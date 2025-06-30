@@ -566,19 +566,38 @@ rule bracken_extract:
 rule rgi_reload_database:
     input:
         card_json = f"{RGI_CARD}/card.json",
-        card_fasta = f"{RGI_CARD}/card_reference.fasta", 
-
+        card_fasta = f"{RGI_CARD}/card_reference.fasta"
     output:
-        touch(f"{LOG_DIR}/rgi_reload_db.done")
+        f"{LOG_DIR}/rgi_reload_db.done"
     log:
         f"{LOG_DIR}/rgi/rgi_reload_db.log"
     conda:
         "envs/rgi.yaml"
     shell:
-         r"""
+        r"""
         set -e
-        echo "Reloading CARD..." > {log}
-        rgi load --card_json {input.card_json} --card_annotation {input.card_fasta} --local >> {log} 2>&1
+
+        LOCALDB="{workflow.basedir}/localDB"
+
+        # Standard "is file, not dir" check
+        if [ -f "$LOCALDB" ]; then
+            echo "ERROR: localDB exists as a file, but should be a directory." >&2
+            exit 1
+        fi
+        mkdir -p "$LOCALDB"
+
+        # Debug output
+        echo "Current files in $LOCALDB before loading:" >> {log}
+        ls -lh "$LOCALDB" >> {log}
+
+        # Only reload if DB is not present (or is empty)
+        if [ -f "$LOCALDB/card.json" ] && [ -s "$LOCALDB/card.json" ] && \
+           [ -f "$LOCALDB/card_reference.fasta" ] && [ -s "$LOCALDB/card_reference.fasta" ]; then
+            echo "CARD local database already present in $LOCALDB, skipping reload." >> {log}
+        else
+            echo "Reloading CARD into $LOCALDB..." >> {log}
+            rgi load --card_json {input.card_json} --card_annotation {input.cexitard_fasta} --local --local_database "$LOCALDB" >> {log} 2>&1
+        fi
 
         touch {output}
         """
