@@ -63,7 +63,7 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 - **`rule bowtie_build_transcript`, `rule bowtie2_map_transcripts` and `assembly_stats_depth`** An index of the transcripts for each sample is built, the rRNA depleted reads are mapped to the transcript file and sorted BAM files are outputted. These BAM files can be used for downstream expression studies. Stats from the SAM files for each sample are printed with samtools flagstat.
   > **Note to self:** determine which files should be marked temporary.  
 
--**`rule Salmon/kallisto/RSEM` Not currently in pipeline but can be added. 
+- **`rule Salmon/kallisto/RSEM` Not currently in pipeline but can be added. 
 
 
 - **`rule kraken2`** assigns taxonomy to the rRNA-depleted reads using a Kraken2-formatted GTDB. A confidence threshold of 0.5 is used and all other parameters are defaults. The output files are `*.report` and `*.kraken`.
@@ -76,10 +76,7 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 
 - **`rule bracken_extract`** used a python script `scripts/extract_bracken_columns.py` to generate tables for the raw and relative abundance for each taxonomic level used in `rule bracken`. The resulting outputs are `Bracken_[species/genus/phylum]_relative_abundance.csv` and Bracken_[species/genus/phylum]_raw_abundance.csv`.
 
-- **`rule rgi_reload_database`**  
-  > **Note to self:** Include a function that allows the rule to not fail if a local CARD database is used.
-
-  Loads the CARD database from a common folder to the working directory. After the step is completed, there should be a `localDB` folder in the main Snakemake directory and a `rgi_reload_db.done` file in the logs directory to prevent the rule from re-running every time the pipeline is called. 
+- **`rule rgi_reload_database`** Loads the CARD database from a common folder to the working directory only if `localDB` has not been previously loaded. After the step is completed, there should be a `localDB` folder in the main Snakemake directory and a `rgi_reload_db.done` file in the logs directory to prevent the rule from re-running every time the pipeline is called. 
 
 - **`rule rgi_bwt`** performs antimicrobial resistance gene profiling on the rRNA-depleted reads using *k*-mer alignment (kma) and default parameters. Output files are:  
   - `*_paired.allele_mapping_data.json`
@@ -137,7 +134,9 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 
     %% Optional transition from assembled transcripts back to Bowtie2 mapping (read support check)
     I --> T{Bowtie2}
-    T --> V((Read Mapping Stats))
+    T --> V((Read Mapping, 
+            Coverage, and
+            Alignment Stats))
     T --> X((Sorted BAM files))
 ```
 ---
