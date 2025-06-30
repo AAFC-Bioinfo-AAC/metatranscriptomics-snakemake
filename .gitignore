@@ -1,0 +1,16 @@
+__pycache__/
+.snakemake/
+envs/.snakemake/
+.vscode/
+*.egg-info
+
+01_reads/
+results/
+reports/
+index/
+logs/
+idx/
+rRNA_DB/
+snakemake-wrappers/
+*.out
+localDB/

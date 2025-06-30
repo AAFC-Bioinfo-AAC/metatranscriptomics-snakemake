@@ -1,0 +1,35 @@
+###FOR TESTING ONLY #####
+#Subset of samples
+sample_subset:
+  - LLC82Sep06GR
+  - LLC82Nov10GR
+  - LLC81Sep06CR
+
+### Sample list ###
+# Prefix of the paired FASTQ reads
+# FASTQ files must has the suffix r1.fastq.gz and r2.fastq.gz or R1.fastq.gz and R2.fastq.gz
+samplelist: "config/samples.txt"
+
+### File paths for input and output ###
+reads_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/01_raw"
+reads_trimmed: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/02_trimmed"
+reads_host_dep: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep"
+reads_rRNA_dep: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep"
+assemblies_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies"
+taxonomy_short_reads_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken" 
+amr_screaning_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi"
+rnaquast_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast"
+bowtie2_assembly_index: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/09_assembly_index" 
+mapping_back_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/10_mapping_back"
+
+### File paths for databases ###
+log_files: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/logs"
+bowtie2_index: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/reasources/bowtie2_index/Cow_phiX"
+sortmerna_DB: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/reasources/rRNA_DB/smr_v4.3_default_db.fasta"
+gtbd_DB: "/gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220"
+busco_lineages:
+  bacteria: "/gpfs/fs7/aafc/common/reference/busco/busco_downloads/lineages/bacteria_odb12"
+  archaea: "/gpfs/fs7/aafc/common/reference/busco/busco_downloads/lineages/archaea_odb12"
+
+### File path for CARD database if the user set it up. This is a fallback if there is no common database
+card_latest: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/localDB"
