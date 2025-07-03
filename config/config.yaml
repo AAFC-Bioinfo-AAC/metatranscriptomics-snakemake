@@ -19,8 +19,11 @@ assemblies_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatransc
 taxonomy_short_reads_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken" 
 amr_screaning_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi"
 rnaquast_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast"
-bowtie2_assembly_index: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/09_assembly_index" 
-mapping_back_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/10_mapping_back"
+co-assembly_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/09_megahit_coassembly"
+coassembly_index: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/10_coassembly_index" 
+sorted_bam_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies"
+prodigal_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/12_prodigal"
+featurecounts_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/13_featurecounts"
 
 ### File paths for databases ###
 log_files: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/logs"

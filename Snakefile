@@ -49,8 +49,11 @@ RRNA_DB = config["sortmerna_DB"]
 TAXONOMY_DB = config["gtbd_DB"]
 BUSCO_LINEAGES = config["busco_lineages"]
 LINEAGES = BUSCO_LINEAGES.keys()
-ASSEMBLY_INDEX = config["bowtie2_assembly_index"]
-ASSEMBLY_MAPPING = config["mapping_back_dir"]
+MEGAHIT_DIR =config["co-assembly_dir"]
+COASSEMBLY_INDEX = config["coassembly_index"]
+ASSEMBLY_MAPPING = config["sorted_bam_dir"]
+PRODIGAL_DIR = config["prodigal_dir"]
+FEATURECOUNTS_DIR = config["featurecounts_dir"]
 
 ## Read samples 
 def find_read_file(sample, readnum):
@@ -107,11 +110,11 @@ rule bowtie2_align:
     log:
         f"{LOG_DIR}/bowtie2/{{sample}}.log"
     params:
-        bt2_threads = 44,
+        bt2_threads = 16,
         view_threads = 4,
-        sort_threads = 12,
+        sort_threads = 8,
         extra= lambda wc: f"-R '@RG\\tID:{wc.sample}\\tSM:{wc.sample}'"
-    threads: 60
+    threads: 24
     conda:
         "envs/bowtie2.yaml"
     shell:
@@ -152,21 +155,40 @@ rule extract_unmapped_fastq:
         "envs/bedtools.yaml"
     shell:
         r"""
+        # Split threads between samtools and pigz; bedtools is single-threaded
+        SAMTOOLS_THREADS=$(( {threads} * 4 / 5 ))
+        PIGZ_THREADS=$(( {threads} / 5 ))
+        [ $SAMTOOLS_THREADS -lt 1 ] && SAMTOOLS_THREADS=1
+        [ $PIGZ_THREADS -lt 1 ] && PIGZ_THREADS=1
+
         echo 'Bedtools version:' > {log}
         bedtools --version >> {log}
         echo 'Samtools version:' >> {log}
         samtools --version | head -n 1 >> {log}
-        echo 'Wall time:' >> {log}
-        start_time=$(date '+%s')
-        # Extract unmapped reads (-f 12), not secondary alignments (-F 256), sort by read name
-        samtools view -u -f 12 -F 256 --threads {threads} {input.bam} 2>> {log} \
-        | samtools sort -n --threads {threads} -O BAM - 2>> {log} \
+        echo "SAMTOOLS_THREADS: $SAMTOOLS_THREADS" >> {log}
+        echo "PIGZ_THREADS: $PIGZ_THREADS" >> {log}
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" >> {log}
+
+        TMPDIR=$(mktemp -d)
+        # Pipe: samtools view -> samtools sort -> bedtools bamtofastq -> pigz
+        samtools view -u -f 12 -F 256 --threads $SAMTOOLS_THREADS {input.bam} 2>> {log} \
+        | samtools sort -n --threads $SAMTOOLS_THREADS -T $TMPDIR/{wildcards.sample}_sort_tmp -O BAM - 2>> {log} \
         | bedtools bamtofastq -i - 2>> {log} \
-            -fq >(pigz --fast > {output.r1}) \
-            -fq2 >(pigz --fast > {output.r2})
-        end_time=$(date '+%s')
+            -fq >(pigz -p $PIGZ_THREADS --fast > {output.r1}) \
+            -fq2 >(pigz -p $PIGZ_THREADS --fast > {output.r2})
+
+        end_time=$(date +%s)
+        end_hr=$(date)
         runtime=$((end_time - start_time))
-        echo "Elapsed seconds: $runtime" >> {log}
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> {log}
+        echo "Wall time: ${{hours}}h ${{mins}}m ${{secs}}s (total ${{runtime}} seconds)" >> {log}
+        "Temporary directory to be removed: $TMPDIR" >> {log}
+        #rm -rf "$TMPDIR"
         """
 rule sortmerna_pe:
     input:
@@ -179,7 +201,7 @@ rule sortmerna_pe:
         stats=f"{RRNA_DEP_DIR}/{{sample}}_sortmerna_pe.stats"
     log:
         f"{LOG_DIR}/sortmerna/{{sample}}reads_pe.log"
-    threads: 60
+    threads: 48
     conda:
         "envs/sortmerna.yaml"
     shell:
@@ -250,7 +272,7 @@ rule rna_spades:
         f"{LOG_DIR}/spades/{{sample}}.log"
     conda:
         "envs/RNAspades.yaml"
-    threads: 60
+    threads: 48
     params:
         memory = "64000"
     shell:
@@ -262,8 +284,11 @@ rule rna_spades:
 
         echo 'SPAdes version:' > {log}
         spades.py --version >> {log}
-        echo 'Wall time:' >> {log}
-        start_time=$(date '+%s')
+
+        # Wall time tracking
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" > {log}
 
         outdir=$(mktemp -d "$TMPDIR/rnaspades_{wildcards.sample}_XXXXXX")
         spades_tmp="$outdir/tmp"
@@ -287,9 +312,15 @@ rule rna_spades:
             exit 1
         fi
 
-        end_time=$(date '+%s')
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
         runtime=$((end_time - start_time))
-        echo "Elapsed seconds: $runtime" >> {log}
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> {log}
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> {log}
         echo "Temporary directory to be removed: $outdir" >> {log}
         rm -rf "$outdir"
         """
@@ -313,8 +344,9 @@ rule rnaquast_busco:
         mkdir -p "$TMPDIR"
         echo "TMPDIR is $TMPDIR" >> {log}
 
-        echo 'Wall time:' >> {log}
-        start_time=$(date '+%s')
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" >> {log}
 
         rnaQUAST.py --transcripts {input.fasta} \
             --output {output.report_dir} \
@@ -322,34 +354,89 @@ rule rnaquast_busco:
             --busco {input.busco_lineage} \
             &>> {log}
             
-        end_time=$(date '+%s')
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
         runtime=$((end_time - start_time))
-        echo "Elapsed seconds: $runtime" >> {log}
-        echo "Temporary files can be found at $TMPDIR" >> {log}
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> {log}
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> {log}
+        echo "Temporary files removed from $TMPDIR" >> {log}
         # rm -rf "$TMPDIR"  # commented-out or removed, so tmpdir is kept.
         """
-rule bowtie_build_transcript:
+
+rule megahit_coassembly:
+    input: 
+        r1 = expand(f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R1.fastq.gz", sample=SAMPLES_SUBSET),
+        r2 = expand(f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R2.fastq.gz", sample=SAMPLES_SUBSET)
+    output:
+        directory(MEGAHIT_DIR)
+    threads: 60
+    conda:
+        "envs/megahit.yaml"
+    log:
+
+        f"{LOG_DIR}/coassembly/megahit.log"
+    shell:
+        r"""
+        set -euo pipefail
+
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" >> {log}
+
+        r1_list=$(echo {input.r1} | tr ' ' ',')
+        r2_list=$(echo {input.r2} | tr ' ' ',')
+
+        export TMPDIR={TMPDIR}/megahit_coassembly_$RANDOM
+        mkdir -p "$TMPDIR"
+        echo "TMPDIR is $TMPDIR" >> {log}
+
+        megahit \
+          -1 "$r1_list" \
+          -2 "$r2_list" \
+          -t {threads} \
+          -o {MEGAHIT_DIR} \
+          --out-prefix final \
+          --tmp-dir "$TMPDIR" \
+          > {log} 2>&1
+
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> {log}
+        echo "Removing tmpdir $TMPDIR" >> {log}
+        #rm -rf "$TMPDIR"
+        """ 
+
+rule index_coassembly:
     input:
-        fasta = f"{ASSEMBLIES_DIR}/{{sample}}.fasta"
+        coassembly = f"{MEGAHIT_DIR}/final.contigs.fa"
     output:
         index = [
-            f"{ASSEMBLY_INDEX}/{{sample}}.index.1.bt2",
-            f"{ASSEMBLY_INDEX}/{{sample}}.index.2.bt2",
-            f"{ASSEMBLY_INDEX}/{{sample}}.index.3.bt2",
-            f"{ASSEMBLY_INDEX}/{{sample}}.index.4.bt2",
-            f"{ASSEMBLY_INDEX}/{{sample}}.index.rev.1.bt2",
-            f"{ASSEMBLY_INDEX}/{{sample}}.index.rev.2.bt2"
+            f"{COASSEMBLY_INDEX}/coassembly.1.bt2",
+            f"{COASSEMBLY_INDEX}/coassembly.2.bt2",
+            f"{COASSEMBLY_INDEX}/coassembly.3.bt2",
+            f"{COASSEMBLY_INDEX}/coassembly.4.bt2",
+            f"{COASSEMBLY_INDEX}/coassembly.rev.1.bt2",
+            f"{COASSEMBLY_INDEX}/coassembly.rev.2.bt2"
         ]
     log:
-        f"{LOG_DIR}/mapping_back/{{sample}}_index.log"
+        f"{LOG_DIR}/coassembly/coassembly_index.log"
     threads: 8  
     conda:
         "envs/bowtie2.yaml"  
     params:
-        prefix = f"{ASSEMBLY_INDEX}/{{sample}}.index"
+        prefix = f"{COASSEMBLY_INDEX}/coassembly"
     shell:
         r"""
         set -euo pipefail
+        mkdir -p {COASSEMBLY_INDEX} 
 
         echo 'Bowtie2 version:' > {log}
         bowtie2 --version >> {log}
@@ -357,7 +444,7 @@ rule bowtie_build_transcript:
         start_hr=$(date)
         echo "Started at: $start_hr" >> {log}
 
-        bowtie2-build --threads {threads} {input.fasta} {params.prefix} &> {log}
+        bowtie2-build --threads {threads} {input.coassembly} {params.prefix} &>> {log}
         end_time=$(date +%s)
         end_hr=$(date)
         runtime=$((end_time - start_time))
@@ -370,18 +457,18 @@ rule bowtie_build_transcript:
 
 rule bowtie2_map_transcripts: 
     input:
-        index = f"{ASSEMBLY_INDEX}/{{sample}}.index.1.bt2", 
+        index = f"{COASSEMBLY_INDEX}/coassembly.1.bt2",
         r1 = f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R1.fastq.gz",
         r2 = f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R2.fastq.gz"
     output:
-        bam = f"{ASSEMBLY_MAPPING}/{{sample}}.sorted.bam"
+        bam = f"{ASSEMBLY_MAPPING}/{{sample}}.coassembly.sorted.bam"
     log:
-        f"{LOG_DIR}/mapping_back/{{sample}}_sorted.log"
-    threads: 40
+        f"{LOG_DIR}/sorted_bam/{{sample}}_sorted.log"
+    threads: 16
     conda:
         "envs/bowtie2.yaml"
     params:
-         index_prefix = f"{ASSEMBLY_INDEX}/{{sample}}.index"
+         index_prefix = f"{COASSEMBLY_INDEX}/coassembly"
     shell:
         r"""
         set -euo pipefail
@@ -408,7 +495,7 @@ rule bowtie2_map_transcripts:
         """
 rule assembly_stats_depth:
     input:
-        bam = f"{ASSEMBLY_MAPPING}/{{sample}}.sorted.bam"
+        bam = f"{ASSEMBLY_MAPPING}/{{sample}}.coassembly.sorted.bam"
     output:
         stats = f"{ASSEMBLY_MAPPING}/{{sample}}.flagstat.txt",
         depth = f"{ASSEMBLY_MAPPING}/{{sample}}.coverage.txt.gz",
@@ -419,6 +506,94 @@ rule assembly_stats_depth:
         samtools flagstat {input.bam} > {output.stats} &&
         samtools depth {input.bam} | pigz -p {threads} > {output.depth} &&
         samtools idxstats {input.bam} | pigz -p {threads} > {output.idxstats}
+        """
+
+rule prodigal_genes:
+    input:
+        coassembly = f"{MEGAHIT_DIR}/final.contigs.fa"
+    output:
+        proteins = f"{PRODIGAL_DIR}/coassembly.faa",
+        nucs = f"{PRODIGAL_DIR}/coassembly.fna",
+        gff = f"{PRODIGAL_DIR}/coassembly.gff",
+        saf = f"{PRODIGAL_DIR}/coassembly.saf"
+    threads: 1
+    log:
+        f"{LOG_DIR}/prodigal/coassembly_prodigal.log"
+    conda:
+        "envs/prodigal.yaml"
+    shell:
+        r"""
+        set -euo pipefail
+
+        # Ensure output directory exists
+        mkdir -p {PRODIGAL_DIR}
+
+        # Wall time tracking
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" > {log}
+
+        echo 'prodigal version:' >> {log}
+        prodigal -v >> {log} 2>&1
+
+
+        prodigal -i {input.coassembly} \
+            -a {output.proteins} \
+            -d {output.nucs} \
+            -o {output.gff} \
+            -p meta \
+            -f gff 2>&1 | grep -v "^Finding genes in sequence" | grep -v "^Request:" >> {log}
+
+        awk '$3=="CDS" {{OFS="\t"; split($9,a,";"); for(i in a){{if(a[i]~/^ID=/)id=substr(a[i],4)}}; print id, $1, $4, $5, $7}}' {output.gff} | \
+        awk 'BEGIN{{print "GeneID\tChr\tStart\tEnd\tStrand"}} 1' > {output.saf}
+
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> {log}
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> {log}
+        """
+rule featurecounts:
+    input:
+        saf = f"{PRODIGAL_DIR}/coassembly.saf",
+        bam = f"{ASSEMBLY_MAPPING}/{{sample}}.coassembly.sorted.bam"
+    output:
+        counts = f"{FEATURECOUNTS_DIR}/{{sample}}_counts.txt"
+    threads: 4
+    log:
+        f"{LOG_DIR}/featurecounts/{{sample}}_featurecounts.log"
+    conda:
+        "envs/featurecounts.yaml"
+    shell:
+        r"""
+        set -euo pipefail
+
+        # Ensure output directory exists
+        mkdir -p {FEATURECOUNTS_DIR}
+
+        # Wall time tracking
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" > {log}
+
+        echo 'featureCounts version:' >> {log}
+        featureCounts -v >> {log}
+
+        featureCounts -a {input.saf} -F SAF -p -T {threads} -o {output.counts} {input.bam} &>> {log}
+
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> {log}
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> {log}
         """
 
 rule kraken2: 
@@ -483,7 +658,7 @@ rule bracken:
     log:f"{LOG_DIR}/bracken/{{sample}}.log"
     conda:
         "envs/kraken2.yaml"
-    threads: 10
+    threads: 2
     params:
         readlen = 150
     shell:
@@ -614,7 +789,7 @@ rule rgi_bwt:
         outprefix = lambda wc: f"{CARD_RGI_OUTPUT_DIR}/{wc.sample}_paired"
     log:
         f"{LOG_DIR}/rgi/bwt_{{sample}}.log"
-    threads: 40
+    threads: 20
     conda:
         "envs/rgi.yaml"
     shell:

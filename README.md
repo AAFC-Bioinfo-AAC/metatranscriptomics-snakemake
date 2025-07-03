@@ -45,30 +45,65 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 - **`rule fastp_pe`** reads the sample names from the `samples.txt` file and processes paired-end FASTQ files with the naming conventions `*_R1.fastq.gz` / `*_r1.fastq.gz` and `*_R2.fastq.gz` / `*_r2.fastq.gz`. This step performs adapter trimming, quality trimming, and filtering. The output files are the trimmed paired reads (`*_r1.fastq.gz`/`*_r2.fastq.gz`), unpaired reads (`*_u1.fastq.gz`/`*_u2.fastq.gz`), and QC reports. Default parameters are used. The unpaired reads can be removed after confirming that the majority of reads have a pair that passed QC.
 
 - **`rule bowtie2_align`** uses the trimmed paired-end files from `rule fastp_pe` and aligns them to the specified index. The resulting file is a reference-aligned BAM file. Default parameters are used.
+  > **Wall time:** Tests for single sample. When total cores was 60 (bowtie2 44, samtools view 4, samotools sort 12) time was 12m 18s. Reduced to total cores 24 (bowtie2 16, samtools view 4, samotools sort 8)
+
 
 - **`rule extract_unmapped_fastq`** takes the sorted BAM file as input and extracts the reads that did not align into paired-end FASTQ files depleted of host and PhiX reads (`*_trimmed_clean_R1.fastq.gz`/`*_trimmed_clean_R2.fastq.gz`). Default parameters are used.
 
+  > **Wall time:** Tests for single sample. When 60 cores were used and there was no splitting the wall time was 17m 57s. Changed to a 80:20 ratio of splitting between samtools and pigz. Total cores is 60 so samtools will get 48 and pigz 12. A temp directory was added and wall time logging has been improved. 
+
+
 - **`rule sortmerna`** aligns the host-depleted reads to an rRNA database and outputs the rRNA-depleted reads (`*_rRNAdep_R1.fastq.gz`/`*_rRNAdep_R2.fastq.gz`). These rRNA-depleted reads will be used for downstream analysis. The database used for testing the pipeline was `smr_v4.3_default_db.fasta`, available [here](https://github.com/sortmerna/sortmerna/releases/tag/v4.3.3). Default parameters were used.
 
-- **`rule rna_spades`**  
-  > **Note to self:** The order of this rule should be changed in the Snakemake workflow. Keep for now while testing.
+  > **Wall time:** With 60 cores wall time was 4h 48m 56s for one sample. See what wall time is with a reduction to 48 cores and then 32. 
 
-   > **Note to self:** In the shell block copy the spades.log. It contains some assembly stat that are not printed to the current log file. 
+- **`rule rna_spades`** 
+
+  > **Wall time:** One sample with 60 cores ran for 2h 15m 53s. The wall time logging and log file has been fixed. Try 48 and 32 cores to see if wall time is similar. Reduce cores if so. 
+
+  > **Note to self:** The order of this rule should be changed in the Snakemake workflow. Keep for now while testing. 
+
+   > **Note to self:** In the shell block copy the spades.log. It contains some assembly stat that are not printed to the current log file. SHOULD BE FIXED. CHECK AFTER NEXT RUN.
 
   The rRNA-depleted reads are assembled into presumptive mRNA transcripts using the `--rna` flag and default parameters. The transcripts are output to a `*.fasta` file. 
 
 - **`rule rnaquast_busco`** uses the transcripts from RNA SPAses to print the number of transcripts, transcripts over 500 bp, transcripts over 1000 bp and the BUSCO completeness. The software is not intended for metatranscriptomics. Use caution when interpreting the results. For instance the BUSCO completeness cannot be interpreted as the percentage of assembly quality but instead it is a representation of the core functions from the bacteria_odb12 and archaea_odb12 lineages.  
   
 
-- **`rule bowtie_build_transcript`, `rule bowtie2_map_transcripts` and `assembly_stats_depth`** An index of the transcripts for each sample is built, the rRNA depleted reads are mapped to the transcript file and sorted BAM files are outputted. These BAM files can be used for downstream expression studies. Stats from the SAM files for each sample are printed with samtools flagstat.
-  > **Note to self:** determine which files should be marked temporary.  
+- **`megahit_coassembly`** here the rRNA-depleted reads are co-assembled with MEGAHIT. If Metagenomic sequencing was done the co-assembly of those reads would be a better choice. The Co-assembly is used as a index to produce sorted BAM files for each assembly. These sorted BAM files can then be used in featureCounts and downstream expression analysis.
 
-- **`rule Salmon/kallisto/RSEM` Not currently in pipeline but can be added. 
+  > **Wall time:** For the co-assembly of three samples was 52 min 28 sec with 60 cores. For large co-assemblies a large mem node will need to be used (will need to be tested at some point)
 
+  > **Note to self:**  currently using a sub set sample list that will need to be removed after testing. The `sample=SAMPLES_SUBSET` will need to be changed to `SAMPLES`. The subset lines will need to be removed from the `config/config.yaml` file and the top of the `Snakemake`.
+
+- **`index_coassembly`** use Bowtie2 to make an index that can be used to map the reads to the co-assembly.
+  > **Wall time:** Wall time with 8 threads was 1m 5s. 
+
+
+- **`bowtie2_map_transcripts`** Maps the cleaned reads to the co-assembly resulting in a `.coassembly.sorted.bam` for each sample.
+
+  > **Wall time:** For one sample using 40 cores was 9m 53s. Reduced cores to 16 and will check wall time. 
+
+
+- **`assembly_stats_depth`** producess a `flagstat.txt` summary of the reads that mapped back to the assembly, a `coverage.txt.gz` depth file with per-base coverage across the co-assembly for each sample, and a `idxstats.txt.gz` with read counts per transcript for each sample.
+
+- **`rule prodigal_genes`** used to make a FASTA file of predicted protein sequences `coassembly.faa` and the predicted genes `coassembly.fna`, a feature formatted annotation file `coassembly.gff` and a simplified annotation formate file `coassembly.saf` that is used by feature counts. 
+
+  > **Temp file:** Go back and decided if this output should be designated temporary 
+
+  > **Wall time** was 8m with 1 core. prodigal does not support more than one core.
+
+- **`rule featurecounts`** generates a table for each sample that includes the Geneid (unique identifier), the co-assembly contig name, the start and end positions of each gene on the contig, the strand orientation (+ or -), the gene length, and the number of reads mapped to each gene. Since all samples are mapped to the same co-assembly reference, the resulting tables can be combined for downstream analysis of gene expression across samples. 
+
+  > **Wall time** for one sample with 4 cores was 17s.
 
 - **`rule kraken2`** assigns taxonomy to the rRNA-depleted reads using a Kraken2-formatted GTDB. A confidence threshold of 0.5 is used and all other parameters are defaults. The output files are `*.report` and `*.kraken`.
+  > **Wall time** Large compute node with 600 GB. With 16 CUPs wall time was 7m 56s. With 2 CPUs wall time was 19m 13s. 
 
 - **`rule bracken`** uses the report file from kraken to output a report at the species, genus and phylum level for each sample. These intermediate files are fed into `rule combine_bracken_outputs`.
+
+   > **Wall time** with 10 threads the wall time was 9s. The cores have been reduced to 2.
+
    > **Note to self:** This rule is also making `.report_bracken_species.txt` at each level in the `06_kraken` directory. At some point see if we can either place these into a direcorory called `reports` or have them cleaned up in the shell block.
 
 - **`rule combine_bracken_outputs`** combines the reports for all the samples   
@@ -89,6 +124,7 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
   - `*_paired.sorted.length_100.bam.bai`  
   Remove files that are not required after this step completes.
 
+  > **Wall time** with 40 cores the job took 18m 7s. Try reducing to 20 cores. If time does not increase much further reduce cores. 
 - **`rule coverm`**
    > **Note to self:** Add in the option of running CoverM. This should not be part of the main pipeline but an option if MAGs from metagenomic sequencing of the same samples are avalible.
 
@@ -205,10 +241,7 @@ curl -O https://example.com/path/to/dataset1.tar.gz
 - **Kraken2**  
   Kraken2 requires a Kraken2-formatted GTDB database. The GTDB release tested with this pipeline was 220.
 
-- **RGI BWT/CARD**  
-  - * PLACEHOLDER: reminder to fix RGI CARD steps so that it does not fail if a user loaded database is used. 
-
-  RGI BWT requires the CARD (Comprehensive Antibiotic Resistance Database) database. The version tested in this pipeline was 4.0.1. The database can be located on a common drive or in your working directory.  
+- **RGI BWT/CARD**  RGI BWT requires the CARD (Comprehensive Antibiotic Resistance Database) database. The version tested in this pipeline was 4.0.1. The database can be located on a common drive or in your working directory.  
   Instructions for installing the CARD database are available [here](https://github.com/arpcard/rgi/blob/master/docs/rgi_bwt.rst).  
   Steps copied from the RGI documentation:
 
