@@ -6,7 +6,7 @@ import sys
 import glob 
 
 TMPDIR="/gpfs/fs7/aafc/scratch/kjg000/tmpdir"
-print(f"DEBUG: Using TMPDIR = {TMPDIR}")
+print(f"DEBUG: Using TMPDIR = {TMPDIR}", file=sys.stderr)
 
 ## Load .env 
 load_dotenv('.env')
@@ -23,14 +23,14 @@ if not RGI_CARD or not os.path.exists(RGI_CARD):
 ## Variable set up and sample loading
 with open(config["samplelist"]) as f:
     SAMPLES = [line.strip() for line in f if line.strip()]
-
+print("SAMPLES:", SAMPLES, file=sys.stderr)
 READS_DIR = config["reads_dir"]
 TRIMMED_DIR = config["reads_trimmed"]
 HOST_DEP_DIR = config["reads_host_dep"]
 RRNA_DEP_DIR = config["reads_rRNA_dep"]
-ASSEMBLIES_DIR =config["assemblies_dir"]
 KRAKEN_OUTPUT_DIR = config["taxonomy_short_reads_dir"]
-CARD_RGI_OUTPUT_DIR = config["amr_screaning_dir"]
+CARD_RGI_OUTPUT_DIR = config["amr_screening_dir"]
+ASSEMBLIES_DIR =config["assemblies_dir"]
 RNAQUAST_DIR = config["rnaquast_dir"]
 LOG_DIR = config["log_files"]
 BOWTIE_INDEX = config["bowtie2_index"]
@@ -45,7 +45,7 @@ BOWTIE_INDEX_FILES = [
 RRNA_DB = config["sortmerna_DB"]
 TAXONOMY_DB = config["gtbd_DB"]
 BUSCO_LINEAGES = config["busco_lineages"]
-LINEAGES = BUSCO_LINEAGES.keys()
+LINEAGES = list(BUSCO_LINEAGES.keys())
 MEGAHIT_DIR =config["co-assembly_dir"]
 COASSEMBLY_INDEX = config["coassembly_index"]
 ASSEMBLY_MAPPING = config["sorted_bam_dir"]
@@ -81,8 +81,45 @@ if not (os.path.exists(f"{RGI_CARD}/card.json")
 # Set to the last step in the pipeline
 rule all:
     input:
-        f"{RNAQUAST_DIR}/LLC82Sep06GR_archaea"
-
+        #Reads depleted of host, PhiX and rRNA
+        expand(f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R1.fastq.gz", sample=SAMPLES),
+        expand(f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R2.fastq.gz", sample=SAMPLES),
+        #Taxonomy with Kraken and Bracken
+        expand(f"{KRAKEN_OUTPUT_DIR}/{{sample}}.report.txt", sample=SAMPLES),
+        expand(f"{KRAKEN_OUTPUT_DIR}/{{sample}}.kraken", sample=SAMPLES),
+        expand(f"{KRAKEN_OUTPUT_DIR}/species/{{sample}}_bracken.species.report.txt", sample=SAMPLES),
+        expand(f"{KRAKEN_OUTPUT_DIR}/genus/{{sample}}_bracken.genus.report.txt", sample=SAMPLES),
+        expand(f"{KRAKEN_OUTPUT_DIR}/phylum/{{sample}}_bracken.phylum.report.txt", sample=SAMPLES),
+        # Merged/parsed bracken tables
+        f"{KRAKEN_OUTPUT_DIR}/merged_abundance_species.txt",
+        f"{KRAKEN_OUTPUT_DIR}/merged_abundance_genus.txt",
+        f"{KRAKEN_OUTPUT_DIR}/merged_abundance_phylum.txt",
+        f"{KRAKEN_OUTPUT_DIR}/Bracken_species_raw_abundance.csv",
+        f"{KRAKEN_OUTPUT_DIR}/Bracken_species_relative_abundance.csv",
+        f"{KRAKEN_OUTPUT_DIR}/Bracken_genus_raw_abundance.csv",
+        f"{KRAKEN_OUTPUT_DIR}/Bracken_genus_relative_abundance.csv",
+        f"{KRAKEN_OUTPUT_DIR}/Bracken_phylum_raw_abundance.csv",
+        f"{KRAKEN_OUTPUT_DIR}/Bracken_phylum_relative_abundance.csv",
+        # AMR screening with RGI BWT
+        expand(f"{CARD_RGI_OUTPUT_DIR}/{{sample}}_paired.allele_mapping_data.json", sample=SAMPLES),
+        expand(f"{CARD_RGI_OUTPUT_DIR}/{{sample}}_paired.allele_mapping_data.txt", sample=SAMPLES),
+        # RNA SPAdes Assemblies and RNAQUAST evaluation with busco lineages
+        expand(f"{ASSEMBLIES_DIR}/{{sample}}.fasta", sample=SAMPLES),
+        expand(f"{RNAQUAST_DIR}/{{sample}}_{{lineage}}", sample=SAMPLES, lineage=LINEAGES),
+        # MEGAHIT Coassembly and annotation
+        f"{MEGAHIT_DIR}/final.contigs.fa",
+        f"{PRODIGAL_DIR}/coassembly.faa",
+        f"{PRODIGAL_DIR}/coassembly.fna",
+        f"{PRODIGAL_DIR}/coassembly.gff",
+        f"{PRODIGAL_DIR}/coassembly.saf",
+        # Mapping of samples to coassembly, stats, and featurecounts
+        expand(f"{ASSEMBLY_MAPPING}/{{sample}}.coassembly.sorted.bam", sample=SAMPLES),
+        expand(f"{ASSEMBLY_MAPPING}/{{sample}}.flagstat.txt", sample=SAMPLES),
+        expand(f"{ASSEMBLY_MAPPING}/{{sample}}.coverage.txt.gz", sample=SAMPLES),
+        expand(f"{ASSEMBLY_MAPPING}/{{sample}}.idxstats.txt.gz", sample=SAMPLES),
+        expand(f"{FEATURECOUNTS_DIR}/{{sample}}_counts.txt", sample=SAMPLES),
+        # Required logs or done markers
+        f"{LOG_DIR}/rgi_reload_db.done"
 rule fastp_pe:
     input:
         sample = lambda wc: [find_read_file(wc.sample, 1), find_read_file(wc.sample, 2)]
@@ -137,8 +174,7 @@ rule bowtie2_align:
         secs=$((runtime % 60))
         echo "Finished at: $end_hr" >> {log}
         echo "Wall time: ${{hours}}h ${{mins}}m ${{secs}}s (total ${{runtime}} seconds)" >> {log}
-        """
-        
+        """  
 rule extract_unmapped_fastq:
     input:
         bam="results/{sample}.bam"
@@ -258,7 +294,244 @@ rule sortmerna_pe:
         echo "Temporary directory to be removed: $WORKDIR" >> {log}
         rm -rf "$WORKDIR"
         """
+rule kraken2:
+    wildcard_constraints:
+        sample = '[^/]+'
+    input:
+        ref = f"{TAXONOMY_DB}",
+        R1 = f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R1.fastq.gz",
+        R2 = f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R2.fastq.gz"
+    output:
+        report = f"{KRAKEN_OUTPUT_DIR}/{{sample}}.report.txt",
+        kraken = f"{KRAKEN_OUTPUT_DIR}/{{sample}}.kraken" 
+    log:
+        f"{LOG_DIR}/kraken2/{{sample}}.log"
+    conda:
+        "envs/kraken2.yaml"
+    threads: 2
+    params:
+        conf_threshold = "0.5"
+    shell:
+        r"""
+        set -euo pipefail
 
+        # Wall time tracking
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" > {log}
+
+        echo 'Kraken2 version:' >> {log}
+        kraken2 --version >> {log}
+        # echo 'Database is GTDB 220' >> {log} #uncomment if there is a text file with the version
+        # cat {input.ref}/VERSION.txt >> {log} #uncomment if there is a text file with the version 
+
+        kraken2 --use-names \
+            --threads {threads} \
+            --db {input.ref} \
+            --confidence {params.conf_threshold} \
+            --report-zero-counts \
+            --paired {input.R1} {input.R2} \
+            --report {output.report} \
+            --output {output.kraken} \
+            &>> {log}
+            
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> {log}
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> {log}
+        """
+rule bracken:
+    wildcard_constraints:
+        sample = '[^/]+'
+    input:
+        ref = f"{TAXONOMY_DB}",
+        report = f"{KRAKEN_OUTPUT_DIR}/{{sample}}.report.txt"
+    output:
+        species = f"{KRAKEN_OUTPUT_DIR}/species/{{sample}}_bracken.species.report.txt",
+        genus = f"{KRAKEN_OUTPUT_DIR}/genus/{{sample}}_bracken.genus.report.txt",
+        phylum = f"{KRAKEN_OUTPUT_DIR}/phylum/{{sample}}_bracken.phylum.report.txt"
+    log:
+        f"{LOG_DIR}/bracken/{{sample}}.log"
+    conda:
+        "envs/kraken2.yaml"
+    threads: 2
+    params:
+        readlen = 150
+    shell:
+        r"""
+        set -euo pipefail
+
+        # Wall time tracking
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" > {log}
+
+        echo 'bracken version:' >> {log}
+        bracken --version >> {log}
+
+        mkdir -p $(dirname {output.species}) $(dirname {output.genus}) $(dirname {output.phylum})
+
+        bracken -r {params.readlen} -t {threads} -d {input.ref} -i {input.report} -l S -o {output.species} &>> {log}
+
+        bracken -r {params.readlen} -t {threads} -d {input.ref} -i {input.report} -l G -o {output.genus} &>> {log}
+
+        bracken -r {params.readlen} -t {threads} -d {input.ref} -i {input.report} -l P -o {output.phylum} &>> {log}
+
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> {log}
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> {log}
+        """
+rule combine_bracken_outputs:
+    input:
+        species = expand(f"{KRAKEN_OUTPUT_DIR}/species/{{sample}}_bracken.species.report.txt", sample=SAMPLES),
+        genus = expand(f"{KRAKEN_OUTPUT_DIR}/genus/{{sample}}_bracken.genus.report.txt", sample=SAMPLES),
+        phylum = expand(f"{KRAKEN_OUTPUT_DIR}/phylum/{{sample}}_bracken.phylum.report.txt", sample=SAMPLES)
+    output:
+        species = f"{KRAKEN_OUTPUT_DIR}/merged_abundance_species.txt",
+        genus = f"{KRAKEN_OUTPUT_DIR}/merged_abundance_genus.txt",
+        phylum = f"{KRAKEN_OUTPUT_DIR}/merged_abundance_phylum.txt"
+    log:
+        f"{LOG_DIR}/bracken/combine_bracken_outputs.log"
+    conda:
+        "envs/kraken2.yaml"
+    shell:
+        r"""
+        set -euo pipefail
+
+        echo "Combining species bracken outputs..." > {log}
+        combine_bracken_outputs.py --files {input.species} --output {output.species} &>> {log}
+
+        echo "Combining genus bracken outputs..." >> {log}
+        combine_bracken_outputs.py --files {input.genus} --output {output.genus} &>> {log}
+
+        echo "Combining phylum bracken outputs..." >> {log}
+        combine_bracken_outputs.py --files {input.phylum} --output {output.phylum} &>> {log}
+        """
+rule bracken_extract:
+    input:
+        species_table = f"{KRAKEN_OUTPUT_DIR}/testing/merged_abundance_species.txt",
+        genus_table = f"{KRAKEN_OUTPUT_DIR}/testing/merged_abundance_genus.txt",
+        phylum_table = f"{KRAKEN_OUTPUT_DIR}/testing/merged_abundance_phylum.txt"
+    output:
+        species_raw = f"{KRAKEN_OUTPUT_DIR}/Bracken_species_raw_abundance.csv",
+        species_rel = f"{KRAKEN_OUTPUT_DIR}/Bracken_species_relative_abundance.csv", 
+        genus_raw = f"{KRAKEN_OUTPUT_DIR}/Bracken_genus_raw_abundance.csv",
+        genus_rel = f"{KRAKEN_OUTPUT_DIR}/Bracken_genus_relative_abundance.csv",
+        phylum_raw = f"{KRAKEN_OUTPUT_DIR}/Bracken_phylum_raw_abundance.csv",
+        phylum_rel = f"{KRAKEN_OUTPUT_DIR}/Bracken_phylum_relative_abundance.csv"
+    conda:
+        "envs/kraken2.yaml"
+    shell:
+        """
+        scripts/extract_bracken_columns.py --input {input.species_table} --level species --out-raw {output.species_raw} --out-rel {output.species_rel}
+        scripts/extract_bracken_columns.py --input {input.genus_table} --level genus --out-raw {output.genus_raw} --out-rel {output.genus_rel}
+        scripts/extract_bracken_columns.py --input {input.phylum_table} --level phylum --out-raw {output.phylum_raw} --out-rel {output.phylum_rel}
+
+        """
+rule rgi_reload_database:
+    input:
+        card_json = f"{RGI_CARD}/card.json",
+        card_fasta = f"{RGI_CARD}/card_reference.fasta"
+    output:
+        f"{LOG_DIR}/rgi_reload_db.done"
+    log:
+        f"{LOG_DIR}/rgi/rgi_reload_db.log"
+    conda:
+        "envs/rgi.yaml"
+    shell:
+        r"""
+        set -e
+
+        LOCALDB="{workflow.basedir}/localDB"
+
+        # Standard "is file, not dir" check
+        if [ -f "$LOCALDB" ]; then
+            echo "ERROR: localDB exists as a file, but should be a directory." >&2
+            exit 1
+        fi
+        mkdir -p "$LOCALDB"
+
+        # Debug output
+        echo "Current files in $LOCALDB before loading:" >> {log}
+        ls -lh "$LOCALDB" >> {log}
+
+        # Only reload if DB is not present (or is empty)
+        if [ -f "$LOCALDB/card.json" ] && [ -s "$LOCALDB/card.json" ] && \
+           [ -f "$LOCALDB/card_reference.fasta" ] && [ -s "$LOCALDB/card_reference.fasta" ]; then
+            echo "CARD local database already present in $LOCALDB, skipping reload." >> {log}
+        else
+            echo "Reloading CARD into $LOCALDB..." >> {log}
+            rgi load --card_json {input.card_json} --card_annotation {input.card_fasta} --local --local_database "$LOCALDB" >> {log} 2>&1
+        fi
+
+        touch {output}
+        """
+rule rgi_bwt:
+    input:
+        R1 = f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R1.fastq.gz",
+        R2 = f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R2.fastq.gz",
+        reload_marker = f"{LOG_DIR}/rgi_reload_db.done"
+    output:
+        json = f"{CARD_RGI_OUTPUT_DIR}/{{sample}}_paired.allele_mapping_data.json",
+        allele = f"{CARD_RGI_OUTPUT_DIR}/{{sample}}_paired.allele_mapping_data.txt"
+    params:
+        outprefix = lambda wc: f"{CARD_RGI_OUTPUT_DIR}/{wc.sample}_paired"
+    log:
+        f"{LOG_DIR}/rgi/bwt_{{sample}}.log"
+    threads: 20
+    conda:
+        "envs/rgi.yaml"
+    shell:
+        r"""
+        set -o pipefail
+        export TMPDIR={TMPDIR}/bwt_{wildcards.sample}_$RANDOM
+        mkdir -p "$TMPDIR"
+        echo "Using TMPDIR: $TMPDIR" >> {log}
+        export RGI_DATA_PATH={RGI_CARD}
+        echo "RGI_DATA_PATH: {RGI_CARD}" >> {log}
+        start_time=$(date +%s)
+        echo "Started at: $(date)" >> {log}
+        echo 'RGI version:' >> {log}
+        rgi main --version >> {log}
+        echo 'bwt without wildcard' >> {log}
+        mkdir -p {CARD_RGI_OUTPUT_DIR}
+        (rgi bwt \
+            -1 {input.R1} \
+            -2 {input.R2} \
+            -a kma \
+            -n {threads} \
+            -o {params.outprefix} \
+            --local \
+            --clean \
+            ) 2>&1 | egrep -av '\[W::sam_parse1\]|mapped query cannot have zero coordinate' | awk 'NF' >> {log}
+
+        rgistatus=${{PIPESTATUS[0]}}
+        if [ $rgistatus -ne 0 ]; then
+        echo "ERROR: rgi bwt failed with exit code $rgistatus" >> {log}
+        exit $rgistatus
+        fi
+
+        end_time=$(date +%s)
+        runtime=$((end_time - start_time))
+
+        echo "Finished at: $(date)" >> {log}
+        echo "Wall time: $((runtime/3600))h $(((runtime%3600)/60))m $((runtime%60))s (total $runtime s)" >> {log}
+
+        echo "Cleaning up temp dir: $TMPDIR" >> {log}
+        rm -rf "$TMPDIR"
+        echo "Cleanup completed for: $TMPDIR" >> {log}
+        """
 rule rna_spades:
     input:
         R1 = f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R1.fastq.gz",
@@ -321,7 +594,6 @@ rule rna_spades:
         echo "Temporary directory to be removed: $outdir" >> {log}
         rm -rf "$outdir"
         """
-
 rule rnaquast_busco:
     input:
         fasta = f"{ASSEMBLIES_DIR}/{{sample}}.fasta",
@@ -363,18 +635,16 @@ rule rnaquast_busco:
         echo "Temporary files removed from $TMPDIR" >> {log}
         # rm -rf "$TMPDIR"  # commented-out or removed, so tmpdir is kept.
         """
-
 rule megahit_coassembly:
     input: 
-        r1 = expand(f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R1.fastq.gz"),
-        r2 = expand(f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R2.fastq.gz")
+        r1 = expand(f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R1.fastq.gz", sample=SAMPLES),
+        r2 = expand(f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R2.fastq.gz", sample=SAMPLES)
     output:
         directory(MEGAHIT_DIR)
     threads: 60
     conda:
         "envs/megahit.yaml"
     log:
-
         f"{LOG_DIR}/coassembly/megahit.log"
     shell:
         r"""
@@ -410,7 +680,6 @@ rule megahit_coassembly:
         echo "Removing tmpdir $TMPDIR" >> {log}
         #rm -rf "$TMPDIR"
         """ 
-
 rule index_coassembly:
     input:
         coassembly = f"{MEGAHIT_DIR}/final.contigs.fa"
@@ -451,7 +720,6 @@ rule index_coassembly:
         echo "Finished at: $end_hr" >> {log}
         echo "Wall time: ${{hours}}h ${{mins}}m ${{secs}}s (total ${{runtime}} seconds)" >> {log}
         """
-
 rule bowtie2_map_transcripts: 
     input:
         index = f"{COASSEMBLY_INDEX}/coassembly.1.bt2",
@@ -504,7 +772,6 @@ rule assembly_stats_depth:
         samtools depth {input.bam} | pigz -p {threads} > {output.depth} &&
         samtools idxstats {input.bam} | pigz -p {threads} > {output.idxstats}
         """
-
 rule prodigal_genes:
     input:
         coassembly = f"{MEGAHIT_DIR}/final.contigs.fa"
@@ -592,242 +859,3 @@ rule featurecounts:
         echo "Finished at: $end_hr" >> {log}
         echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> {log}
         """
-
-rule kraken2: 
-    input:
-        ref = f"{TAXONOMY_DB}",
-        R1 = f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R1.fastq.gz",
-        R2 = f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R2.fastq.gz"
-        
-    output:
-        report = f"{KRAKEN_OUTPUT_DIR}/{{sample}}.report.txt",
-        kraken = f"{KRAKEN_OUTPUT_DIR}/{{sample}}.kraken" 
-    log:
-        f"{LOG_DIR}/kraken2/{{sample}}.log"
-    conda:
-        "envs/kraken2.yaml"
-    threads: 2
-    params:
-        conf_threshold = "0.5"
-    shell:
-        r"""
-        set -euo pipefail
-
-        # Wall time tracking
-        start_time=$(date +%s)
-        start_hr=$(date)
-        echo "Started at: $start_hr" > {log}
-
-        echo 'Kraken2 version:' >> {log}
-        kraken2 --version >> {log}
-        # echo 'Database is GTDB 220' >> {log} #uncomment if there is a text file with the version
-        # cat {input.ref}/VERSION.txt >> {log} #uncomment if there is a text file with the version 
-
-        kraken2 --use-names \
-            --threads {threads} \
-            --db {input.ref} \
-            --confidence {params.conf_threshold} \
-            --report-zero-counts \
-            --paired {input.R1} {input.R2} \
-            --report {output.report} \
-            --output {output.kraken} \
-            &>> {log}
-            
-        # Wall time logging
-        end_time=$(date +%s)
-        end_hr=$(date)
-        runtime=$((end_time - start_time))
-        hours=$((runtime / 3600))
-        mins=$(((runtime % 3600) / 60))
-        secs=$((runtime % 60))
-        echo "Finished at: $end_hr" >> {log}
-        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> {log}
-        """
-
-rule bracken:
-    input:
-        ref = f"{TAXONOMY_DB}",
-        report = f"{KRAKEN_OUTPUT_DIR}/{{sample}}.report.txt"
-    output:
-        species = f"{KRAKEN_OUTPUT_DIR}/species/{{sample}}_bracken.species.report.txt",
-        genus = f"{KRAKEN_OUTPUT_DIR}/genus/{{sample}}_bracken.genus.report.txt",
-        phylum = f"{KRAKEN_OUTPUT_DIR}/phylum/{{sample}}_bracken.phylum.report.txt"
-    log:f"{LOG_DIR}/bracken/{{sample}}.log"
-    conda:
-        "envs/kraken2.yaml"
-    threads: 2
-    params:
-        readlen = 150
-    shell:
-        r"""
-        set -euo pipefail
-
-        # Wall time tracking
-        start_time=$(date +%s)
-        start_hr=$(date)
-        echo "Started at: $start_hr" > {log}
-
-        echo 'bracken version:' >> {log}
-        bracken --version >> {log}
-
-        mkdir -p $(dirname {output.species}) $(dirname {output.genus}) $(dirname {output.phylum})
-
-        bracken -r {params.readlen} -t {threads} -d {input.ref} -i {input.report} -l S -o {output.species} &>> {log}
-
-        bracken -r {params.readlen} -t {threads} -d {input.ref} -i {input.report} -l G -o {output.genus} &>> {log}
-
-        bracken -r {params.readlen} -t {threads} -d {input.ref} -i {input.report} -l P -o {output.phylum} &>> {log}
-
-        # Wall time logging
-        end_time=$(date +%s)
-        end_hr=$(date)
-        runtime=$((end_time - start_time))
-        hours=$((runtime / 3600))
-        mins=$(((runtime % 3600) / 60))
-        secs=$((runtime % 60))
-        echo "Finished at: $end_hr" >> {log}
-        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> {log}
-        """
-rule combine_bracken_outputs:
-    input:
-        species = expand(f"{KRAKEN_OUTPUT_DIR}/species/{{sample}}_bracken.species.report.txt"),
-        genus = expand(f"{KRAKEN_OUTPUT_DIR}/genus/{{sample}}_bracken.genus.report.txt"),
-        phylum = expand(f"{KRAKEN_OUTPUT_DIR}/phylum/{{sample}}_bracken.phylum.report.txt")
-    output:
-        species = f"{KRAKEN_OUTPUT_DIR}/merged_abundance_species.txt",
-        genus = f"{KRAKEN_OUTPUT_DIR}/merged_abundance_genus.txt",
-        phylum = f"{KRAKEN_OUTPUT_DIR}/merged_abundance_phylum.txt"
-    log: f"{LOG_DIR}/bracken/combine_bracken_outputs.log"
-    conda:
-        "envs/kraken2.yaml"
-    shell:
-        r"""
-        set -euo pipefail
-
-        echo "Combining species bracken outputs..." > {log}
-        combine_bracken_outputs.py --files {input.species} --output {output.species} &>> {log}
-
-        echo "Combining genus bracken outputs..." >> {log}
-        combine_bracken_outputs.py --files {input.genus} --output {output.genus} &>> {log}
-
-        echo "Combining phylum bracken outputs..." >> {log}
-        combine_bracken_outputs.py --files {input.phylum} --output {output.phylum} &>> {log}
-        """
-rule bracken_extract:
-    input:
-        species_table = f"{KRAKEN_OUTPUT_DIR}/testing/merged_abundance_species.txt",
-        genus_table = f"{KRAKEN_OUTPUT_DIR}/testing/merged_abundance_genus.txt",
-        phylum_table = f"{KRAKEN_OUTPUT_DIR}/testing/merged_abundance_phylum.txt"
-    output:
-        species_raw = f"{KRAKEN_OUTPUT_DIR}/Bracken_species_raw_abundance.csv",
-        species_rel = f"{KRAKEN_OUTPUT_DIR}/Bracken_species_relative_abundance.csv", 
-        genus_raw = f"{KRAKEN_OUTPUT_DIR}/Bracken_genus_raw_abundance.csv",
-        genus_rel = f"{KRAKEN_OUTPUT_DIR}/Bracken_genus_relative_abundance.csv",
-        phylum_raw = f"{KRAKEN_OUTPUT_DIR}/Bracken_phylum_raw_abundance.csv",
-        phylum_rel = f"{KRAKEN_OUTPUT_DIR}/Bracken_phylum_relative_abundance.csv"
-    conda:
-        "envs/kraken2.yaml"
-    shell:
-        """
-        scripts/extract_bracken_columns.py --input {input.species_table} --level species --out-raw {output.species_raw} --out-rel {output.species_rel}
-        scripts/extract_bracken_columns.py --input {input.genus_table} --level genus --out-raw {output.genus_raw} --out-rel {output.genus_rel}
-        scripts/extract_bracken_columns.py --input {input.phylum_table} --level phylum --out-raw {output.phylum_raw} --out-rel {output.phylum_rel}
-
-        """
-
-rule rgi_reload_database:
-    input:
-        card_json = f"{RGI_CARD}/card.json",
-        card_fasta = f"{RGI_CARD}/card_reference.fasta"
-    output:
-        f"{LOG_DIR}/rgi_reload_db.done"
-    log:
-        f"{LOG_DIR}/rgi/rgi_reload_db.log"
-    conda:
-        "envs/rgi.yaml"
-    shell:
-        r"""
-        set -e
-
-        LOCALDB="{workflow.basedir}/localDB"
-
-        # Standard "is file, not dir" check
-        if [ -f "$LOCALDB" ]; then
-            echo "ERROR: localDB exists as a file, but should be a directory." >&2
-            exit 1
-        fi
-        mkdir -p "$LOCALDB"
-
-        # Debug output
-        echo "Current files in $LOCALDB before loading:" >> {log}
-        ls -lh "$LOCALDB" >> {log}
-
-        # Only reload if DB is not present (or is empty)
-        if [ -f "$LOCALDB/card.json" ] && [ -s "$LOCALDB/card.json" ] && \
-           [ -f "$LOCALDB/card_reference.fasta" ] && [ -s "$LOCALDB/card_reference.fasta" ]; then
-            echo "CARD local database already present in $LOCALDB, skipping reload." >> {log}
-        else
-            echo "Reloading CARD into $LOCALDB..." >> {log}
-            rgi load --card_json {input.card_json} --card_annotation {input.cexitard_fasta} --local --local_database "$LOCALDB" >> {log} 2>&1
-        fi
-
-        touch {output}
-        """
-
-rule rgi_bwt:
-    input:
-        R1 = f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R1.fastq.gz",
-        R2 = f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R2.fastq.gz",
-        reload_marker = f"{LOG_DIR}/rgi_reload_db.done"
-    output:
-        json = f"{CARD_RGI_OUTPUT_DIR}/{{sample}}_paired.allele_mapping_data.json",
-        allele = f"{CARD_RGI_OUTPUT_DIR}/{{sample}}_paired.allele_mapping_data.txt"
-    params:
-        outprefix = lambda wc: f"{CARD_RGI_OUTPUT_DIR}/{wc.sample}_paired"
-    log:
-        f"{LOG_DIR}/rgi/bwt_{{sample}}.log"
-    threads: 20
-    conda:
-        "envs/rgi.yaml"
-    shell:
-        r"""
-        set -o pipefail
-        export TMPDIR={TMPDIR}/bwt_{wildcards.sample}_$RANDOM
-        mkdir -p "$TMPDIR"
-        echo "Using TMPDIR: $TMPDIR" >> {log}
-        export RGI_DATA_PATH={RGI_CARD}
-        echo "RGI_DATA_PATH: {RGI_CARD}" >> {log}
-        start_time=$(date +%s)
-        echo "Started at: $(date)" >> {log}
-        echo 'RGI version:' >> {log}
-        rgi main --version >> {log}
-        echo 'bwt without wildcard' >> {log}
-        mkdir -p {CARD_RGI_OUTPUT_DIR}
-        (rgi bwt \
-            -1 {input.R1} \
-            -2 {input.R2} \
-            -a kma \
-            -n {threads} \
-            -o {params.outprefix} \
-            --local \
-            --clean \
-            ) 2>&1 | egrep -av '\[W::sam_parse1\]|mapped query cannot have zero coordinate' | awk 'NF' >> {log}
-
-        rgistatus=${{PIPESTATUS[0]}}
-        if [ $rgistatus -ne 0 ]; then
-        echo "ERROR: rgi bwt failed with exit code $rgistatus" >> {log}
-        exit $rgistatus
-        fi
-
-        end_time=$(date +%s)
-        runtime=$((end_time - start_time))
-
-        echo "Finished at: $(date)" >> {log}
-        echo "Wall time: $((runtime/3600))h $(((runtime%3600)/60))m $((runtime%60))s (total $runtime s)" >> {log}
-
-        echo "Cleaning up temp dir: $TMPDIR" >> {log}
-        rm -rf "$TMPDIR"
-        echo "Cleanup completed for: $TMPDIR" >> {log}
-        """
-
-

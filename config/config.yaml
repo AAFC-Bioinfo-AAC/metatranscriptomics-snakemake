@@ -10,7 +10,7 @@ reads_host_dep: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscr
 reads_rRNA_dep: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep"
 assemblies_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies"
 taxonomy_short_reads_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken" 
-amr_screaning_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi"
+amr_screening_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi"
 rnaquast_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast"
 co-assembly_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/09_megahit_coassembly"
 coassembly_index: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/10_coassembly_index" 
