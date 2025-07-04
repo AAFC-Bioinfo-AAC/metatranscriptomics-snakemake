@@ -1,7 +1,4 @@
 configfile: "config/config.yaml"
-## REMEMBER TO REMOVE TEST SUBSET
-# For test rules:
-SAMPLES_SUBSET = config["sample_subset"]
 
 from dotenv import load_dotenv
 import os
@@ -369,8 +366,8 @@ rule rnaquast_busco:
 
 rule megahit_coassembly:
     input: 
-        r1 = expand(f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R1.fastq.gz", sample=SAMPLES_SUBSET),
-        r2 = expand(f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R2.fastq.gz", sample=SAMPLES_SUBSET)
+        r1 = expand(f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R1.fastq.gz"),
+        r2 = expand(f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R2.fastq.gz")
     output:
         directory(MEGAHIT_DIR)
     threads: 60
@@ -693,9 +690,9 @@ rule bracken:
         """
 rule combine_bracken_outputs:
     input:
-        species = expand(f"{KRAKEN_OUTPUT_DIR}/species/{{sample}}_bracken.species.report.txt", sample=SAMPLES_SUBSET),
-        genus = expand(f"{KRAKEN_OUTPUT_DIR}/genus/{{sample}}_bracken.genus.report.txt", sample=SAMPLES_SUBSET),
-        phylum = expand(f"{KRAKEN_OUTPUT_DIR}/phylum/{{sample}}_bracken.phylum.report.txt", sample=SAMPLES_SUBSET)
+        species = expand(f"{KRAKEN_OUTPUT_DIR}/species/{{sample}}_bracken.species.report.txt"),
+        genus = expand(f"{KRAKEN_OUTPUT_DIR}/genus/{{sample}}_bracken.genus.report.txt"),
+        phylum = expand(f"{KRAKEN_OUTPUT_DIR}/phylum/{{sample}}_bracken.phylum.report.txt")
     output:
         species = f"{KRAKEN_OUTPUT_DIR}/merged_abundance_species.txt",
         genus = f"{KRAKEN_OUTPUT_DIR}/merged_abundance_genus.txt",

@@ -74,7 +74,6 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 
   > **Wall time:** For the co-assembly of three samples was 52 min 28 sec with 60 cores. For large co-assemblies a large mem node will need to be used (will need to be tested at some point)
 
-  > **Note to self:**  currently using a sub set sample list that will need to be removed after testing. The `sample=SAMPLES_SUBSET` will need to be changed to `SAMPLES`. The subset lines will need to be removed from the `config/config.yaml` file and the top of the `Snakemake`.
 
 - **`index_coassembly`** use Bowtie2 to make an index that can be used to map the reads to the co-assembly.
   > **Wall time:** Wall time with 8 threads was 1m 5s. 
@@ -106,8 +105,7 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 
    > **Note to self:** This rule is also making `.report_bracken_species.txt` at each level in the `06_kraken` directory. At some point see if we can either place these into a direcorory called `reports` or have them cleaned up in the shell block.
 
-- **`rule combine_bracken_outputs`** combines the reports for all the samples   
-  > **Note to self:**  currently using a sub set sample list that will need to be removed after testing. The `sample=SAMPLES_SUBSET` will need to be changed to `SAMPLES`. The subset lines will need to be removed from the `config/config.yaml` file and the top of the `Snakemake`.
+- **`rule combine_bracken_outputs`** combines the reports for all the samples  
 
 - **`rule bracken_extract`** used a python script `scripts/extract_bracken_columns.py` to generate tables for the raw and relative abundance for each taxonomic level used in `rule bracken`. The resulting outputs are `Bracken_[species/genus/phylum]_relative_abundance.csv` and Bracken_[species/genus/phylum]_raw_abundance.csv`.
 

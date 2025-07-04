@@ -1,10 +1,3 @@
-###FOR TESTING ONLY #####
-#Subset of samples
-sample_subset:
-  - LLC82Sep06GR
-  - LLC82Nov10GR
-  - LLC81Sep06CR
-
 ### Sample list ###
 # Prefix of the paired FASTQ reads
 # FASTQ files must has the suffix r1.fastq.gz and r2.fastq.gz or R1.fastq.gz and R2.fastq.gz
