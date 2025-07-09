@@ -352,31 +352,17 @@ snakemake --conda-create-envs-only
 
 ## Credits
 
-*Example:*
-
-*This repository was written by [Your Name/Team Name].*
-
-*We thank the following people and teams for their assistance in the development of this project:*
-
-*[Contributor 1]*
-
-*[Contributor 2]*
-
-*[Acknowledged Organizations or Teams]*
+This repository was written by Katherine James-Gzyl and assisted by Devin Holman and Arun Kommadath.
 
 ---
 
 ## Contribution
-
-*Provide guidelines for contributing to the project.*
 
 If you would like to contribute to this project, please review the guidelines in [CONTRIBUTING.md](CONTRIBUTING.md) and ensure you adhere to our [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) to foster a respectful and inclusive environment.
 
 ---
 
 ## License
-
-*Provide license information, changing from the default MIT included where required. Add copyright statement in License.*
 
 This project is distributed under the MIT License. For complete details and copyright information, see the [LICENSE](LICENSE) file.
 
