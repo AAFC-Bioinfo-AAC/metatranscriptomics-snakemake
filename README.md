@@ -46,6 +46,7 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
     - [Publications](#publications)
     - [Resources](#resources)
     - [Tools/Software](#toolssoftware)
+  - [Citation](#citation)
 
 ---
 
@@ -389,3 +390,9 @@ The pipeline and analysis associated with it is published here:
 ### Tools/Software
 
 References to tools and software used here can be found in the [CITATIONS.md](CITATIONS.md) file.
+
+## Citation
+
+*Provide information on how to cite this repository. Use a CITATION.cff file where required. Citation tools like GitHub and Zenodo will use this file to generate standardized references.*
+
+If you use this project in your work, please cite it using the [CITATION.cff](CITATION.cff) file.
