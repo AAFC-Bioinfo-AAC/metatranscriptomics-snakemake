@@ -1,0 +1,10 @@
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - bowtie2=2.5.4
+  - samtools=1.21
+  - bedtools=2.31
+  - pigz=2.6
+  

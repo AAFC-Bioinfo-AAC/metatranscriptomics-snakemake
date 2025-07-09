@@ -1,0 +1,7 @@
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+- rgi=6.0.4
+- kma>=1.4.17

@@ -1,0 +1,8 @@
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - rnaquast=2.3.0
+  - busco=5.8.3
+  - python>=3.7
