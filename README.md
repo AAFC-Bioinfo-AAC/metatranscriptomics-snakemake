@@ -17,6 +17,8 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
   - [About](#about)
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
+    - [Workflow diagram](#workflow-diagram)
+    - [Snakemake rules](#snakemake-rules)
   - [Data](#data)
   - [Parameters](#parameters)
   - [Usage](#usage)
@@ -46,7 +48,50 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 
 ## Overview
 
-*Provide a summary of the steps or processes the code performs. Include:*
+### Workflow diagram
+
+ ```mermaid
+ flowchart TD
+    %% Title
+    %% Metatranscriptome Assembly and Analysis Pipeline
+
+    subgraph PREPROC [Pre-processing]
+        A[Paired Reads] -->|QC & trim| B{fastp}
+        B --> C[Trimmed Reads]
+        B --> L((Fastp QC Report))
+        C -->|Host/PhiX removal| D{Bowtie2}
+        D --> E[Non-host, Non-PhiX Reads]
+    end
+
+    subgraph DEPLETION [rRNA Depletion]
+        E --> F{SortMeRNA}
+        F --> G[rRNA-depleted Reads]
+    end
+
+    subgraph ASSEMBLY [Assembly]
+        G --> H{rnaSPAdes}
+        H --> I((Assembled Transcripts))
+    end
+
+    subgraph QC_REPORTS [Reports and Files for Downstream Analysis]
+        I --> S{rnaQUAST}
+        S --> U((Assembly QC Report))
+        G --> M{Kraken2}
+        M --> N{Bracken}
+        N --> O((Taxonomic Profile))
+        G --> W{RGI}
+        W --> Q((AMR Profile))
+    end
+
+    %% Optional transition from assembled transcripts back to Bowtie2 mapping (read support check)
+    I --> T{Bowtie2}
+    T --> V((Read Mapping, 
+            Coverage, and
+            Alignment Stats))
+    T --> X((Sorted BAM files))
+```
+
+### Snakemake rules
 
 - **`rule fastp_pe`** reads the sample names from the `samples.txt` file and processes paired-end FASTQ files with the naming conventions `*_R1.fastq.gz` / `*_r1.fastq.gz` and `*_R2.fastq.gz` / `*_r2.fastq.gz`. This step performs adapter trimming, quality trimming, and filtering. The output files are the trimmed paired reads (`*_r1.fastq.gz`/`*_r2.fastq.gz`), unpaired reads (`*_u1.fastq.gz`/`*_u2.fastq.gz`), and QC reports. Default parameters are used. The unpaired reads can be removed after confirming that the majority of reads have a pair that passed QC.
 
@@ -124,51 +169,6 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 
 - **`rules Cazymes`**
      > **Note to self:** Do we want to include this in the pipeline or use transcripts in exisiting Bash pipeline made by Arun.
-
-- *A diagram or workflow visual that illustrates the main steps or processes.*
-
-**Example**:
-
- ```mermaid
- flowchart TD
-    %% Title
-    %% Metatranscriptome Assembly and Analysis Pipeline
-
-    subgraph PREPROC [Pre-processing]
-        A[Paired Reads] -->|QC & trim| B{fastp}
-        B --> C[Trimmed Reads]
-        B --> L((Fastp QC Report))
-        C -->|Host/PhiX removal| D{Bowtie2}
-        D --> E[Non-host, Non-PhiX Reads]
-    end
-
-    subgraph DEPLETION [rRNA Depletion]
-        E --> F{SortMeRNA}
-        F --> G[rRNA-depleted Reads]
-    end
-
-    subgraph ASSEMBLY [Assembly]
-        G --> H{rnaSPAdes}
-        H --> I((Assembled Transcripts))
-    end
-
-    subgraph QC_REPORTS [Reports and Files for Downstream Analysis]
-        I --> S{rnaQUAST}
-        S --> U((Assembly QC Report))
-        G --> M{Kraken2}
-        M --> N{Bracken}
-        N --> O((Taxonomic Profile))
-        G --> W{RGI}
-        W --> Q((AMR Profile))
-    end
-
-    %% Optional transition from assembled transcripts back to Bowtie2 mapping (read support check)
-    I --> T{Bowtie2}
-    T --> V((Read Mapping, 
-            Coverage, and
-            Alignment Stats))
-    T --> X((Sorted BAM files))
-```
 
 ---
 
