@@ -2,9 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## ABOUT
-
-*Summary of the project:*
+## About
 
 The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illumina shotgun metatranscriptomic sequencing as input. The first part of the pipeline processes the reads using Fastp, Bowtie2, and SortMeRNA to perform quality filtering, deplete host and PhiX reads, and removes ribosomal (r)RNA. These cleaned reads are then used for taxonomic classification with Kraken2 and GTDB, antimicrobial gene profiling with RGI and CARD, and transcriptome assembly into presumptive messenger (m)RNA transcripts using RNA SPAdes. To asses the quality of transcripts rnaQUAST and mapping the cleaned reads back to assembly are used. The SAM files from mapping the reads back to the assembly can be used in further expression studies.
 
@@ -14,29 +12,39 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 
 ---
 
-## TABLE OF CONTENTS
-
-| **Section**                                                                | **Description**                                                                                                   |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| [ABOUT](#about)                                                            | *A summary of the project, may include its origin, purpose, and functionality, along with configuration options.* |
-| [OVERVIEW](#overview)                                                      | *A summary of the project's processes, supported by a visual representation (e.g., a pipeline diagram).*          |
-| [DATA](#data)                                                              | *Details of the data files used in the project.*                                                                  |
-| [PARAMETERS](#parameters)                                                  | *A table describing configurable parameters, their expected values, and their impact on the output.*              |
-| [USAGE](#usage)                                                            | *Detailed guidance on how to use the project, including pre-requisites, instructions, and optional notes.*        |
-| &nbsp;&nbsp;&nbsp;&nbsp;[Pre-requisites](#pre-requisites)                  | *Dependencies and hardware/software requirements.*                                                                |
-| &nbsp;&nbsp;&nbsp;&nbsp;[Instructions](#instructions)                      | *Step-by-step directions for running the code, including examples and links to related resources.*                |
-| &nbsp;&nbsp;&nbsp;&nbsp;[Notes](#notes)                                    | *Additional optional details, tips, or alternative methods.*                                                      |
-| [OUTPUT](#output)                                                          | *Details of the output files generated, which may include formats, locations, and naming conventions.*            |
-| [CREDITS](#credits)                                                        | *Acknowledgment of contributors, teams, and organizations that supported the project.*                            |
-| [CONTRIBUTION](#contribution)                                              | *Guidelines for contributing to the repository, with a link to the `CONTRIBUTING.md` file.*                       |
-| [COPYRIGHT](#copyright)                                                    | *Ownership details*                                                                                               |
-| [LICENSE](#license)                                                        | *Information about the license, including a link to the `LICENSE` file.*                                          |
-| [PUBLICATIONS & ADDITIONAL RESOURCES](#publications--additional-resources) | *Links to publications, articles, or other resources related to the project.*                                     |
-| [CITATION](#citation)                                                      | *Instructions for citing the project, with references to the `CITATION.cff` and `CITATIONS.md` files.*            |
+## Table of Contents
+- [Metatranscriptomics Snakemake Pipeline](#metatranscriptomics-snakemake-pipeline)
+  - [About](#about)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Data](#data)
+  - [Parameters](#parameters)
+  - [Usage](#usage)
+    - [Warnings](#warnings)
+    - [Pre-requisites](#pre-requisites)
+      - [Software](#software)
+      - [Additional Data Files and Databases for Software](#additional-data-files-and-databases-for-software)
+    - [Setup Instructions](#setup-instructions)
+      - [1. Installation](#1-installation)
+      - [2. Configuration](#2-configuration)
+        - [2.1. config.yaml](#21-configyaml)
+        - [2.2. Environment file](#22-environment-file)
+        - [2.3. Sample list](#23-sample-list)
+      - [3. Running the pipeline](#3-running-the-pipeline)
+        - [3.1.Conda Environments](#31conda-environments)
+    - [Notes](#notes)
+  - [OUTPUT](#output)
+  - [Credits](#credits)
+  - [Contribution](#contribution)
+  - [License](#license)
+  - [References](#references)
+    - [Publications](#publications)
+    - [Resources](#resources)
+    - [Tools/Software](#toolssoftware)
 
 ---
 
-## OVERVIEW
+## Overview
 
 *Provide a summary of the steps or processes the code performs. Include:*
 
@@ -164,7 +172,7 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 
 ---
 
-## DATA
+## Data
 
 The raw input data must be in the form of paired-end FASTQ files generated from metatranscriptomics experiments.
 
@@ -177,19 +185,9 @@ The raw input data must be in the form of paired-end FASTQ files generated from 
 
 - **Dataset 1 Filename**: Sequencing reads (FASTQ) from beef cattle rumen samples are provided for three samples: `LLC42Nov10C`, `LLC42Sep06CR`, and `LLC82Sep06GR`. There is also a subsampled test file, `test_LLC82Sep06GR`, which can be used for all steps dealing with unassembled data but will fail for the RNA SPAdes step.
 
-*For large external datasets, provide links or instructions to download or utilize them.*
-
-**Example:**
-
-To download the raw data:
-
-```bash
-curl -O https://example.com/path/to/dataset1.tar.gz
-```
-
 ---
 
-## PARAMETERS
+## Parameters
 
 | Parameter          | Value                                                                                               |
 | -------------------- | ----------------------------------------------------------------------------------------------------- |
@@ -198,15 +196,15 @@ curl -O https://example.com/path/to/dataset1.tar.gz
 
 ---
 
-## USAGE
+## Usage
 
 ### Warnings
 
-- **Enviroment varable function**
-  The `.env` file can overwirte the `config/config.ymal` file
+- **Environment variable function**
+  The `.env` file can overwrite the `config/config.ymal` file
 
 - **Current Issues**
-  - The TMPDIR varable set in the .env file is not working. For a temp fix the TMPDIR has been set in the main Snakemake workflow
+  - The TMPDIR variable set in the .env file is not working. For a temp fix the TMPDIR has been set in the main Snakemake workflow
 
   - temp folder is set to `/gpfs/fs7/aafc/scratch/$USER/tmpdir` for running on the GPSC.
 
@@ -252,11 +250,8 @@ curl -O https://example.com/path/to/dataset1.tar.gz
 rnaQUAST uses the BUSCO bacterial and archaeal lineages. The directory path to these lineages must be provided.
 
 - The conda enviroments used in the pipeline need to be generated before running with `snakemake --use-conda --conda-create-envs-only`
-- *Specific programming languages, libraries, or frameworks (e.g., Python 3.9, NumPy).*
-- *Installation instructions for dependencies (e.g., pip install, conda environments).*
-- *Hardware requirements, if any (e.g., CPU/GPU specifications, memory, specs used when running with SLURM).*
 
-### Instructions
+### Setup Instructions
 
 #### 1. Installation
 
@@ -331,13 +326,6 @@ Load the required conda enviroments for the pipeline with:
 snakemake --conda-create-envs-only
 ```
   
-*DETAILED Step-by-step guide to running the code. Can include:*
-
-- *Command-line examples or scripts to execute.*
-- *Screenshots, images, or videos illustrating usage.*
-- *Links to detailed documentation or tutorials.*
-- *Diagrams showing data flow or system behavior.*
-
 ### Notes
 
 - Kraken2: Large compute node with 600 GB. With 16 CUPs wall time was 7m 56s. With 2 CPUs wall time was 19m 13s.
@@ -348,58 +336,69 @@ snakemake --conda-create-envs-only
 
 ## OUTPUT
 
-*Describe the expected outputs of the code. Include:*
+*Provide format, location, and naming of result files, and a brief description.*
 
-- *File types (e.g., `.csv`, `.txt`, `.bam`).*
-- *Location of the files.*
-- *File naming conventions.*
-- *Examples of output files or links to them, if applicable.*
+*Example Output:*
 
----
+*Output files include:*
 
-## CREDITS
+*- results/reports/summary.csv: Key metrics from analysis.*
 
-**Example:**
-"This repository was written by [Your Name/Team Name]."
-"We thank the following people and teams for their assistance in the development of this project:"
+*- results/logs/pipeline.log: Step-by-step log.*
 
-- [Contributor 1]
-- [Contributor 2]
-- [Acknowledged Organizations or Teams]
+*- results/plots/visualization.png: Output plot.*
 
 ---
 
-## CONTRIBUTION
+## Credits
 
-If you would like to contribute to this project, please consult [CONTRIBUTING.md](CONTRIBUTING.md)
+*Example:*
 
----
+*This repository was written by [Your Name/Team Name].*
 
-## COPYRIGHT
+*We thank the following people and teams for their assistance in the development of this project:*
 
-Government of Canada, Agriculture & Agri-Food Canada
+*[Contributor 1]*
 
----
+*[Contributor 2]*
 
-## LICENSE
-
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+*[Acknowledged Organizations or Teams]*
 
 ---
 
-## PUBLICATIONS & ADDITIONAL RESOURCES
+## Contribution
 
-*IF APPLICABLE: Include any publications, articles, or additional resources that are related to the project.*
+*Provide guidelines for contributing to the project.*
 
-- *Links to related papers or articles.*
-- *References for bioinformatics tools or methods used in the code.*
-
-#### ABCC_RCBA_Guide
-
-Guidelines (under development) for additional context and supplementary materials that align with this project.
+If you would like to contribute to this project, please review the guidelines in [CONTRIBUTING.md](CONTRIBUTING.md) and ensure you adhere to our [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) to foster a respectful and inclusive environment.
 
 ---
 
-## CITATION
+## License
 
-If you use this repository for your analysis, please cite it using the [CITATION.cff](CITATION.cff) file. An extensive list of references for the tools used can be found in the [CITATIONS.md](CITATIONS.md) file.
+*Provide license information, changing from the default MIT included where required. Add copyright statement in License.*
+
+This project is distributed under the MIT License. For complete details and copyright information, see the [LICENSE](LICENSE) file.
+
+---
+
+## References
+
+*Provide references to key publications and any useful resources for tools/software used. Formal citations of the tools used may also be provided via a CITATIONS.md file.*
+
+*Example References:*
+
+### Publications
+
+The pipeline and analysis associated with it is published here:
+
+- Your published paper title – Journal, Year.
+
+### Resources
+
+- Link to Snakemake Manual
+- Link to Tool X Documentation
+  
+### Tools/Software
+
+References to tools and software used here can be found in the [CITATIONS.md](CITATIONS.md) file.
