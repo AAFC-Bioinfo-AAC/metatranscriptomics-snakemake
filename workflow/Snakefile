@@ -131,9 +131,9 @@ rule fastp_pe:
         json = f"{TRIMMED_DIR}/{{sample}}.fastp.json"
     log:
         f"{LOG_DIR}/fastp/{{sample}}.fastp.log"
-    threads: 10
+    threads: 4
     wrapper:
-        "file://snakemake-wrappers/bio/fastp"
+        "file:///gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-pipeline-snakemake/snakemake-wrappers/bio/fastp"
 
 rule bowtie2_align:
     input:
