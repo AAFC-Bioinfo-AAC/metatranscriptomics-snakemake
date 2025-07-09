@@ -4,7 +4,7 @@
 
 ## About
 
-The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illumina shotgun metatranscriptomic sequencing as input. The first part of the pipeline processes the reads using Fastp, Bowtie2, and SortMeRNA to perform quality filtering, deplete host and PhiX reads, and removes ribosomal (r)RNA. These cleaned reads are then used for taxonomic classification with Kraken2 and GTDB, antimicrobial gene profiling with RGI and CARD, and transcriptome assembly into presumptive messenger (m)RNA transcripts using RNA SPAdes. To asses the quality of transcripts rnaQUAST and mapping the cleaned reads back to assembly are used. The SAM files from mapping the reads back to the assembly can be used in further expression studies.
+The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illumina shotgun metatranscriptomic sequencing as input. The first part of the pipeline processes the reads using fastp, Bowtie2, and SortMeRNA to perform quality filtering, deplete host and PhiX reads, and removes ribosomal (r)RNA. These cleaned reads are then used for taxonomic classification with Kraken2 and GTDB, antimicrobial gene profiling with RGI and CARD, and transcriptome assembly into presumptive messenger (m)RNA transcripts using RNA SPAdes. To asses the quality of transcripts rnaQUAST and mapping the cleaned reads back to assembly are used. The SAM files from mapping the reads back to the assembly can be used in further expression studies.
 
 - *Tools that still need to be added to the pipeline are CoverM, and CAZyme analysis*
 - *The different ways the code can be configured or customized for specific use cases.*
@@ -99,11 +99,11 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 - **`rule fastp_pe`** reads the sample names from the `samples.txt` file and processes paired-end FASTQ files with the naming conventions `*_R1.fastq.gz` / `*_r1.fastq.gz` and `*_R2.fastq.gz` / `*_r2.fastq.gz`. This step performs adapter trimming, quality trimming, and filtering. The output files are the trimmed paired reads (`*_r1.fastq.gz`/`*_r2.fastq.gz`), unpaired reads (`*_u1.fastq.gz`/`*_u2.fastq.gz`), and QC reports. Default parameters are used. The unpaired reads can be removed after confirming that the majority of reads have a pair that passed QC.
 
 - **`rule bowtie2_align`** uses the trimmed paired-end files from `rule fastp_pe` and aligns them to the specified index. The resulting file is a reference-aligned BAM file. Default parameters are used.
-  > **Wall time:** Tests for single sample. When total cores was 60 (bowtie2 44, samtools view 4, samotools sort 12) time was 12m 18s. Reduced to total cores 24 (bowtie2 16, samtools view 4, samotools sort 8)
+  > **Wall time:** Tests for single sample. When total cores was 60 (bowtie2 44, SAMtools view 4, SAMtools sort 12) time was 12m 18s. Reduced to total cores 24 (bowtie2 16, SAMtools view 4, SAMtools sort 8)
 
 - **`rule extract_unmapped_fastq`** takes the sorted BAM file as input and extracts the reads that did not align into paired-end FASTQ files depleted of host and PhiX reads (`*_trimmed_clean_R1.fastq.gz`/`*_trimmed_clean_R2.fastq.gz`). Default parameters are used.
 
-  > **Wall time:** Tests for single sample. When 60 cores were used and there was no splitting the wall time was 17m 57s. Changed to a 80:20 ratio of splitting between samtools and pigz. Total cores is 60 so samtools will get 48 and pigz 12. A temp directory was added and wall time logging has been improved.
+  > **Wall time:** Tests for single sample. When 60 cores were used and there was no splitting the wall time was 17m 57s. Changed to a 80:20 ratio of splitting between SAMtools and pigz. Total cores is 60 so SAMtools will get 48 and pigz 12. A temp directory was added and wall time logging has been improved.
 
 - **`rule sortmerna`** aligns the host-depleted reads to an rRNA database and outputs the rRNA-depleted reads (`*_rRNAdep_R1.fastq.gz`/`*_rRNAdep_R2.fastq.gz`). These rRNA-depleted reads will be used for downstream analysis. The database used for testing the pipeline was `smr_v4.3_default_db.fasta`, available from the Reference RNA databases (database.tar.gz) file at [sortmerna release v4.3.3](https://github.com/sortmerna/sortmerna/releases/tag/v4.3.3). Default parameters were used.
 
@@ -130,7 +130,7 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 
   > **Wall time:** For one sample using 40 cores was 9m 53s. Reduced cores to 16 and will check wall time.
 
-- **`assembly_stats_depth`** producess a `flagstat.txt` summary of the reads that mapped back to the assembly, a `coverage.txt.gz` depth file with per-base coverage across the co-assembly for each sample, and a `idxstats.txt.gz` with read counts per transcript for each sample.
+- **`assembly_stats_depth`** produces a `flagstat.txt` summary of the reads that mapped back to the assembly, a `coverage.txt.gz` depth file with per-base coverage across the co-assembly for each sample, and a `idxstats.txt.gz` with read counts per transcript for each sample.
 
 - **`rule prodigal_genes`** used to make a FASTA file of predicted protein sequences `coassembly.faa` and the predicted genes `coassembly.fna`, a feature formatted annotation file `coassembly.gff` and a simplified annotation formate file `coassembly.saf` that is used by feature counts.
 
@@ -147,7 +147,7 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 - **`rule bracken`** uses the report file from kraken to output a report at the species, genus and phylum level for each sample. These intermediate files are fed into `rule combine_bracken_outputs`.
 
    > **Wall time** with 10 threads the wall time was 9s. The cores have been reduced to 2.
-   > **Note to self:** This rule is also making `.report_bracken_species.txt` at each level in the `06_kraken` directory. At some point see if we can either place these into a direcorory called `reports` or have them cleaned up in the shell block.
+   > **Note to self:** This rule is also making `.report_bracken_species.txt` at each level in the `06_kraken` directory. At some point see if we can either place these into a directory called `reports` or have them cleaned up in the shell block.
 
 - **`rule combine_bracken_outputs`** combines the reports for all the samples  
 
@@ -168,10 +168,10 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 
   > **Wall time** with 40 cores the job took 18m 7s. Try reducing to 20 cores. If time does not increase much further reduce cores.
 - **`rule coverm`**
-   > **Note to self:** Add in the option of running CoverM. This should not be part of the main pipeline but an option if MAGs from metagenomic sequencing of the same samples are avalible.
+   > **Note to self:** Add in the option of running CoverM. This should not be part of the main pipeline but an option if MAGs from metagenomic sequencing of the same samples are available.
 
 - **`rules Cazymes`**
-     > **Note to self:** Do we want to include this in the pipeline or use transcripts in exisiting Bash pipeline made by Arun.
+     > **Note to self:** Do we want to include this in the pipeline or use transcripts in existing Bash pipeline made by Arun.
 
 ---
 
@@ -186,7 +186,7 @@ The raw input data must be in the form of paired-end FASTQ files generated from 
 
 **Example:**
 
-- **Dataset 1 Filename**: Sequencing reads (FASTQ) from beef cattle rumen samples are provided for three samples: `LLC42Nov10C`, `LLC42Sep06CR`, and `LLC82Sep06GR`. There is also a subsampled test file, `test_LLC82Sep06GR`, which can be used for all steps dealing with unassembled data but will fail for the RNA SPAdes step.
+- **Dataset 1 Filename**: Sequencing reads (FASTQ) from beef cattle rumen samples are provided for three samples: `LLC42Nov10C`, `LLC42Sep06CR`, and `LLC82Sep06GR`. There is also a sub-sampled test file, `test_LLC82Sep06GR`, which can be used for all steps dealing with un-assembled data but will fail for the RNA SPAdes step.
 
 ---
 
@@ -219,7 +219,7 @@ The raw input data must be in the form of paired-end FASTQ files generated from 
   Kraken2 requires a Kraken2-formatted GTDB database. The GTDB release tested with this pipeline was 220.
 
 - **RGI BWT/CARD**  RGI BWT requires the CARD (Comprehensive Antibiotic Resistance Database) database. The version tested in this pipeline was 4.0.1. The database can be located on a common drive or in your working directory.  
-  Instructions for installing the CARD database are available on [arpcard rgi github](https://github.com/arpcard/rgi/blob/master/docs/rgi_bwt.rst).  
+  Instructions for installing the CARD database are available on [CARD RGI github](https://github.com/arpcard/rgi/blob/master/docs/rgi_bwt.rst).  
   Steps copied from the RGI documentation:
 
   **Download CARD data:**
@@ -240,14 +240,14 @@ The raw input data must be in the form of paired-end FASTQ files generated from 
 - **BUSCO**
 rnaQUAST uses the BUSCO bacterial and archaeal lineages. The directory path to these lineages must be provided.
 
-- The conda enviroments used in the pipeline need to be generated before running with `snakemake --use-conda --conda-create-envs-only`
+- The conda environments used in the pipeline need to be generated before running with `snakemake --use-conda --conda-create-envs-only`
 
 ### Setup Instructions
 
 #### 1. Installation
 
 Clone the repository into the directory where you want to run the metatranscriptomics Snakemake pipeline.  
-**Note:** This location must be on an HPCC (High Performance Computing Cluster) with access to a high-memory node (at least 600 GB RAM) and sufficient storage for all metatranscriptomics analyses.
+**Note:** This location must be on an HPC (High Performance Computing) cluster with access to a high-memory node (at least 600 GB RAM) and sufficient storage for all metatranscriptomics analyses.
 
 ```bash
 cd /path/to/metatranscriptomics
@@ -268,13 +268,13 @@ The `config.yaml` file must be located in the `config` directory, which resides 
 
 **Note:**  
 You must edit `config.yaml` **before** running the pipeline to ensure all paths are correctly set.  
-For best practice, use database paths that are in common locations to all users on the HPCC.
+For best practice, use database paths that are in common locations to all users on the HPC.
 
 ##### 2.2. Environment file
 
-This file must contain paths to the TMPDIR file and the RGI databse. Follow these instructions:
+This file must contain paths to the TMPDIR file and the RGI database. Follow these instructions:
 
-- In the main Snakemake direcory (where you are running Snakemake from)
+- In the main Snakemake directory (where you are running Snakemake from)
 
 ```bash
 touch .env
@@ -311,7 +311,7 @@ Snakemake can automatically create and load Conda environments for each rule in 
 - `RNAspades.yaml`
 - `sortmerna.yaml`
 
-Load the required conda enviroments for the pipeline with:
+Load the required conda environments for the pipeline with:
 
 ```bash
 snakemake --conda-create-envs-only
@@ -321,7 +321,7 @@ snakemake --conda-create-envs-only
 
 #### Warnings
 
-- The `.env` file can overwrite the `config/config.ymal` file
+- The `.env` file can overwrite the `config/config.yaml` file
 
 #### Current issues
 
