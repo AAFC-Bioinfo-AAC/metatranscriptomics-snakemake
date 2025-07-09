@@ -22,10 +22,9 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
   - [Data](#data)
   - [Parameters](#parameters)
   - [Usage](#usage)
-    - [Warnings](#warnings)
     - [Pre-requisites](#pre-requisites)
       - [Software](#software)
-      - [Additional Data Files and Databases for Software](#additional-data-files-and-databases-for-software)
+      - [Databases](#databases)
     - [Setup Instructions](#setup-instructions)
       - [1. Installation](#1-installation)
       - [2. Configuration](#2-configuration)
@@ -35,6 +34,9 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
       - [3. Running the pipeline](#3-running-the-pipeline)
         - [3.1.Conda Environments](#31conda-environments)
     - [Notes](#notes)
+      - [Warnings](#warnings)
+      - [Current Issues](#current-issues)
+      - [Resource usage](#resource-usage)
   - [OUTPUT](#output)
   - [Credits](#credits)
   - [Contribution](#contribution)
@@ -198,25 +200,13 @@ The raw input data must be in the form of paired-end FASTQ files generated from 
 
 ## Usage
 
-### Warnings
-
-- **Environment variable function**
-  The `.env` file can overwrite the `config/config.ymal` file
-
-- **Current Issues**
-  - The TMPDIR variable set in the .env file is not working. For a temp fix the TMPDIR has been set in the main Snakemake workflow
-
-  - temp folder is set to `/gpfs/fs7/aafc/scratch/$USER/tmpdir` for running on the GPSC.
-
-  - `$USER` is changed to actual user name. This was done for testing. I wasn't sure if the `$USER` was being expanded correctly.
-
 ### Pre-requisites
 
 #### Software
 
 - Snakemake version 9.6.0
 
-#### Additional Data Files and Databases for Software
+#### Databases
 
 - **Bowtie2**  
   Bowtie2 uses an index of reference sequences to align reads. This index must be created before running the pipeline. The index files (with the `.bt2` extension) must be located in the `index` directory. Make sure to update the prefix of these files in the `config.yaml` file.
@@ -328,11 +318,21 @@ snakemake --conda-create-envs-only
   
 ### Notes
 
-- Kraken2: Large compute node with 600 GB. With 16 CUPs wall time was 7m 56s. With 2 CPUs wall time was 19m 13s.
-*IF APPLICABLE: Any information, such as tips, warnings, or alternative ways to run the code.*
-*OTHERWISE: Write N/A*
+#### Warnings
 
----
+- The `.env` file can overwrite the `config/config.ymal` file
+
+#### Current Issues
+
+- The TMPDIR variable set in the .env file is not working. For a temp fix the TMPDIR has been set in the main Snakemake workflow
+
+- temp folder is set to `/gpfs/fs7/aafc/scratch/$USER/tmpdir` for running on the GPSC.
+
+- `$USER` is changed to actual user name. This was done for testing. I wasn't sure if the `$USER` was being expanded correctly.
+
+#### Resource usage
+
+- Kraken2: Large compute node with 600 GB. With 16 CUPs wall time was 7m 56s. With 2 CPUs wall time was 19m 13s.
 
 ## OUTPUT
 
