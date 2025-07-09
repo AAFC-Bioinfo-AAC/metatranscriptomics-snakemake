@@ -136,6 +136,8 @@ For answers to common questions about this code of conduct, see the FAQ at
 [FAQ]: https://www.contributor-covenant.org/faq
 [translations]: https://www.contributor-covenant.org/translations
 
+______________________
+
 # Code de conduite
 
 ([English](#contributor-covenant-code-of-conduct))
