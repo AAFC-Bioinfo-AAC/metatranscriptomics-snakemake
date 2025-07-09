@@ -13,6 +13,7 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 ---
 
 ## Table of Contents
+
 - [Metatranscriptomics Snakemake Pipeline](#metatranscriptomics-snakemake-pipeline)
   - [About](#about)
   - [Table of Contents](#table-of-contents)
@@ -32,10 +33,10 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
         - [2.2. Environment file](#22-environment-file)
         - [2.3. Sample list](#23-sample-list)
       - [3. Running the pipeline](#3-running-the-pipeline)
-        - [3.1.Conda Environments](#31conda-environments)
+        - [3.1.Conda environments](#31conda-environments)
     - [Notes](#notes)
       - [Warnings](#warnings)
-      - [Current Issues](#current-issues)
+      - [Current issues](#current-issues)
       - [Resource usage](#resource-usage)
   - [OUTPUT](#output)
   - [Credits](#credits)
@@ -104,7 +105,7 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 
   > **Wall time:** Tests for single sample. When 60 cores were used and there was no splitting the wall time was 17m 57s. Changed to a 80:20 ratio of splitting between samtools and pigz. Total cores is 60 so samtools will get 48 and pigz 12. A temp directory was added and wall time logging has been improved.
 
-- **`rule sortmerna`** aligns the host-depleted reads to an rRNA database and outputs the rRNA-depleted reads (`*_rRNAdep_R1.fastq.gz`/`*_rRNAdep_R2.fastq.gz`). These rRNA-depleted reads will be used for downstream analysis. The database used for testing the pipeline was `smr_v4.3_default_db.fasta`, available [here](https://github.com/sortmerna/sortmerna/releases/tag/v4.3.3). Default parameters were used.
+- **`rule sortmerna`** aligns the host-depleted reads to an rRNA database and outputs the rRNA-depleted reads (`*_rRNAdep_R1.fastq.gz`/`*_rRNAdep_R2.fastq.gz`). These rRNA-depleted reads will be used for downstream analysis. The database used for testing the pipeline was `smr_v4.3_default_db.fasta`, available from the Reference RNA databases (database.tar.gz) file at [sortmerna release v4.3.3](https://github.com/sortmerna/sortmerna/releases/tag/v4.3.3). Default parameters were used.
 
   > **Wall time:** With 60 cores wall time was 4h 48m 56s for one sample. See what wall time is with a reduction to 48 cores and then 32.
 
@@ -218,7 +219,7 @@ The raw input data must be in the form of paired-end FASTQ files generated from 
   Kraken2 requires a Kraken2-formatted GTDB database. The GTDB release tested with this pipeline was 220.
 
 - **RGI BWT/CARD**  RGI BWT requires the CARD (Comprehensive Antibiotic Resistance Database) database. The version tested in this pipeline was 4.0.1. The database can be located on a common drive or in your working directory.  
-  Instructions for installing the CARD database are available [here](https://github.com/arpcard/rgi/blob/master/docs/rgi_bwt.rst).  
+  Instructions for installing the CARD database are available on [arpcard rgi github](https://github.com/arpcard/rgi/blob/master/docs/rgi_bwt.rst).  
   Steps copied from the RGI documentation:
 
   **Download CARD data:**
@@ -299,7 +300,7 @@ touch .env
 
 Complete steps **1.Installation** and **2.Configuration** and ensure database paths have been added to the 'config.yaml'. Required databases are described in the [Pre-requisites](#pre-requisites).
 
-##### 3.1.Conda Environments
+##### 3.1.Conda environments
 
 Snakemake can automatically create and load Conda environments for each rule in your workflow. Check to see that you have the following configuration files in the `envs` directory:
 
@@ -322,7 +323,7 @@ snakemake --conda-create-envs-only
 
 - The `.env` file can overwrite the `config/config.ymal` file
 
-#### Current Issues
+#### Current issues
 
 - The TMPDIR variable set in the .env file is not working. For a temp fix the TMPDIR has been set in the main Snakemake workflow
 
