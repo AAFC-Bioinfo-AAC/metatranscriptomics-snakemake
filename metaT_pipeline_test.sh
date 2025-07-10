@@ -14,6 +14,6 @@ conda activate snakemake-9.6.0
 export PATH="$PWD/bin:$PATH"
 
   snakemake \
-    --profile /home/kjg000/J-003165_abcc_rcba/code/metatranscriptomics-pipeline-snakemake/profiles/slurm \
-    --configfile /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-pipeline-snakemake/config/config.yaml \
+    --profile /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/profiles/slurm \
+    --configfile /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/config/config.yaml \
     --printshellcmds 

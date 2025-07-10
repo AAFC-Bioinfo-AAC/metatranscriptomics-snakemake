@@ -1,30 +1,32 @@
 # Snakemake Profile for running on SLURM
 
 ## Directory layout 
-my_project/
+my_pipeline/
 ├── Snakefile
+├── profiles/
+│   └── slurm/
+│       ├── config.yaml         ← profile config (with jobscript:)
 ├── config/
-│   └── config.yaml          # ← workflow variables for your code/rules
-└── profiles/
-    └── slurm/
-        ├── config.yaml      # ← profile settings for snakemake/SLURM and per-rule resource config 
-      
+│   └── config.yaml             ← workflow data/sample config
+├── run_snakemake.sh            ← your SLURM launcher (submit as sbatch)
+├── scripts/                    ← (optional, for aux scripts)
+└── ...                         ← other workflow files/rules
 
 ## Main profile
-- Controls how Snakemake runs overall (max cores, jobs, conda, default-resources, latency-wait, etc)
-- Per rule resources need to go here. Snakemake no longer take a cluster_config.ymal file
-- Is used when you launch Snakemake with --profile <dir>.
-### Example config.yaml
+- Controls how Snakemake runs on SLURM
+- Must invoke with ` --profile /absolute/path/to/the/my_pipeline/profiles/slurm`
+### Example Profile
+`profiles/slurm/config.yaml`
 ```bash
 ### How Snakemake will run on SBATCH ###
-cores: 64 # total number of cores Snakemake can request at any time
-jobs: 20 # max amount of jobs Snakemake runs at once
+cores: 60 # total number of cores Snakemake can request at any time
+jobs: 10 # max amount of jobs Snakemake runs at once
 latency-wait: 60 # gives time for containers to start, and for other I/O delays
 rerun-incomplete: true
 quiet: false # Makes Snakemake output more verbose about its operations
 retries: 2               # so jobs killed by IO hiccups are auto retried
-max-jobs-per-second: 10  # slowing down submission rate (tune for your site!)
-
+max-jobs-per-second: 2  # slowing down submission rate (tune for your site!)
+executor: slurm #
 ### SLURM ###
 slurm: true
 default-resources:

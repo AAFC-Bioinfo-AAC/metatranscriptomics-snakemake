@@ -140,11 +140,11 @@ rule bowtie2_align:
         sample=[f"{TRIMMED_DIR}/{{sample}}_r1.fastq.gz", f"{TRIMMED_DIR}/{{sample}}_r2.fastq.gz"],
         idx = BOWTIE_INDEX_FILES
     output:
-        bam = temp("results/{sample}.bam")
+        bam = f"{TRIMMED_DIR}/bam/{{sample}}.bam"
     log:
         f"{LOG_DIR}/bowtie2/{{sample}}.log"
     params:
-        bt2_threads = 16,
+        bt2_threads = 12,
         view_threads = 4,
         sort_threads = 8,
         extra= lambda wc: f"-R '@RG\\tID:{wc.sample}\\tSM:{wc.sample}'"
@@ -177,7 +177,7 @@ rule bowtie2_align:
         """  
 rule extract_unmapped_fastq:
     input:
-        bam="results/{sample}.bam"
+        bam=f"{TRIMMED_DIR}/bam/{{sample}}.bam"
     output:
         r1=f"{HOST_DEP_DIR}/{{sample}}_trimmed_clean_R1.fastq.gz",
         r2=f"{HOST_DEP_DIR}/{{sample}}_trimmed_clean_R2.fastq.gz"
@@ -468,11 +468,12 @@ rule rgi_reload_database:
 
         # Only reload if DB is not present (or is empty)
         if [ -f "$LOCALDB/card.json" ] && [ -s "$LOCALDB/card.json" ] && \
-           [ -f "$LOCALDB/card_reference.fasta" ] && [ -s "$LOCALDB/card_reference.fasta" ]; then
+        [ -f "$LOCALDB/card_reference.fasta" ] && [ -s "$LOCALDB/card_reference.fasta" ]; then
             echo "CARD local database already present in $LOCALDB, skipping reload." >> {log}
         else
             echo "Reloading CARD into $LOCALDB..." >> {log}
-            rgi load --card_json {input.card_json} --card_annotation {input.card_fasta} --local --local_database "$LOCALDB" >> {log} 2>&1
+            export RGI_DATA_PATH="$LOCALDB"
+            rgi load --card_json {input.card_json} --card_annotation {input.card_fasta} --local >> {log} 2>&1
         fi
 
         touch {output}
