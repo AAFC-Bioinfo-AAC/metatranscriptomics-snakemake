@@ -4,13 +4,9 @@ envs/.snakemake/
 .vscode/
 *.egg-info
 
-01_reads/
-results/
-reports/
-index/
 logs/
 idx/
-rRNA_DB/
-snakemake-wrappers/
+resources/bowtie2_index/
+resources/rRNA_DB/
 *.out
 localDB/

@@ -18,14 +18,18 @@ sorted_bam_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatransc
 prodigal_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/12_prodigal"
 featurecounts_dir: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/13_featurecounts"
 
-### File paths for databases ###
-log_files: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/logs"
-bowtie2_index: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/reasources/bowtie2_index/Cow_phiX"
-sortmerna_DB: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/reasources/rRNA_DB/smr_v4.3_default_db.fasta"
+### Log files ###
+log_files: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs"
+
+### File paths for resources  ###
+bowtie2_index: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/resources/bowtie2_index/Cow_phiX"
+sortmerna_DB: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/resources/rRNA_DB/smr_v4.3_default_db.fasta"
+
+### File paths for databases on common drives###
 gtbd_DB: "/gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220"
 busco_lineages:
   bacteria: "/gpfs/fs7/aafc/common/reference/busco/busco_downloads/lineages/bacteria_odb12"
   archaea: "/gpfs/fs7/aafc/common/reference/busco/busco_downloads/lineages/archaea_odb12"
 
 ### File path for CARD database if the user set it up. This is a fallback if there is no common database
-card_latest: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/localDB"
+card_latest: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/localDB"

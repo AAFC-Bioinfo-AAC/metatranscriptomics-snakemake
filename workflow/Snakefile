@@ -10,15 +10,15 @@ print(f"DEBUG: Using TMPDIR = {TMPDIR}", file=sys.stderr)
 
 ## Load .env 
 load_dotenv('.env')
-#TMPDIR = os.getenv("TMPDIR", "/gpfs/fs7/aafc/scratch/kjg000/tmpdir")
-#print(f"DEBUG: Using TMPDIR = {TMPDIR}")
+TMPDIR = os.getenv("TMPDIR", "/gpfs/fs7/aafc/scratch/kjg000/tmpdir")
+print(f"DEBUG: Using TMPDIR = {TMPDIR}")
 RGI_CARD = os.getenv("RGI_CARD") or config.get("card_latest") #fallback if user do not have common card database
 if not RGI_CARD:
     raise ValueError("You must set the environment variable RGI_CARD to your CARD DB directory")
 
 ## Early exit if RGI CARD database cannot be loaded.
-if not RGI_CARD or not os.path.exists(RGI_CARD):
-    sys.exit(f"\nERROR: RGI_CARD not set or path not found: {RGI_CARD}\nEdit .env or config.yaml.\n")
+#if not RGI_CARD or not os.path.exists(RGI_CARD):
+    #sys.exit(f"\nERROR: RGI_CARD not set or path not found: {RGI_CARD}\nEdit .env or config.yaml.\n")
 
 ## Variable set up and sample loading
 with open(config["samplelist"]) as f:
@@ -64,7 +64,7 @@ def find_read_file(sample, readnum):
             return found[0]
     raise ValueError(f"No FASTQ found for sample {sample}, read {readnum}.")
 
-# Optional: check specifically for card_reference.fasta
+#Optional: check specifically for card_reference.fasta
 def has_fasta(path):
     return (
         os.path.exists(os.path.join(path, "card_reference.fasta")) or
@@ -133,7 +133,7 @@ rule fastp_pe:
         f"{LOG_DIR}/fastp/{{sample}}.fastp.log"
     threads: 4
     wrapper:
-        "file:///gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-pipeline-snakemake/snakemake-wrappers/bio/fastp"
+        "file:///gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/local-wrappers/bio/fastp"
 
 rule bowtie2_align:
     input:

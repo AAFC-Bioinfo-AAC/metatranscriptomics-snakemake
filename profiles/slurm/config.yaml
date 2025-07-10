@@ -6,7 +6,7 @@ latency-wait: 60
 rerun-incomplete: true
 retries: 2              
 max-jobs-per-second: 2 
-#cluster: "sbatch --cpus-per-task={resources.cpus} --mem={resources.mem_mb} --time={resources.time} --partition={resources.partition} --account={resources.account} --output=slurm-%j.out"
+jobscript: "slurm-jobscript.sh"
 ### SLURM ###
 executor: slurm
 default-resources:
