@@ -7,6 +7,11 @@ retries: 2
 max-jobs-per-second: 2 
 executor: slurm
 
+
+### Env Vars ###
+envvars:
+  TMPDIR: "/gpfs/fs7/aafc/scratch/kjg000/tmpdir"
+
 default-resources:
   - slurm_account=aafc_aac
   - slurm_partition=standard
@@ -14,7 +19,6 @@ default-resources:
   - runtime=60       # minutes
   - mem_mb=4000
   - cpus=1
-  - tmpdir="/gpfs/fs7/aafc/scratch/kjg000/tmpdir"
 
 ### Env modules ###
 # use-envmodules: false 
@@ -77,7 +81,7 @@ set-resources:
     runtime: 20
     slurm_partition: standard
     slurm_account: aafc_aac
-
+   
   bracken_extract:
     cpus: 1
     mem_mb: 2000
