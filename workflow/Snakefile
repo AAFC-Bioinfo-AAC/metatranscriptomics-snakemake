@@ -140,7 +140,7 @@ rule bowtie2_align:
         sample=[f"{TRIMMED_DIR}/{{sample}}_r1.fastq.gz", f"{TRIMMED_DIR}/{{sample}}_r2.fastq.gz"],
         idx = BOWTIE_INDEX_FILES
     output:
-        bam = f"{TRIMMED_DIR}/bam/{{sample}}.bam"
+        bam = temp(f"{TRIMMED_DIR}/bam/{{sample}}.bam")
     log:
         f"{LOG_DIR}/bowtie2/{{sample}}.log"
     params:
@@ -204,10 +204,12 @@ rule extract_unmapped_fastq:
         start_hr=$(date)
         echo "Started at: $start_hr" >> {log}
 
-        TMPDIR=$(mktemp -d)
-        # Pipe: samtools view -> samtools sort -> bedtools bamtofastq -> pigz
+        TMPDIR="${{TMPDIR:-/tmp}}"
+        JOB_ID="${{SLURM_JOB_ID:-manual}}"
+        TMPJOB=$(mktemp -d "${{TMPDIR}}/bam2fq_${{JOB_ID}}_XXXXXX" 2>> {log} || echo "/tmp/bam2fq_${{JOB_ID}}_manualtmp")
+
         samtools view -u -f 12 -F 256 --threads $SAMTOOLS_THREADS {input.bam} 2>> {log} \
-        | samtools sort -n --threads $SAMTOOLS_THREADS -T $TMPDIR/{wildcards.sample}_sort_tmp -O BAM - 2>> {log} \
+        | samtools sort -n --threads $SAMTOOLS_THREADS -T $TMPJOB/{wildcards.sample}_sort_tmp -O BAM - 2>> {log} \
         | bedtools bamtofastq -i - 2>> {log} \
             -fq >(pigz -p $PIGZ_THREADS --fast > {output.r1}) \
             -fq2 >(pigz -p $PIGZ_THREADS --fast > {output.r2})
@@ -220,9 +222,10 @@ rule extract_unmapped_fastq:
         secs=$((runtime % 60))
         echo "Finished at: $end_hr" >> {log}
         echo "Wall time: ${{hours}}h ${{mins}}m ${{secs}}s (total ${{runtime}} seconds)" >> {log}
-        "Temporary directory to be removed: $TMPDIR" >> {log}
-        #rm -rf "$TMPDIR"
+        echo "Temporary directory to be removed: $TMPJOB" >> {log}
+        #rm -rf "$TMPJOB"
         """
+
 rule sortmerna_pe:
     input:
         ref=f"{RRNA_DB}",
@@ -245,10 +248,11 @@ rule sortmerna_pe:
         start_time=$(date +%s)
         start_hr=$(date)
         echo "Started at: $start_hr" > {log}
+        echo "Running on: $(hostname)" >> {log}
 
-        export TMPDIR={TMPDIR}
+        export TMPDIR="${{TMPDIR:-/tmp}}"
         WORKDIR="$TMPDIR/smrn_{wildcards.sample}_$RANDOM"
-        mkdir -p "$WORKDIR"
+        mkdir -p "$WORKDIR" || { echo "Failed to create TMP workdir $WORKDIR" >> {log}; exit 1; }
 
         echo "Temporary workdir: $WORKDIR" >> {log}
         echo "Using SortMeRNA version:" >> {log}
@@ -420,9 +424,9 @@ rule combine_bracken_outputs:
         """
 rule bracken_extract:
     input:
-        species_table = f"{KRAKEN_OUTPUT_DIR}/testing/merged_abundance_species.txt",
-        genus_table = f"{KRAKEN_OUTPUT_DIR}/testing/merged_abundance_genus.txt",
-        phylum_table = f"{KRAKEN_OUTPUT_DIR}/testing/merged_abundance_phylum.txt"
+        species_table = f"{KRAKEN_OUTPUT_DIR}/merged_abundance_species.txt",
+        genus_table = f"{KRAKEN_OUTPUT_DIR}/merged_abundance_genus.txt",
+        phylum_table = f"{KRAKEN_OUTPUT_DIR}/merged_abundance_phylum.txt"
     output:
         species_raw = f"{KRAKEN_OUTPUT_DIR}/Bracken_species_raw_abundance.csv",
         species_rel = f"{KRAKEN_OUTPUT_DIR}/Bracken_species_relative_abundance.csv", 
@@ -496,9 +500,13 @@ rule rgi_bwt:
     shell:
         r"""
         set -o pipefail
-        export TMPDIR={TMPDIR}/bwt_{wildcards.sample}_$RANDOM
-        mkdir -p "$TMPDIR"
+
+        echo "Running on: $(hostname)" > {log}
+
+        export TMPDIR="${{TMPDIR:-/tmp}}/bwt_{wildcards.sample}_$RANDOM"
+        mkdir -p "$TMPDIR" || (echo "Failed to create TMPDIR $TMPDIR" >> {log}; exit 1)
         echo "Using TMPDIR: $TMPDIR" >> {log}
+
         export RGI_DATA_PATH={RGI_CARD}
         echo "RGI_DATA_PATH: {RGI_CARD}" >> {log}
         start_time=$(date +%s)
@@ -550,8 +558,11 @@ rule rna_spades:
         r"""
         set -euo pipefail
 
-        export TMPDIR={TMPDIR}
-        mkdir -p "$TMPDIR"
+        echo "Running on: $(hostname)" > {log}
+
+        export TMPDIR="${{TMPDIR:-/tmp}}/spades_{wildcards.sample}_$RANDOM"
+        mkdir -p "$TMPDIR" || (echo "Failed to create TMPDIR $TMPDIR" >> {log}; exit 1)
+        echo "Using TMPDIR: $TMPDIR" >> {log}
 
         echo 'SPAdes version:' > {log}
         spades.py --version >> {log}
@@ -610,9 +621,11 @@ rule rnaquast_busco:
         r"""
         set -euo pipefail
 
-        export TMPDIR={TMPDIR}/rnaquast_{wildcards.sample}_{wildcards.lineage}_$RANDOM
-        mkdir -p "$TMPDIR"
-        echo "TMPDIR is $TMPDIR" >> {log}
+        echo "Running on: $(hostname)" > {log}
+        
+        export TMPDIR="${{TMPDIR:-/tmp}}/rnaquast_{wildcards.sample}_$RANDOM"
+        mkdir -p "$TMPDIR" || (echo "Failed to create TMPDIR $TMPDIR" >> {log}; exit 1)
+        echo "Using TMPDIR: $TMPDIR" >> {log}
 
         start_time=$(date +%s)
         start_hr=$(date)
@@ -641,7 +654,7 @@ rule megahit_coassembly:
         r1 = expand(f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R1.fastq.gz", sample=SAMPLES),
         r2 = expand(f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R2.fastq.gz", sample=SAMPLES)
     output:
-        directory(MEGAHIT_DIR)
+        f"{MEGAHIT_DIR}/final.contigs.fa"
     threads: 60
     conda:
         "envs/megahit.yaml"
@@ -651,16 +664,18 @@ rule megahit_coassembly:
         r"""
         set -euo pipefail
 
+        echo "Running on: $(hostname)" > {log}
+
         start_time=$(date +%s)
         start_hr=$(date)
         echo "Started at: $start_hr" >> {log}
 
         r1_list=$(echo {input.r1} | tr ' ' ',')
         r2_list=$(echo {input.r2} | tr ' ' ',')
-
-        export TMPDIR={TMPDIR}/megahit_coassembly_$RANDOM
-        mkdir -p "$TMPDIR"
-        echo "TMPDIR is $TMPDIR" >> {log}
+        
+        export TMPDIR="${{TMPDIR:-/tmp}}/megahit_coassembly_{wildcards.sample}_$RANDOM"
+        mkdir -p "$TMPDIR" || (echo "Failed to create TMPDIR $TMPDIR" >> {log}; exit 1)
+        echo "Using TMPDIR: $TMPDIR" >> {log}
 
         megahit \
           -1 "$r1_list" \
