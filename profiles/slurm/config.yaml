@@ -118,8 +118,8 @@ set-resources:
     slurm_account: aafc_aac
 
   megahit_coassembly:
-    cpus: 60
-    mem_mb: 512000
+    cpus: 48
+    mem_mb: 256000
     runtime: 240
     slurm_partition: standard
     slurm_account: aafc_aac

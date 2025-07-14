@@ -32,4 +32,4 @@ busco_lineages:
   archaea: "/gpfs/fs7/aafc/common/reference/busco/busco_downloads/lineages/archaea_odb12"
 
 ### File path for CARD database if the user set it up. This is a fallback if there is no common database
-card_latest: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/localDB"
+card_latest: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/localDB"

@@ -5,9 +5,6 @@ import os
 import sys
 import glob 
 
-TMPDIR="/gpfs/fs7/aafc/scratch/kjg000/tmpdir"
-print(f"DEBUG: Using TMPDIR = {TMPDIR}", file=sys.stderr)
-
 ## Load .env 
 load_dotenv('.env')
 TMPDIR = os.getenv("TMPDIR", "/gpfs/fs7/aafc/scratch/kjg000/tmpdir")
@@ -252,7 +249,7 @@ rule sortmerna_pe:
 
         export TMPDIR="${{TMPDIR:-/tmp}}"
         WORKDIR="$TMPDIR/smrn_{wildcards.sample}_$RANDOM"
-        mkdir -p "$WORKDIR" || { echo "Failed to create TMP workdir $WORKDIR" >> {log}; exit 1; }
+        mkdir -p "$WORKDIR" || {{ echo "Failed to create TMP workdir $WORKDIR" >> {log}; exit 1; }}
 
         echo "Temporary workdir: $WORKDIR" >> {log}
         echo "Using SortMeRNA version:" >> {log}
@@ -436,13 +433,8 @@ rule bracken_extract:
         phylum_rel = f"{KRAKEN_OUTPUT_DIR}/Bracken_phylum_relative_abundance.csv"
     conda:
         "envs/kraken2.yaml"
-    shell:
-        """
-        scripts/extract_bracken_columns.py --input {input.species_table} --level species --out-raw {output.species_raw} --out-rel {output.species_rel}
-        scripts/extract_bracken_columns.py --input {input.genus_table} --level genus --out-raw {output.genus_raw} --out-rel {output.genus_rel}
-        scripts/extract_bracken_columns.py --input {input.phylum_table} --level phylum --out-raw {output.phylum_raw} --out-rel {output.phylum_rel}
-
-        """
+    script:
+        "scripts/extract_bracken_columns.py"
 rule rgi_reload_database:
     input:
         card_json = f"{RGI_CARD}/card.json",
@@ -546,7 +538,8 @@ rule rna_spades:
         R1 = f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R1.fastq.gz",
         R2 = f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R2.fastq.gz"
     output:
-        fasta = f"{ASSEMBLIES_DIR}/{{sample}}.fasta"
+        fasta = f"{ASSEMBLIES_DIR}/{{sample}}.fasta",
+        spadeslog = f"{ASSEMBLIES_DIR}/{{sample}}.log"
     log:
         f"{LOG_DIR}/spades/{{sample}}.log"
     conda:
@@ -557,20 +550,21 @@ rule rna_spades:
     shell:
         r"""
         set -euo pipefail
-
-        echo "Running on: $(hostname)" > {log}
+        exec 1>> "{log}" 2>&1
+        echo "Running on: $(hostname)"
+        
 
         export TMPDIR="${{TMPDIR:-/tmp}}/spades_{wildcards.sample}_$RANDOM"
-        mkdir -p "$TMPDIR" || (echo "Failed to create TMPDIR $TMPDIR" >> {log}; exit 1)
-        echo "Using TMPDIR: $TMPDIR" >> {log}
+        mkdir -p "$TMPDIR" || (echo "Failed to create TMPDIR $TMPDIR" && exit 1)
+        echo "Using TMPDIR: $TMPDIR"
 
-        echo 'SPAdes version:' > {log}
-        spades.py --version >> {log}
+        echo 'SPAdes version:'
+        spades.py --version
 
         # Wall time tracking
         start_time=$(date +%s)
         start_hr=$(date)
-        echo "Started at: $start_hr" > {log}
+        echo "Started at: $start_hr"
 
         outdir=$(mktemp -d "$TMPDIR/rnaspades_{wildcards.sample}_XXXXXX")
         spades_tmp="$outdir/tmp"
@@ -583,16 +577,17 @@ rule rna_spades:
             -1 {input.R1} \
             -2 {input.R2} \
             -o "$outdir" \
-            &>> {log}
+           || { echo "SPAdes failed!"; exit 1; }
+
+         # Copy logs even on failure
+        cp "$outdir/spades.log" {output.spadeslog} || echo "spades.log not found"
 
         # Try to copy the rnaSPAdes output
-        if [ -f "$outdir/transcripts.fasta" ]; then
-            cp "$outdir/transcripts.fasta" {output.fasta}
-        else
-            echo "ERROR: Expected transcripts.fasta not found in $outdir!" >&2
-            ls -lh "$outdir"
+        if [ ! -s "$outdir/transcripts.fasta" ]; then
+            echo "ERROR: transcripts.fasta was not created or is empty." >&2
             exit 1
         fi
+        cp "$outdir/transcripts.fasta" {output.fasta}
 
         # Wall time logging
         end_time=$(date +%s)
@@ -601,9 +596,9 @@ rule rna_spades:
         hours=$((runtime / 3600))
         mins=$(((runtime % 3600) / 60))
         secs=$((runtime % 60))
-        echo "Finished at: $end_hr" >> {log}
-        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> {log}
-        echo "Temporary directory to be removed: $outdir" >> {log}
+        echo "Finished at: $end_hr"
+        echo "Wall time: ${hours}h ${mins}m ${secs}s (total ${runtime} seconds)"
+        echo "Temporary directory to be removed: $outdir"
         rm -rf "$outdir"
         """
 rule rnaquast_busco:
@@ -655,7 +650,7 @@ rule megahit_coassembly:
         r2 = expand(f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R2.fastq.gz", sample=SAMPLES)
     output:
         f"{MEGAHIT_DIR}/final.contigs.fa"
-    threads: 60
+    threads: 48
     conda:
         "envs/megahit.yaml"
     log:
@@ -673,7 +668,7 @@ rule megahit_coassembly:
         r1_list=$(echo {input.r1} | tr ' ' ',')
         r2_list=$(echo {input.r2} | tr ' ' ',')
         
-        export TMPDIR="${{TMPDIR:-/tmp}}/megahit_coassembly_{wildcards.sample}_$RANDOM"
+        export TMPDIR="${{TMPDIR:-/tmp}}/megahit_coassembly_${{RANDOM}}_$(date +%s)"
         mkdir -p "$TMPDIR" || (echo "Failed to create TMPDIR $TMPDIR" >> {log}; exit 1)
         echo "Using TMPDIR: $TMPDIR" >> {log}
 
@@ -681,7 +676,7 @@ rule megahit_coassembly:
           -1 "$r1_list" \
           -2 "$r2_list" \
           -t {threads} \
-          -o {MEGAHIT_DIR} \
+          -o {MEGAHIT_DIR} --force\
           --out-prefix final \
           --tmp-dir "$TMPDIR" \
           > {log} 2>&1
