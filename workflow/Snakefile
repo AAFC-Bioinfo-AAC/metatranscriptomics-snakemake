@@ -7,15 +7,15 @@ import glob
 
 ## Load .env 
 load_dotenv('.env')
-TMPDIR = os.getenv("TMPDIR", "/gpfs/fs7/aafc/scratch/kjg000/tmpdir")
+TMPDIR = os.getenv("TMPDIR", "/gpfs/fs7/aafc/scratch/$USER/tmpdir")
 print(f"DEBUG: Using TMPDIR = {TMPDIR}")
 RGI_CARD = os.getenv("RGI_CARD") or config.get("card_latest") #fallback if user do not have common card database
 if not RGI_CARD:
     raise ValueError("You must set the environment variable RGI_CARD to your CARD DB directory")
 
 ## Early exit if RGI CARD database cannot be loaded.
-#if not RGI_CARD or not os.path.exists(RGI_CARD):
-    #sys.exit(f"\nERROR: RGI_CARD not set or path not found: {RGI_CARD}\nEdit .env or config.yaml.\n")
+if not RGI_CARD or not os.path.exists(RGI_CARD):
+    sys.exit(f"\nERROR: RGI_CARD not set or path not found: {RGI_CARD}\nEdit .env or config.yaml.\n")
 
 ## Variable set up and sample loading
 with open(config["samplelist"]) as f:
@@ -539,7 +539,6 @@ rule rna_spades:
         R2 = f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R2.fastq.gz"
     output:
         fasta = f"{ASSEMBLIES_DIR}/{{sample}}.fasta",
-        spadeslog = f"{ASSEMBLIES_DIR}/{{sample}}.log"
     log:
         f"{LOG_DIR}/spades/{{sample}}.log"
     conda:
@@ -566,7 +565,7 @@ rule rna_spades:
         
         outdir=$(mktemp -d "$TMPDIR/rnaspades_{wildcards.sample}_XXXXXX")
         spades_tmp="$outdir/tmp"
-        mkdir -p "$spades_tmp" >> {log} 2>&1
+        mkdir -p "$spades_tmp"
 
         spades.py --rna \
             -t {threads} \
@@ -582,13 +581,6 @@ rule rna_spades:
             echo ">dummy_sequence" > {output.fasta}
         else
             cp "$outdir/transcripts.fasta" {output.fasta}
-        fi
-
-        # Copy spades log if it exists
-        if [ -f "$outdir/spades.log" ]; then
-            cp "$outdir/spades.log" {output.spadeslog}
-        else
-            echo "SPAdes log not found for {wildcards.sample}" >> {log} 2>&1
         fi
 
         # Wall time logging

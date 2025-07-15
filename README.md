@@ -170,8 +170,6 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 
   > **Wall time:** One sample with 60 cores ran for 2h 15m 53s. The wall time logging and log file has been fixed. Try 48 and 32 cores to see if wall time is similar. Reduce cores if so.
   
-   > **Note to self:** In the shell block copy the spades.log. Copied spades.log but there is no additional information that is not printed to shell log. Delete the code lines.
-
 - **`rule rnaquast_busco`** uses the transcripts from RNA SPAses to print the number of transcripts, transcripts over 500 bp, transcripts over 1000 bp and the BUSCO completeness. The software is not intended for metatranscriptomics. Use caution when interpreting the results. For instance the BUSCO completeness cannot be interpreted as the percentage of assembly quality but instead it is a representation of the core functions from the bacteria_odb12 and archaea_odb12 lineages.  
   
 - **`megahit_coassembly`** here the rRNA-depleted reads are co-assembled with MEGAHIT. If Metagenomic sequencing was done the co-assembly of those reads would be a better choice. The Co-assembly is used as a index to produce sorted BAM files for each assembly. These sorted BAM files can then be used in featureCounts and downstream expression analysis.
@@ -444,7 +442,7 @@ export PATH="$PWD/bin:$PATH"
     --keep-going 
   ```
 ### Notes
-
+- temp folder is set to `/gpfs/fs7/aafc/scratch/$USER/tmpdir` for running on the GPSC.
 #### Warnings
 
 - The conda environments will not be created if the conda configuration is `conda config --set channel_priority strict`.
@@ -453,11 +451,7 @@ export PATH="$PWD/bin:$PATH"
 
 #### Current issues
 
-- The TMPDIR variable set in the .env file is not working. For a temp fix the TMPDIR has been set in the main Snakemake workflow
-
-- temp folder is set to `/gpfs/fs7/aafc/scratch/$USER/tmpdir` for running on the GPSC.
-
-- `$USER` is changed to actual user name. This was done for testing. I wasn't sure if the `$USER` was being expanded correctly.
+- When poor sample reads are used in the pipeline rna SPAdes cannot make an transcripts.fasta file. A temporary solution is to make a dummy fasta file. This results in failed downstream rules for rnaQUAST.
 
 #### Resource usage
 

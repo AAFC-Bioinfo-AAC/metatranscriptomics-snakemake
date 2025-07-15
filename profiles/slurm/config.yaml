@@ -10,7 +10,7 @@ executor: slurm
 
 ### Env Vars ###
 envvars:
-  TMPDIR: "/gpfs/fs7/aafc/scratch/kjg000/tmpdir"
+  TMPDIR: "/gpfs/fs7/aafc/scratch/$USER/tmpdir"
 
 default-resources:
   - slurm_account=aafc_aac
