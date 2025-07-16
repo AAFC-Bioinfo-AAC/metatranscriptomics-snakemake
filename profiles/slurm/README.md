@@ -1,36 +1,56 @@
 # Snakemake Profile for running on SLURM
 
 ## Directory layout 
-my_project/
-├── Snakefile
+```
+metatranscriptomics_pipeline/
+├── Workflow/
+│   └── Snakemake
+    └── logs
+    └── scripts
+    └── envs
+      └── tool1.yaml
+      └── too2.yaml
+      └── tool3.yaml
+      └── ... 
+├──resources 
+│ 
+├── profiles/
+│   └── slurm/
+│       └── config.yaml         ← profile config
 ├── config/
-│   └── config.yaml          # ← workflow variables for your code/rules
-└── profiles/
-    └── slurm/
-        ├── config.yaml      # ← profile settings for snakemake/SLURM and per-rule resource config 
-      
+│   └── config.yaml             ← workflow data/sample config
+├── run_snakemake.sh            ← your SLURM launcher
+└── ...                         
+```
 
 ## Main profile
-- Controls how Snakemake runs overall (max cores, jobs, conda, default-resources, latency-wait, etc)
-- Per rule resources need to go here. Snakemake no longer take a cluster_config.ymal file
-- Is used when you launch Snakemake with --profile <dir>.
-### Example config.yaml
+- Controls how Snakemake schedules jobs on SLURM
+- Must invoke with ` --profile /absolute/path/to/the/my_pipeline/profiles/slurm`
+### Example Profile
+`profiles/slurm/config.yaml`
 ```bash
-### How Snakemake will run on SBATCH ###
-cores: 64 # total number of cores Snakemake can request at any time
-jobs: 20 # max amount of jobs Snakemake runs at once
+###How Snakemake assign resources to rules ###
+cores: 60 # total number of cores Snakemake can request at any time
+jobs: 10 # max amount of jobs Snakemake runs at once
 latency-wait: 60 # gives time for containers to start, and for other I/O delays
 rerun-incomplete: true
 quiet: false # Makes Snakemake output more verbose about its operations
 retries: 2               # so jobs killed by IO hiccups are auto retried
-max-jobs-per-second: 10  # slowing down submission rate (tune for your site!)
+max-jobs-per-second: 2  # slowing down submission rate (tune for your site!)
+executor: slurm 
 
-### SLURM ###
-slurm: true
+### Env Vars ###
+envvars:
+  TMPDIR: "/gpfs/fs7/aafc/scratch/$USER/tmpdir"
+
 default-resources:
-  - mem_mb=8000             # default memory per job: 8GB (change as desired)
+  - mem_mb=8000             
   - slurm_partition=standard  # SLURM partition to use by default
   - slurm_account=aafc_aac # SLURM account
+  - slurm_cluster=gpsc8 #SLURM cluster
+  - runtime=60       # minutes
+  - mem_mb=4000 # default memory per job (change as desired)
+  - cpus=1
 
 ### Env modules ###
 # use-envmodules: false # use-envmodules: true only if: Your system disables Conda/containers and expects you to use module load bioinfo-tool for each step or you have a properly configured profile and know which modules are needed for every rule.
@@ -56,150 +76,127 @@ conda-frontend: mamba   # if you have mamba installed
 ## Per rule resources
 set-resources:
   fastp_pe:
-    cpus: 4
-    mem_mb: 40000
-    time: "00:40:00"
-    partition: standard
-    account: aafc_aac
+    cpus: 2
+    mem_mb: 4000
+    runtime: 40
+    slurm_partition: standard
+    slurm_account: aafc_aac
 
   bowtie2_align:
     cpus: 24
     mem_mb: 48000
-    time: "00:30:00"
-    partition: standard
-    account: aafc_aac
+    runtime: 30
+    slurm_partition: standard
+    slurm_account: aafc_aac
 
   extract_unmapped_fastq:
     cpus: 60
     mem_mb: 64000
-    time: "00:30:00"
-    partition: standard
-    account: aafc_aac
+    runtime: 30
+    slurm_partition: standard
+    slurm_account: aafc_aac
 
   sortmerna_pe:
     cpus: 48
     mem_mb: 32000
-    time: "06:00:00"
-    partition: standard
-    account: aafc_aac
+    runtime: 360
+    slurm_partition: standard
+    slurm_account: aafc_aac
 
   kraken2:
     cpus: 2
     mem_mb: 600000
-    time: "00:30:00"
-    partition: large
-    account: aafc_aac__large
+    runtime: 30 
+    slurm_partition: large
+    slurm_account: aafc_aac__large
 
   bracken:
     cpus: 2
     mem_mb: 4000
-    time: "00:10:00"
-    partition: standard
-    account: aafc_aac
+    runtime: 10
+    slurm_partition: standard
+    slurm_account: aafc_aac
 
   combine_bracken_outputs:
     cpus: 1
     mem_mb: 2000
-    time: "00:20:00"
-    partition: standard
-    account: aafc_aac
-
+    runtime: 20
+    slurm_partition: standard
+    slurm_account: aafc_aac
+   
   bracken_extract:
     cpus: 1
     mem_mb: 2000
-    time: "00:10:00"
-    partition: standard
-    account: aafc_aac
+    runtime: 10
+    slurm_partition: standard
+    slurm_account: aafc_aac
 
   rgi_reload_database:
     cpus: 1
     mem_mb: 2000
-    time: "00:30:00"
-    partition: standard
-    account: aafc_aac
+    runtime: 30
+    slurm_partition: standard
+    slurm_account: aafc_aac
 
   rgi_bwt:
     cpus: 20
     mem_mb: 64000
-    time: "01:00:00"
-    partition: standard
-    account: aafc_aac
+    runtime: 60
+    slurm_partition: standard
+    slurm_account: aafc_aac
 
   rna_spades:             
     cpus: 48
     mem_mb: 64000
-    time: "04:00:00"
-    partition: standard
-    account: aafc_aac   
+    runtime: 240
+    slurm_partition: standard
+    slurm_account: aafc_aac
 
   rnaquast_busco:
     cpus: 4
     mem_mb: 16000
-    time: "00:10:00"
-    partition: standard
-    account: aafc_aac  
+    runtime: 10
+    slurm_partition: standard
+    slurm_account: aafc_aac
 
   megahit_coassembly:
-    cpus: 60
-    mem_mb: 512000
-    time: "04:00:00"
-    partition: standard
-    account: aafc_aac 
+    cpus: 48
+    mem_mb: 256000
+    runtime: 240
+    slurm_partition: standard
+    slurm_account: aafc_aac
 
   index_coassembly:
     cpus: 8
     mem_mb: 16000
-    time: "02:00:00"
-    partition: standard
-    account: aafc_aac
+    runtime: 120
+    slurm_partition: standard
+    slurm_account: aafc_aac
 
   bowtie2_map_transcripts:
     cpus: 16
     mem_mb: 32000
-    time: "00:30:00"
-    partition: standard
-    account: aafc_aac
+    runtime: 30
+    slurm_partition: standard
+    slurm_account: aafc_aac
 
   assembly_stats_depth:
     cpus: 2
     mem_mb: 2000
-    time: "00:30:00"
-    partition: standard
-    account: aafc_aac
+    runtime: 30
+    slurm_partition: standard
+    slurm_account: aafc_aac
 
   prodigal_genes:
     cpus: 1
     mem_mb: 2000
-    time: "01:00:00"
-    partition: standard
-    account: aafc_aac
+    runtime: 60
+    slurm_partition: standard
+    slurm_account: aafc_aac
 
   featurecounts:
     cpus: 4
     mem_mb: 8000
-    time: "00:10:00"
-    partition: standard
-    account: aafc_aac
-  ```
-
-### Example
-```bash
-#!/bin/bash
-#SBATCH --job-name=metaT_full_test
-#SBATCH --output=metaT_full_test_%j.out 
-#SBATCH --cluster=gpsc8 
-#SBATCH --partition=standard
-#SBATCH --account=aafc_aac
-#SBATCH --mem=2000
-#SBATCH --time=1:00:00
-
-source ~/.bashrc
-mamba activate snakemake-9.6.0
-export PATH="$PWD/bin:$PATH"
-
-  snakemake \
-    --profile path/to/profiles/slurm/ \
-    --configfile my_project/config/cluster_config.yaml \
-    --printshellcmds \
-    --forceall ## keep for testing. Remove for actual runs
-```     
+    runtime: 10
+    slurm_partition: standard
+    slurm_account: aafc_aac

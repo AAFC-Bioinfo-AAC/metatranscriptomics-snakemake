@@ -1,7 +1,8 @@
 channels:
-  - bioconda
   - conda-forge
+  - bioconda
   - defaults
 dependencies:
 - rgi=6.0.4
+- biopython>=1.78
 - kma>=1.4.17

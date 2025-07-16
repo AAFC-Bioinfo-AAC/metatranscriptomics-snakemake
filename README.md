@@ -72,9 +72,40 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
         F --> G[rRNA-depleted Reads]
     end
 
-    subgraph ASSEMBLY [Assembly]
+    subgraph COASSEMBLY [Co-Assembly]
+        %% megahit_coassembly rule
+        G --> MH{MEGAHIT Co-assembly}
+        MH --> FA((Co-assembled Transcripts))
+
+        %% index_coassembly rule
+        FA --> IB{Index Bowtie2}
+        IB --> IB1((Coassembly index))
+
+        %% bowtie2_map_transcripts rule (per-sample mapping)
+        IB1 --> BT2{Bowtie2 Map Transcripts}
+        G --> BT2
+        BT2 --> BAM((Sample BAMs))
+
+        %% assembly_stats_depth rule (per-sample)
+        BAM --> STATS{Assembly Stats+Depth}
+        STATS --> STATSOUT((Stats/Depth/IdxStats))
+
+        %% prodigal_genes rule
+        FA --> PG{Prodigal Genes}
+        PG --> PROD_OUTS1((Predicted protein sequences
+        Predicted nucleotide sequences))
+        PG --> PROD_OUTS2((Gene annotation file
+                        Simplified Annotation Format))
+
+        %% featurecounts rule (per-sample)
+        PROD_OUTS2 --> FC{featureCounts}
+        BAM --> FC
+        FC --> FCT((Sample Counts.txt))
+    end
+
+    subgraph ASSEMBLY [Sample Assembly]
         G --> H{rnaSPAdes}
-        H --> I((Assembled Transcripts))
+        H --> I((Sample Transcripts))
     end
 
     subgraph QC_REPORTS [Reports and Files for Downstream Analysis]
@@ -86,13 +117,6 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
         G --> W{RGI}
         W --> Q((AMR Profile))
     end
-
-    %% Optional transition from assembled transcripts back to Bowtie2 mapping (read support check)
-    I --> T{Bowtie2}
-    T --> V((Read Mapping, 
-            Coverage, and
-            Alignment Stats))
-    T --> X((Sorted BAM files))
 ```
 
 ### Snakemake rules
@@ -109,38 +133,6 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 - **`rule sortmerna`** aligns the host-depleted reads to an rRNA database and outputs the rRNA-depleted reads (`*_rRNAdep_R1.fastq.gz`/`*_rRNAdep_R2.fastq.gz`). These rRNA-depleted reads will be used for downstream analysis. The database used for testing the pipeline was `smr_v4.3_default_db.fasta`, available from the Reference RNA databases (database.tar.gz) file at [sortmerna release v4.3.3](https://github.com/sortmerna/sortmerna/releases/tag/v4.3.3). Default parameters were used.
 
   > **Wall time:** With 60 cores wall time was 4h 48m 56s for one sample. See what wall time is with a reduction to 48 cores and then 32.
-
-- **`rule rna_spades`**
-
-  > **Wall time:** One sample with 60 cores ran for 2h 15m 53s. The wall time logging and log file has been fixed. Try 48 and 32 cores to see if wall time is similar. Reduce cores if so.
-  > **Note to self:** The order of this rule should be changed in the Snakemake workflow. Keep for now while testing.
-   > **Note to self:** In the shell block copy the spades.log. It contains some assembly stat that are not printed to the current log file. SHOULD BE FIXED. CHECK AFTER NEXT RUN.
-
-  The rRNA-depleted reads are assembled into presumptive mRNA transcripts using the `--rna` flag and default parameters. The transcripts are output to a `*.fasta` file.
-
-- **`rule rnaquast_busco`** uses the transcripts from RNA SPAses to print the number of transcripts, transcripts over 500 bp, transcripts over 1000 bp and the BUSCO completeness. The software is not intended for metatranscriptomics. Use caution when interpreting the results. For instance the BUSCO completeness cannot be interpreted as the percentage of assembly quality but instead it is a representation of the core functions from the bacteria_odb12 and archaea_odb12 lineages.  
-  
-- **`megahit_coassembly`** here the rRNA-depleted reads are co-assembled with MEGAHIT. If Metagenomic sequencing was done the co-assembly of those reads would be a better choice. The Co-assembly is used as a index to produce sorted BAM files for each assembly. These sorted BAM files can then be used in featureCounts and downstream expression analysis.
-
-  > **Wall time:** For the co-assembly of three samples was 52 min 28 sec with 60 cores. For large co-assemblies a large mem node will need to be used (will need to be tested at some point)
-
-- **`index_coassembly`** use Bowtie2 to make an index that can be used to map the reads to the co-assembly.
-  > **Wall time:** Wall time with 8 threads was 1m 5s.
-
-- **`bowtie2_map_transcripts`** Maps the cleaned reads to the co-assembly resulting in a `.coassembly.sorted.bam` for each sample.
-
-  > **Wall time:** For one sample using 40 cores was 9m 53s. Reduced cores to 16 and will check wall time.
-
-- **`assembly_stats_depth`** produces a `flagstat.txt` summary of the reads that mapped back to the assembly, a `coverage.txt.gz` depth file with per-base coverage across the co-assembly for each sample, and a `idxstats.txt.gz` with read counts per transcript for each sample.
-
-- **`rule prodigal_genes`** used to make a FASTA file of predicted protein sequences `coassembly.faa` and the predicted genes `coassembly.fna`, a feature formatted annotation file `coassembly.gff` and a simplified annotation formate file `coassembly.saf` that is used by feature counts.
-
-  > **Temp file:** Go back and decided if this output should be designated temporary
-  > **Wall time** was 8m with 1 core. prodigal does not support more than one core.
-
-- **`rule featurecounts`** generates a table for each sample that includes the Geneid (unique identifier), the co-assembly contig name, the start and end positions of each gene on the contig, the strand orientation (+ or -), the gene length, and the number of reads mapped to each gene. Since all samples are mapped to the same co-assembly reference, the resulting tables can be combined for downstream analysis of gene expression across samples.
-
-  > **Wall time** for one sample with 4 cores was 17s.
 
 - **`rule kraken2`** assigns taxonomy to the rRNA-depleted reads using a Kraken2-formatted GTDB. A confidence threshold of 0.5 is used and all other parameters are defaults. The output files are `*.report` and `*.kraken`.
   > **Wall time** Large compute node with 600 GB. With 16 CUPs wall time was 7m 56s. With 2 CPUs wall time was 19m 13s.
@@ -174,6 +166,33 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 - **`rules Cazymes`**
      > **Note to self:** Do we want to include this in the pipeline or use transcripts in existing Bash pipeline made by Arun.
 
+- **`rule rna_spades`** The rRNA-depleted reads are assembled into presumptive mRNA transcripts using the `--rna` flag and default parameters. The transcripts are output to a `*.fasta` file.
+
+  > **Wall time:** One sample with 60 cores ran for 2h 15m 53s. The wall time logging and log file has been fixed. Try 48 and 32 cores to see if wall time is similar. Reduce cores if so.
+  
+- **`rule rnaquast_busco`** uses the transcripts from RNA SPAses to print the number of transcripts, transcripts over 500 bp, transcripts over 1000 bp and the BUSCO completeness. The software is not intended for metatranscriptomics. Use caution when interpreting the results. For instance the BUSCO completeness cannot be interpreted as the percentage of assembly quality but instead it is a representation of the core functions from the bacteria_odb12 and archaea_odb12 lineages.  
+  
+- **`megahit_coassembly`** here the rRNA-depleted reads are co-assembled with MEGAHIT. If Metagenomic sequencing was done the co-assembly of those reads would be a better choice. The Co-assembly is used as a index to produce sorted BAM files for each assembly. These sorted BAM files can then be used in featureCounts and downstream expression analysis.
+
+  > **Wall time:** For the co-assembly of three samples was 52 min 28 sec with 60 cores. For large co-assemblies a large mem node will need to be used (will need to be tested at some point)
+
+- **`index_coassembly`** use Bowtie2 to make an index that can be used to map the reads to the co-assembly.
+  > **Wall time:** Wall time with 8 threads was 1m 5s.
+
+- **`bowtie2_map_transcripts`** Maps the cleaned reads to the co-assembly resulting in a `.coassembly.sorted.bam` for each sample.
+
+  > **Wall time:** For one sample using 40 cores was 9m 53s. Reduced cores to 16 and will check wall time.
+
+- **`assembly_stats_depth`** produces a `flagstat.txt` summary of the reads that mapped back to the assembly, a `coverage.txt.gz` depth file with per-base coverage across the co-assembly for each sample, and a `idxstats.txt.gz` with read counts per transcript for each sample.
+
+- **`rule prodigal_genes`** used to make a FASTA file of predicted protein sequences `coassembly.faa` and the predicted genes `coassembly.fna`, a feature formatted annotation file `coassembly.gff` and a simplified annotation formate file `coassembly.saf` that is used by feature counts.
+
+  > **Temp file:** Go back and decided if this output should be designated temporary
+  > **Wall time** was 8m with 1 core. prodigal does not support more than one core.
+
+- **`rule featurecounts`** generates a table for each sample that includes the Geneid (unique identifier), the co-assembly contig name, the start and end positions of each gene on the contig, the strand orientation (+ or -), the gene length, and the number of reads mapped to each gene. Since all samples are mapped to the same co-assembly reference, the resulting tables can be combined for downstream analysis of gene expression across samples.
+
+  > **Wall time** for one sample with 4 cores was 17s.
 ---
 
 ## Data
@@ -207,6 +226,7 @@ The raw input data must be in the form of paired-end FASTQ files generated from 
 #### Software
 
 - Snakemake version 9.6.0
+- Snakemake-executor-plugin-slurm
 
 #### Databases
 
@@ -241,8 +261,6 @@ The raw input data must be in the form of paired-end FASTQ files generated from 
 - **BUSCO**
 rnaQUAST uses the BUSCO bacterial and archaeal lineages. The directory path to these lineages must be provided.
 
-- The conda environments used in the pipeline need to be generated before running with `snakemake --use-conda --conda-create-envs-only`
-
 ### Setup Instructions
 
 #### 1. Installation
@@ -251,19 +269,90 @@ Clone the repository into the directory where you want to run the metatranscript
 **Note:** This location must be on an HPC (High Performance Computing) cluster with access to a high-memory node (at least 600 GB RAM) and sufficient storage for all metatranscriptomics analyses.
 
 ```bash
-cd /path/to/metatranscriptomics
+cd /path/to/code/directory
 git clone <repository-url>
 ```
+#### 2. SLURM Profile
+##### 2.1. SLURM Profile Directory Structure
+```
+metatranscriptomics_pipeline/
+├── Workflow/
+│   └── Snakemake/
+│   └── ... 
+├── profiles/
+│   └── slurm/
+│       └── config.yaml         ← profile config
+├── config/
+│   └── config.yaml             ← workflow data/sample config
+|   └── samples.txt
+├── run_snakemake.sh            ← your SLURM launcher
+├── .env
+└── ...                         
+```
+##### 2.2. Profile Configuration
+The SLURM execution settings are configured in profiles/slurm/config.yaml. This file defines resource defaults, cluster submission commands, and job script templates for Snakemake. The pre-rule resources need to be adjusted for the size and number of input samples for each rule.
 
-#### 2. Configuration
+**Example for profiles/slurm/config.yaml:**
+```bash
+### How Snakemake assigns resources to rules
+cores: 60
+jobs: 10 
+latency-wait: 60 
+rerun-incomplete: true
+retries: 2              
+max-jobs-per-second: 2 
+executor: slurm
 
-The pipeline requires the following configuration files: `config.yaml`, `.env`, and `sample.txt`.
 
-##### 2.1. config.yaml
+### Env Vars ###
+envvars:
+  TMPDIR: "/gpfs/fs7/aafc/scratch/$USER/tmpdir"
+
+default-resources:
+  - slurm_account=aafc_aac
+  - slurm_partition=standard
+  - slurm_cluster=gpsc8
+  - runtime=60       # minutes
+  - mem_mb=4000
+  - cpus=1
+
+### Env modules ###
+# use-envmodules: false 
+
+### Conda ###
+use-conda: true
+conda-frontend: mamba   
+
+### Resource scopes ###
+set-resource-scopes:
+  cores: local 
+
+## Per rule resources
+set-resources:
+  fastp_pe:
+    cpus: 2
+    mem_mb: 4000
+    runtime: 40
+    slurm_partition: standard
+    slurm_account: aafc_aac
+
+  bowtie2_align:
+    cpus: 24
+    mem_mb: 48000
+    runtime: 30
+    slurm_partition: standard
+    slurm_account: aafc_aac
+```
+
+#### 3. Configuration
+
+The pipeline requires the following configuration files: `config.yaml`, `.env`, and `samples.txt`.
+
+##### 3.1. config/config.yaml
 
 The `config.yaml` file must be located in the `config` directory, which resides in the main Snakemake working directory. This file specifies crucial settings, including:
 
-- Path to the `sample.txt`  
+- Path to the `samples.txt`  
 - Input and output directories  
 - File paths to required databases  
 
@@ -271,7 +360,7 @@ The `config.yaml` file must be located in the `config` directory, which resides 
 You must edit `config.yaml` **before** running the pipeline to ensure all paths are correctly set.  
 For best practice, use database paths that are in common locations to all users on the HPC.
 
-##### 2.2. Environment file
+##### 3.2. Environment file
 
 This file must contain paths to the TMPDIR file and the RGI database. Follow these instructions:
 
@@ -288,49 +377,81 @@ touch .env
  RGI_CARD = path/to/card.json and card_reference.fasta
  ```
 
-##### 2.3. Sample list
+##### 3.3. Sample list
 
- Sample names must be stored in a plain text file named `samples.txt`. Each sample name should appear on a separate line, with no additional formatting or headers.
+ Sample names must be stored in a plain text within `config/samples.txt`. Each sample name should appear on a separate line, with no additional formatting or headers.
 
 **Example `samples.txt`:**
 `LLC42Nov10CR`
 `LLC42Sep06CR`
 `LLC82Sep06GR`
 
-#### 3. Running the pipeline
+#### 4. Running the pipeline
 
-Complete steps **1.Installation** and **2.Configuration** and ensure database paths have been added to the 'config.yaml'. Required databases are described in the [Pre-requisites](#pre-requisites).
+Complete steps **1.Installation**, **2.SLURM Profile**, and **3.Configuration** and ensure database paths have been added to the 'config/config.yaml'. Required databases are described in the [Pre-requisites](#pre-requisites).
 
-##### 3.1.Conda environments
+##### 4.1. Conda environments
 
-Snakemake can automatically create and load Conda environments for each rule in your workflow. Check to see that you have the following configuration files in the `envs` directory:
+Snakemake can automatically create and load Conda environments for each rule in your workflow. Check to see that you have the following configuration files in the `workflow/envs` directory:
 
 - `bedtools.yaml`
 - `bowtie2.yaml`
+- `featurecounts.yaml`
 - `kraken2.yaml`
+- `megahit.yaml`
 - `rgi.yaml`
+- `rnaquast.yaml`
 - `RNAspades.yaml`
 - `sortmerna.yaml`
 
 Load the required conda environments for the pipeline with:
 
 ```bash
-snakemake --conda-create-envs-only
+snakemake --use-conda \
+  --conda-create-envs-only \
+  --conda-prefix path/to/common/lab/folder/conda/metatranscriptomics-snakemake-conda
 ```
-  
-### Notes
+##### 4.2. SLURM launcher
+This is the script you use to submit the Snakemake pipeline to SLURM.
+- Defines resources for the job scheduler
+- Activates the Snakemake environment
+- Submits and manages jobs using the Snakemake `--profile` configuration `(profiles/slurm/)`.
+- Contains any additional Snakemake arguments (e.g.., `--unlock`, `--dry-run`, `--rerun-incomplete`)
 
+```bash
+#!/bin/bash
+#SBATCH --job-name=run_snakemake.sh
+#SBATCH --output=run_snakemaket_%j.out 
+#SBATCH --error=run_snakemake_%j.err 
+#SBATCH --cluster=gpsc8 
+#SBATCH --partition=standard
+#SBATCH --account=aafc_aac
+#SBATCH --mem=2000
+#SBATCH --time=8:00:00
+
+source /gpfs/fs7/aafc/common/miniforge/miniforge3/etc/profile.d/conda.sh
+
+conda activate snakemake-9.6.0
+export PATH="$PWD/bin:$PATH"
+
+  snakemake \
+    --profile absolute/path/to/profiles/slurm \
+    --configfile absolute/path/to/config/config.yaml \
+    --conda-prefix absolute/path/to/common/conda/metatranscriptomics-snakemake-conda \
+    --printshellcmds \
+    --keep-going 
+  ```
+### Notes
+- temp folder is set to `/gpfs/fs7/aafc/scratch/$USER/tmpdir` for running on the GPSC.
 #### Warnings
 
+- The conda environments will not be created if the conda configuration is `conda config --set channel_priority strict`.
+- Set conda to `conda config --set channel_priority flexible` or use libmamba.
 - The `.env` file can overwrite the `config/config.yaml` file
 
 #### Current issues
 
-- The TMPDIR variable set in the .env file is not working. For a temp fix the TMPDIR has been set in the main Snakemake workflow
-
-- temp folder is set to `/gpfs/fs7/aafc/scratch/$USER/tmpdir` for running on the GPSC.
-
-- `$USER` is changed to actual user name. This was done for testing. I wasn't sure if the `$USER` was being expanded correctly.
+- When poor sample reads are used in the pipeline rna SPAdes cannot make an transcripts.fasta file. A temporary solution is to make a dummy fasta file. This results in failed downstream rules for rnaQUAST.
 
 #### Resource usage
 

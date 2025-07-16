@@ -9,4 +9,5 @@ idx/
 resources/bowtie2_index/
 resources/rRNA_DB/
 *.out
+*.err
 localDB/
