@@ -220,7 +220,7 @@ rule extract_unmapped_fastq:
         echo "Finished at: $end_hr" >> {log}
         echo "Wall time: ${{hours}}h ${{mins}}m ${{secs}}s (total ${{runtime}} seconds)" >> {log}
         echo "Temporary directory to be removed: $TMPJOB" >> {log}
-        #rm -rf "$TMPJOB"
+        rm -rf "$TMPJOB"
         """
 
 rule sortmerna_pe:
@@ -449,7 +449,7 @@ rule rgi_reload_database:
         r"""
         set -e
 
-        LOCALDB="{workflow.basedir}/localDB"
+        LOCALDB="localDB"
 
         # Standard "is file, not dir" check
         if [ -f "$LOCALDB" ]; then
@@ -612,10 +612,6 @@ rule rnaquast_busco:
 
         echo "Running on: $(hostname)" > {log}
         
-        export TMPDIR="${{TMPDIR:-/tmp}}/rnaquast_{wildcards.sample}_$RANDOM"
-        mkdir -p "$TMPDIR" || (echo "Failed to create TMPDIR $TMPDIR" >> {log}; exit 1)
-        echo "Using TMPDIR: $TMPDIR" >> {log}
-
         start_time=$(date +%s)
         start_hr=$(date)
         echo "Started at: $start_hr" >> {log}
@@ -635,8 +631,6 @@ rule rnaquast_busco:
         secs=$((runtime % 60))
         echo "Finished at: $end_hr" >> {log}
         echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> {log}
-        echo "Temporary files removed from $TMPDIR" >> {log}
-        # rm -rf "$TMPDIR"  # commented-out or removed, so tmpdir is kept.
         """
 rule megahit_coassembly:
     input: 
@@ -682,8 +676,9 @@ rule megahit_coassembly:
         mins=$(((runtime % 3600) / 60))
         secs=$((runtime % 60))
         echo "Finished at: $end_hr" >> {log}
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> {log}
         echo "Removing tmpdir $TMPDIR" >> {log}
-        #rm -rf "$TMPDIR"
+        rm -rf "$TMPDIR"
         """ 
 rule index_coassembly:
     input:
