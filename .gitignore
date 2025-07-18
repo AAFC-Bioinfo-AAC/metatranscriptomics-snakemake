@@ -11,3 +11,6 @@ resources/rRNA_DB/
 *.out
 *.err
 localDB/
+
+# Do not ignore the local-wrappers directory, but ignore its contents
+local-wrappers/*
