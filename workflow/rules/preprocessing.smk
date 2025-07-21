@@ -17,7 +17,7 @@ rule fastp_pe:
         f"{LOG_DIR}/fastp/{{sample}}.fastp.log"
     threads: 4
     wrapper:
-        "file:../local-wrappers/bio/fastp"
+        "file://workflow/local-wrappers/bio/fastp"
 
 rule bowtie2_align:
     input:

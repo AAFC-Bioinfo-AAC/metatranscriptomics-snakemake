@@ -13,4 +13,4 @@ resources/rRNA_DB/
 localDB/
 
 # Do not ignore the local-wrappers directory, but ignore its contents
-local-wrappers/*
+workflow/local-wrappers/*

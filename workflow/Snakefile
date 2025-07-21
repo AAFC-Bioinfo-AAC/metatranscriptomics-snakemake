@@ -78,6 +78,7 @@ if not (os.path.exists(f"{RGI_CARD}/card.json")
 include: "rules/preprocessing.smk"
 include: "rules/sortmerna.smk"
 include: "rules/taxonomy.smk"
+include: "rules/amr_short_reads.smk"
 
 ## Rule outputs files ##
 rule all:
@@ -122,105 +123,6 @@ rule all:
         # Required logs or done markers
         f"{LOG_DIR}/rgi_reload_db.done"
 
-
-rule rgi_reload_database:
-    input:
-        card_json = f"{RGI_CARD}/card.json",
-        card_fasta = f"{RGI_CARD}/card_reference.fasta"
-    output:
-        f"{LOG_DIR}/rgi_reload_db.done"
-    log:
-        f"{LOG_DIR}/rgi/rgi_reload_db.log"
-    conda:
-        "envs/rgi.yaml"
-    shell:
-        r"""
-        set -e
-
-        LOCALDB="localDB"
-
-        # Standard "is file, not dir" check
-        if [ -f "$LOCALDB" ]; then
-            echo "ERROR: localDB exists as a file, but should be a directory." >&2
-            exit 1
-        fi
-        mkdir -p "$LOCALDB"
-
-        # Debug output
-        echo "Current files in $LOCALDB before loading:" >> {log}
-        ls -lh "$LOCALDB" >> {log}
-
-        # Only reload if DB is not present (or is empty)
-        if [ -f "$LOCALDB/card.json" ] && [ -s "$LOCALDB/card.json" ] && \
-        [ -f "$LOCALDB/card_reference.fasta" ] && [ -s "$LOCALDB/card_reference.fasta" ]; then
-            echo "CARD local database already present in $LOCALDB, skipping reload." >> {log}
-        else
-            echo "Reloading CARD into $LOCALDB..." >> {log}
-            export RGI_DATA_PATH="$LOCALDB"
-            rgi load --card_json {input.card_json} --card_annotation {input.card_fasta} --local >> {log} 2>&1
-        fi
-
-        touch {output}
-        """
-rule rgi_bwt:
-    input:
-        R1 = f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R1.fastq.gz",
-        R2 = f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R2.fastq.gz",
-        reload_marker = f"{LOG_DIR}/rgi_reload_db.done"
-    output:
-        json = f"{CARD_RGI_OUTPUT_DIR}/{{sample}}_paired.allele_mapping_data.json",
-        allele = f"{CARD_RGI_OUTPUT_DIR}/{{sample}}_paired.allele_mapping_data.txt"
-    params:
-        outprefix = lambda wc: f"{CARD_RGI_OUTPUT_DIR}/{wc.sample}_paired"
-    log:
-        f"{LOG_DIR}/rgi/bwt_{{sample}}.log"
-    threads: 20
-    conda:
-        "envs/rgi.yaml"
-    shell:
-        r"""
-        set -o pipefail
-
-        echo "Running on: $(hostname)" > {log}
-
-        export TMPDIR="${{TMPDIR:-/tmp}}/bwt_{wildcards.sample}_$RANDOM"
-        mkdir -p "$TMPDIR" || (echo "Failed to create TMPDIR $TMPDIR" >> {log}; exit 1)
-        echo "Using TMPDIR: $TMPDIR" >> {log}
-
-        export RGI_DATA_PATH={RGI_CARD}
-        echo "RGI_DATA_PATH: {RGI_CARD}" >> {log}
-        start_time=$(date +%s)
-        echo "Started at: $(date)" >> {log}
-        echo 'RGI version:' >> {log}
-        rgi main --version >> {log}
-        echo 'bwt without wildcard' >> {log}
-        mkdir -p {CARD_RGI_OUTPUT_DIR}
-        (rgi bwt \
-            -1 {input.R1} \
-            -2 {input.R2} \
-            -a kma \
-            -n {threads} \
-            -o {params.outprefix} \
-            --local \
-            --clean \
-            ) 2>&1 | egrep -av '\[W::sam_parse1\]|mapped query cannot have zero coordinate' | awk 'NF' >> {log}
-
-        rgistatus=${{PIPESTATUS[0]}}
-        if [ $rgistatus -ne 0 ]; then
-        echo "ERROR: rgi bwt failed with exit code $rgistatus" >> {log}
-        exit $rgistatus
-        fi
-
-        end_time=$(date +%s)
-        runtime=$((end_time - start_time))
-
-        echo "Finished at: $(date)" >> {log}
-        echo "Wall time: $((runtime/3600))h $(((runtime%3600)/60))m $((runtime%60))s (total $runtime s)" >> {log}
-
-        echo "Cleaning up temp dir: $TMPDIR" >> {log}
-        rm -rf "$TMPDIR"
-        echo "Cleanup completed for: $TMPDIR" >> {log}
-        """
 rule rna_spades:
     input:
         R1 = f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R1.fastq.gz",

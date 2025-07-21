@@ -1,8 +1,12 @@
+name: rgi
 channels:
-  - conda-forge
   - bioconda
+  - conda-forge
   - defaults
 dependencies:
-- rgi=6.0.4
-- biopython>=1.78
-- kma>=1.4.17
+  - python=3.8
+  - pip
+  - rgi=6.0.4  # or your required version
+  - kma
+  - pip:
+      - rgi  # this line ensures pip re-installs RGI with full Python source
