@@ -121,57 +121,184 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 
 ### Snakemake rules
 
-- **`rule fastp_pe`** reads the sample names from the `samples.txt` file and processes paired-end FASTQ files with the naming conventions `*_R1.fastq.gz` / `*_r1.fastq.gz` and `*_R2.fastq.gz` / `*_r2.fastq.gz`. This step performs adapter trimming, quality trimming, and filtering. The output files are the trimmed paired reads (`*_r1.fastq.gz`/`*_r2.fastq.gz`), unpaired reads (`*_u1.fastq.gz`/`*_u2.fastq.gz`), and QC reports. Default parameters are used. The unpaired reads can be removed after confirming that the majority of reads have a pair that passed QC.
+## Preprocessing Module Overview
 
-- **`rule bowtie2_align`** uses the trimmed paired-end files from `rule fastp_pe` and aligns them to the specified index. The resulting file is a reference-aligned BAM file. Default parameters are used.
-  > **Wall time:** Tests for single sample. When total cores was 60 (bowtie2 44, SAMtools view 4, SAMtools sort 12) time was 12m 18s. Reduced to total cores 24 (bowtie2 16, SAMtools view 4, SAMtools sort 8)
+The pipeline is modularized, with each module located in the `metatranscriptomics-snakemake/workflow/rules` directory. The modules are `preprocessing.smk`, `sortmerna.smk`, and `amr_short_reads.smk`. **More modules to follow**
 
-- **`rule extract_unmapped_fastq`** takes the sorted BAM file as input and extracts the reads that did not align into paired-end FASTQ files depleted of host and PhiX reads (`*_trimmed_clean_R1.fastq.gz`/`*_trimmed_clean_R2.fastq.gz`). Default parameters are used.
+---   
+### Module  `preprocessing.smk` contains these rules:
+🔹 **`rule fastp_pe` *Quality Control & Trimming***
 
-  > **Wall time:** Tests for single sample. When 60 cores were used and there was no splitting the wall time was 17m 57s. Changed to a 80:20 ratio of splitting between SAMtools and pigz. Total cores is 60 so SAMtools will get 48 and pigz 12. A temp directory was added and wall time logging has been improved.
+- **Purpose:** Performs adapter trimming, quality trimming, and filtering of paired-end reads.
+- **Inputs:** `samplesheet.csv` defines sample IDs and corresponding read pairs.
+- **Outputs:**
+  - Trimmed paired reads: `*_r1.fastq.gz`, `*_r2.fastq.gz`
+  - Unpaired reads: `*_u1.fastq.gz`, `*_u2.fastq.gz`
+  - QC reports (HTML and JSON)
 
-- **`rule sortmerna`** aligns the host-depleted reads to an rRNA database and outputs the rRNA-depleted reads (`*_rRNAdep_R1.fastq.gz`/`*_rRNAdep_R2.fastq.gz`). These rRNA-depleted reads will be used for downstream analysis. The database used for testing the pipeline was `smr_v4.3_default_db.fasta`, available from the Reference RNA databases (database.tar.gz) file at [sortmerna release v4.3.3](https://github.com/sortmerna/sortmerna/releases/tag/v4.3.3). Default parameters were used.
+- **Notes:**
+  - Parameters are defined in **`config/config.ymal`** for `fastp`.
+  - Outputs are marked as **temporary** and automatically cleaned up once no longer needed.
 
-  > **Wall time:** With 60 cores wall time was 4h 48m 56s for one sample. See what wall time is with a reduction to 48 cores and then 32.
 
-- **`rule kraken2`** assigns taxonomy to the rRNA-depleted reads using a Kraken2-formatted GTDB. A confidence threshold of 0.5 is used and all other parameters are defaults. The output files are `*.report` and `*.kraken`.
-  > **Wall time** Large compute node with 600 GB. With 16 CUPs wall time was 7m 56s. With 2 CPUs wall time was 19m 13s.
+🔹 **`rule bowtie2_align` *Alignment to Host/Phix***
+- **Purpose:** Aligns trimmed reads to a user created reference (Host/PhiX) that has been indexed by Bowtie2 index.
+- **Inputs:** 
+  - Trimmed paired reads: `*_r1.fastq.gz`, `*_r2.fastq.gz`
+  - Bowtie2 index files with the suffix `.bt2`
+- **Outputs:**
+  - Reference-aligned `BAM` file
 
-- **`rule bracken`** uses the report file from kraken to output a report at the species, genus and phylum level for each sample. These intermediate files are fed into `rule combine_bracken_outputs`.
+- **Notes:**
+  - Uses **default parameters** from `Bowtie2`.
+  - Outputs are marked as **temporary** and automatically cleaned up once no longer needed.
+- **Performance Notes:**
+  > **Wall time:**  
+  > - 60 cores (bowtie2: 44, SAMtools view: 4, SAMtools sort: 12): 12m 18s  
+  > - 24 cores (bowtie2: 16, SAMtools view: 4, SAMtools sort: 8): ??
 
-   > **Wall time** with 10 threads the wall time was 9s. The cores have been reduced to 2.
-   > **Note to self:** This rule is also making `.report_bracken_species.txt` at each level in the `06_kraken` directory. At some point see if we can either place these into a directory called `reports` or have them cleaned up in the shell block.
 
-- **`rule combine_bracken_outputs`** combines the reports for all the samples  
+🔹 **`rule extract_unmapped_fastq` *Decontamination***
+- **Purpose:** extracts the reads that did not align into paired-end FASTQ files depleted of host and PhiX reads
+- **Inputs:**
+  - Sorted BAM file
+- **Outputs:**
+  - Clean read pairs: `*_trimmed_clean_R1.fastq.gz`/`*_trimmed_clean_R2.fastq.gz` 
+- **Notes:**
+  - Uses **default parameters** from `Bowtie2`.
+  - ## *Add the parameters to the `config/config.yaml`*
+- **Performance Notes:**
+  >  **Wall time:**  
+  > - 60 cores, no splitting: 17m 57s  
+  > - Optimized run with core splitting at a 80:20 ratio between SAMtools and pigz (SAMtools: 48, pigz: 12) : time???
 
-- **`rule bracken_extract`** used a python script `scripts/extract_bracken_columns.py` to generate tables for the raw and relative abundance for each taxonomic level used in `rule bracken`. The resulting outputs are `Bracken_[species/genus/phylum]_relative_abundance.csv` and Bracken_[species/genus/phylum]_raw_abundance.csv`.
+---  
+### Module  `sortmerna.smk` contains this rule:
+🔹 **`rule sortmerna` *rRNA Removal***
+- **Purpose:** Align the clean read pairs to an rRNA database and outputs the rRNA-depleted reads
+- **Inputs:**
+  - Clean read pairs: `*_trimmed_clean_R1.fastq.gz`/`*_trimmed_clean_R2.fastq.gz` 
+- **Outputs:**
+  -rRNA-depleted reads: `*_rRNAdep_R1.fastq.gz`/`*_rRNAdep_R2.fastq.gz`
+- **Notes:**
+  - Uses **default parameters** from `SortMeRNA`
+  - Parameters need to be moved from rule and into `config/config.yaml`
+  - The database used for testing the pipeline was `smr_v4.3_default_db.fasta`, available from the Reference RNA databases (database.tar.gz) file at [sortmerna release v4.3.3](https://github.com/sortmerna/sortmerna/releases/tag/v4.3.3)
 
-- **`rule rgi_reload_database`** Loads the CARD database from a common folder to the working directory only if `localDB` has not been previously loaded. After the step is completed, there should be a `localDB` folder in the main Snakemake directory and a `rgi_reload_db.done` file in the logs directory to prevent the rule from re-running every time the pipeline is called.
+- **Performance Notes:**
+  >  **Wall time:**  
+  > - 60 cores wall time: 4h 48m 56s
+  > - 48 cores wall time: ??
 
-- **`rule rgi_bwt`** performs antimicrobial resistance gene profiling on the rRNA-depleted reads using *k*-mer alignment (kma) and default parameters. Output files are:  
-  - `*_paired.allele_mapping_data.json`
-  - `*_paired.allele_mapping_data.txt`
-  - `*_paired.artifacts_mapping_stats.txt`
-  - `*_paired.gene_mapping_data.txt`
-  - `*_paired.overall_mapping_stats.txt`
-  - `*_paired.reference_mapping_stats.txt`
-  - `*_paired.sorted.length_100.bam`
-  - `*_paired.sorted.length_100.bam.bai`  
-  Remove files that are not required after this step completes.
+--- 
+### Module  `taxonomy.smk` contains these rules:
+### ALL parameters still need to go into config/config.yaml and wall time needs to be removed
 
-  > **Wall time** with 40 cores the job took 18m 7s. Try reducing to 20 cores. If time does not increase much further reduce cores.
+🔹 **`rule kraken2` *Assign Taxonomy***
+- **Purpose:** Assign taxonomy to the clean reads using a Kraken2-formatted GTDB
+- **Inputs:**
+  -rRNA-depleted reads: `*_rRNAdep_R1.fastq.gz`/`*_rRNAdep_R2.fastq.gz`
+- **Outputs:**
+  -Kraken and report for each sample: `*.kraken`/`*.report`
+- **Notes:**
+  - Uses confidence threshold of 0.5 and **default parameters** from `Kraken2`
+  - New Kraken2 database has not been tested yet
+  - Must use **Large compute node**
+
+- **Performance Notes:**
+  >  **Wall time:**  
+  > - Large compute node with 600 GB. With 16 CUPs wall time was 7m 56s
+  > - Large compute node with 600 GB. With 2 CUPs wall time was 19m 13s
+
+🔹 **`rule bracken` *Abundance Estimation***
+  - **Purpose:** Refines Kraken classification to provide abundance estimates at the species, genus and phylum level for each sample.
+  - **Inputs:** Report file from `kraken`
+  - **Outputs:**  
+  - Bracken reports at:
+    - Species level
+    - Genus level
+    - Phylum level
+ - **Notes:**
+  - Outputs are used as **intermediate files** for downstream rule: `combine_bracken_outputs`
+  - his rule is also making `.report_bracken_species.txt` at each level in the `06_kraken` directory. At some point see if we can either place these into a directory called `reports` or have them cleaned up in the shell block.
+
+- **Performance Notes:**
+  >  **Wall time:**  
+  > - 10 threads the wall time was 9s.
+  > - 2 threads ??
+
+🔹 **`rule combine_bracken_outputs` *Merging Abundance Tables***
+- **Inputs:**  
+  - Bracken reports at species, genus, and phylum levels from `rule bracken`
+- **Outputs:**  
+  - Combined abundance tables for:
+    - Species level
+    - Genus level
+    - Phylum level
+
+🔹 **`rule bracken_extract` *Relative Abundance Tables***
+- **Purpose:** generate tables for the raw and relative abundance for each taxonomic level for all samples
+- **Inputs:**
+  - Combined abundance tables for:
+    - Species level
+    - Genus level
+    - Phylum level
+- **Outputs:**
+  - Combined relative and raw abundance tables for
+    - Species level
+    - Genus level
+    - Phylum level
+---
+### Module  `amr_short_reads.smk` contains these rules:
+### ALL parameters still need to go into config/config.yaml and wall time needs to be removed
+🔹 **`rule rgi_reload_database` *Load CARD DB***
+- **Purpose:** Checks if the CARD Database has been loaded from a common directory or user specific directory
+- **Inputs:** 
+  - `card_reference.fasta`
+  - `card.json`
+- **Outputs:**
+  - Done marker `rgi_reload_db.done` to prevent the rule from re-running every time the pipeline is called.
+
+🔹 **`symlink_rgi_card` *Symlink CARD to the working directory***
+- **Purpose:** Prevent the re-loading of the CARD DB
+
+🔹 **`rule rgi_bwt` *Antimicrobial Resistance Gene Profiling***
+- **Purpose:** performs antimicrobial resistance gene profiling on the cleaned reads using *k*-mer alignment (kma)
+- **Inputs:** 
+  -rRNA-depleted reads: `*_rRNAdep_R1.fastq.gz`/`*_rRNAdep_R2.fastq.gz`
+- **Outputs:**  
+  - `*_paired.allele_mapping_data.json` – JSON-formatted allele mapping results  
+  - `*_paired.allele_mapping_data.txt` – Text-formatted allele mapping  
+  - `*_paired.artifacts_mapping_stats.txt` – Statistics on mapping artifacts  
+  - `*_paired.gene_mapping_data.txt` – Per-gene alignment details  
+  - `*_paired.overall_mapping_stats.txt` – Summary statistics across all mappings  
+  - `*_paired.reference_mapping_stats.txt` – Reference-specific mapping stats  
+  - `*_paired.sorted.length_100.bam` – Filtered and sorted BAM file with reads ≥100 bp  
+  - `*_paired.sorted.length_100.bam.bai` – BAM index for downstream access
+
+- **Notes:**
+  - Uses default RGI BWT parameters.
+
+- **Performance Notes:**
+  >  **Wall time:**  
+  > - 40 cores wall time: 18m 7s
+  > - 20 cores wall time: ??If time does not increase much further reduce cores.
+
+---   
 - **`rule coverm`**
    > **Note to self:** Add in the option of running CoverM. This should not be part of the main pipeline but an option if MAGs from metagenomic sequencing of the same samples are available.
 
 - **`rules Cazymes`**
      > **Note to self:** Do we want to include this in the pipeline or use transcripts in existing Bash pipeline made by Arun.
+---
 
 - **`rule rna_spades`** The rRNA-depleted reads are assembled into presumptive mRNA transcripts using the `--rna` flag and default parameters. The transcripts are output to a `*.fasta` file.
 
   > **Wall time:** One sample with 60 cores ran for 2h 15m 53s. The wall time logging and log file has been fixed. Try 48 and 32 cores to see if wall time is similar. Reduce cores if so.
   
 - **`rule rnaquast_busco`** uses the transcripts from RNA SPAses to print the number of transcripts, transcripts over 500 bp, transcripts over 1000 bp and the BUSCO completeness. The software is not intended for metatranscriptomics. Use caution when interpreting the results. For instance the BUSCO completeness cannot be interpreted as the percentage of assembly quality but instead it is a representation of the core functions from the bacteria_odb12 and archaea_odb12 lineages.  
-  
+
+---  
 - **`megahit_coassembly`** here the rRNA-depleted reads are co-assembled with MEGAHIT. If Metagenomic sequencing was done the co-assembly of those reads would be a better choice. The Co-assembly is used as a index to produce sorted BAM files for each assembly. These sorted BAM files can then be used in featureCounts and downstream expression analysis.
 
   > **Wall time:** For the co-assembly of three samples was 52 min 28 sec with 60 cores. For large co-assemblies a large mem node will need to be used (will need to be tested at some point)
@@ -200,9 +327,8 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 The raw input data must be in the form of paired-end FASTQ files generated from metatranscriptomics experiments.
 
 - Each sample should include both forward (R1) and reverse (R2) read files.
-- Both uppercase (`R1`/`R2`) and lowercase (`r1`/`r2`) naming formats are accepted (e.g., `sample_R1.fastq.gz`, `sample_r2.fastq.gz`).
-- The files must be organized in a directory named `01_raw`.
-- The path to the `01_raw` directory must be specified in the `config.yaml` file.
+- The path to the `PROJECT_ROOT` needs to be specified in the `.evn` file
+- Raw fastq file directory must be specified in the `config.yaml` file.
 
 **Example:**
 
@@ -231,7 +357,7 @@ The raw input data must be in the form of paired-end FASTQ files generated from 
 #### Databases
 
 - **Bowtie2**  
-  Bowtie2 uses an index of reference sequences to align reads. This index must be created before running the pipeline. The index files (with the `.bt2` extension) must be located in the `index` directory. Make sure to update the prefix of these files in the `config.yaml` file.
+  Bowtie2 uses an index of reference sequences to align reads. This index must be created before running the pipeline. The index files (with the `.bt2` extension) must be located in the directory you specify in the `config/config.yaml` file. Make sure to update the prefix of these files in the `config.yaml` file.
 
 - **SortMeRNA**  
   SortMeRNA requires a ribosomal (r)RNA database in the `rRNA_DB` directory. Update the `config.yaml` file with the filename of the database used. You can download the database from [SortMeRNA releases](https://github.com/sortmerna/sortmerna/releases/tag/v4.3.3). The file `smr_v4.3_default_db.fasta` was used for pipeline testing.
@@ -354,7 +480,8 @@ The `config.yaml` file must be located in the `config` directory, which resides 
 
 - Path to the `samples.txt`  
 - Input and output directories  
-- File paths to required databases  
+- File paths to required databases 
+- Parameters for each rule **NEED TO UPDATE RULES** 
 
 **Note:**  
 You must edit `config.yaml` **before** running the pipeline to ensure all paths are correctly set.  
@@ -362,7 +489,7 @@ For best practice, use database paths that are in common locations to all users 
 
 ##### 3.2. Environment file
 
-This file must contain paths to the TMPDIR file and the RGI database. Follow these instructions:
+This file must contain paths to the **PROJECT ROOT**,  **USER SCRATCH**, and **RGI COMMON DATABASE**. Follow these instructions:
 
 - In the main Snakemake directory (where you are running Snakemake from)
 
@@ -373,18 +500,19 @@ touch .env
 - Open the .env file and add
 
 ```bash
- TMPDIR = path/to/temp/on/cluster
+ PROJECT_ROOT = path/to/project/root
+ TMPDIR = path/to/temp/on/cluster **Issue with $USER. I had to use my actual username in the .env file**
  RGI_CARD = path/to/card.json and card_reference.fasta
  ```
 
 ##### 3.3. Sample list
 
- Sample names must be stored in a plain text within `config/samples.txt`. Each sample name should appear on a separate line, with no additional formatting or headers.
+ `samplesheet.csv` Has the following column names: "sample","fastq_1","fastq_2". For the column 'sample" use the sampleID for the read pair, and for "fastq_1","fastq_2" have the names of the read1 and read2 files as they appear in the raw fastq files directory. The file location of the `samplesheet.csv` must be`config/samplesheet.csv`.
 
-**Example `samples.txt`:**
-`LLC42Nov10CR`
-`LLC42Sep06CR`
-`LLC82Sep06GR`
+**Example `samplesheet.csv`:**
+sample,fastq_1,fastq_2
+test_LLC82Nov10GR,test_LLC82Nov10GR_r1.fastq.gz,test_LLC82Nov10GR_r2.fastq.gz
+test_LLC82Sep06GR,test_LLC82Sep06GR_r1.fastq.gz,test_LLC82Sep06GR_r2.fastq.gz
 
 #### 4. Running the pipeline
 
@@ -417,6 +545,7 @@ This is the script you use to submit the Snakemake pipeline to SLURM.
 - Activates the Snakemake environment
 - Submits and manages jobs using the Snakemake `--profile` configuration `(profiles/slurm/)`.
 - Contains any additional Snakemake arguments (e.g.., `--unlock`, `--dry-run`, `--rerun-incomplete`)
+- For a snakemake report with runtime and software versions use --report path/to/metatranscriptomics_report.html after the pipeline has completed
 
 ```bash
 #!/bin/bash
@@ -451,6 +580,7 @@ export PATH="$PWD/bin:$PATH"
 
 #### Current issues
 
+- In the .env file /gpfs/fs7/aafc/scratch/$USER/ was not solving to user so as a temporary fix I put in my user name.
 - When poor sample reads are used in the pipeline rna SPAdes cannot make an transcripts.fasta file. A temporary solution is to make a dummy fasta file. This results in failed downstream rules for rnaQUAST.
 
 #### Resource usage
