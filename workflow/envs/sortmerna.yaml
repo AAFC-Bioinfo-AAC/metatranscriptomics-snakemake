@@ -1,3 +1,4 @@
+name: sortmerna
 channels:
   - bioconda
   - conda-forge

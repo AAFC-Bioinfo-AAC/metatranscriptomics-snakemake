@@ -1,3 +1,4 @@
+name: rnaquast
 channels:
   - conda-forge
   - bioconda
