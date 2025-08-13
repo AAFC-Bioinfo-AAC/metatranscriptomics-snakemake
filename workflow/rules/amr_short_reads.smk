@@ -55,7 +55,6 @@ rule symlink_rgi_card:
         set -o pipefail
 
         mkdir -p $(dirname {log})
-        echo "Running on: $(hostname)" > {log}
 
         # Create symlink in working directory to shared CARD DB
         mkdir -p localDB
@@ -78,7 +77,7 @@ rule rgi_bwt:
         outprefix = lambda wc: f"{CARD_RGI_OUTPUT_DIR}/{wc.sample}_paired"
     log:
         f"{LOG_DIR}/rgi/bwt_{{sample}}.log"
-    threads: 20
+    threads: config["rgi_bwt"].get("threads", 20)
     conda:
         "../envs/rgi.yaml"
     shell:
@@ -86,18 +85,12 @@ rule rgi_bwt:
         set -o pipefail
 
         mkdir -p $(dirname {log})
-        echo "Running on: $(hostname)" > {log}
 
         # Ensure RGI_DATA_PATH is set to the localDB directory
         export RGI_DATA_PATH=localDB
         echo "RGI_DATA_PATH: $RGI_DATA_PATH" >> {log}
 
         mkdir -p {CARD_RGI_OUTPUT_DIR}
-        start_time=$(date +%s)
-        echo "Started at: $(date)" >> {log}
-        echo 'RGI version:' >> {log}
-        rgi main --version >> {log}
-        echo 'Running rgi bwt...' >> {log}
 
         rgi bwt \
             -1 {input.R1} \
@@ -114,18 +107,5 @@ rule rgi_bwt:
             echo "ERROR: rgi bwt failed with exit code $rgistatus" >> {log}
             exit $rgistatus
         fi
-
-        end_time=$(date +%s)
-        runtime=$((end_time - start_time))
-
-        # Wall time logging
-        end_time=$(date +%s)
-        end_hr=$(date)
-        runtime=$((end_time - start_time))
-        hours=$((runtime / 3600))
-        mins=$(((runtime % 3600) / 60))
-        secs=$((runtime % 60))
-        echo "Finished at: $end_hr" >> {log}
-        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> {log}
         """
 

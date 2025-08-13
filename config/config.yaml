@@ -35,6 +35,7 @@ busco_lineages:
 card_latest: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/localDB"
 
 ### Parameters for rules ###
+## preprocessing.smk
 fastp:
   threads: 4
   cut_tail: true
@@ -51,3 +52,22 @@ bowtie2_align:
   sort_threads: 8
 extract_unmapped_fastq:
   threads: 60
+## sortmerna.smk
+sortmerna_pe:
+  threads: 48
+## amr_short_reads.smk
+rgi_bwt:
+  threads: 20
+## taxonomy.smk
+kraken2:
+  threads: 2
+  conf_threshold: "0.5"
+bracken:
+  threads: 2
+  readlen: 150
+## sample_assembly.smk
+rna_spades:
+  threads: 48
+  memory: "64000"
+rnaquast_busco:
+  threads: 4

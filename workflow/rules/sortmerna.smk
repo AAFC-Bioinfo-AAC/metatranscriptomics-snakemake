@@ -15,26 +15,18 @@ rule sortmerna_pe:
         stats=f"{RRNA_DEP_DIR}/{{sample}}_sortmerna_pe.stats"
     log:
         f"{LOG_DIR}/sortmerna/{{sample}}reads_pe.log"
-    threads: 48
+    threads: config["sortmerna_pe"].get("threads", 48)
     conda:
         "../envs/sortmerna.yaml"
     shell:
         r"""
         set -euo pipefail
 
-        # Wall time tracking
-        start_time=$(date +%s)
-        start_hr=$(date)
-        echo "Started at: $start_hr" > {log}
-        echo "Running on: $(hostname)" >> {log}
-
         export TMPDIR="${{TMPDIR:-/tmp}}"
         WORKDIR="$TMPDIR/smrn_{wildcards.sample}_$RANDOM"
         mkdir -p "$WORKDIR" || {{ echo "Failed to create TMP workdir $WORKDIR" >> {log}; exit 1; }}
 
         echo "Temporary workdir: $WORKDIR" >> {log}
-        echo "Using SortMeRNA version:" >> {log}
-        sortmerna --version >> {log}
 
         # Actually run SortMeRNA
         sortmerna \
@@ -64,15 +56,6 @@ rule sortmerna_pe:
             echo "SortMeRNA stats not found; see main log for errors." > {output.stats}
         fi
 
-        # Wall time logging
-        end_time=$(date +%s)
-        end_hr=$(date)
-        runtime=$((end_time - start_time))
-        hours=$((runtime / 3600))
-        mins=$(((runtime % 3600) / 60))
-        secs=$((runtime % 60))
-        echo "Finished at: $end_hr" >> {log}
-        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> {log}
         echo "Temporary directory to be removed: $WORKDIR" >> {log}
         rm -rf "$WORKDIR"
         """
