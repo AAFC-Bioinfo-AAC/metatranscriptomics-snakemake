@@ -16,4 +16,5 @@ localDB/
 workflow/local-wrappers/*
 
 #cond env
-/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/metatranscriptomic-conda-env/
+metatranscriptomic-conda-env/
+metatranscriptomic-conda-env/*
