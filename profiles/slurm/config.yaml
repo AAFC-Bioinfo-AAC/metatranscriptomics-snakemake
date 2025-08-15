@@ -48,7 +48,7 @@ set-resources:
     slurm_account: aafc_aac
 
   extract_unmapped_fastq:
-    cpus: 60
+    cpus: 20
     mem_mb: 64000
     runtime: 30
     slurm_partition: standard

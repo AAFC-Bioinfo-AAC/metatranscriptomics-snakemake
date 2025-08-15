@@ -120,6 +120,7 @@ include: "rules/preprocessing.smk"
 include: "rules/sortmerna.smk"
 include: "rules/taxonomy.smk"
 include: "rules/amr_short_reads.smk"
+include: "rules/sample_assembly.smk"
 
 ## Rule outputs files ##
 rule all:
@@ -147,8 +148,8 @@ rule all:
         #expand(f"{CARD_RGI_OUTPUT_DIR}/{{sample}}_paired.allele_mapping_data.json", sample=SAMPLES),
         #expand(f"{CARD_RGI_OUTPUT_DIR}/{{sample}}_paired.allele_mapping_data.txt", sample=SAMPLES),
         # RNA SPAdes Assemblies and RNAQUAST evaluation with busco lineages
-        #expand(f"{ASSEMBLIES_DIR}/{{sample}}.fasta", sample=SAMPLES),
-        #expand(f"{RNAQUAST_DIR}/{{sample}}_{{lineage}}", sample=SAMPLES, lineage=LINEAGES),
+        expand(f"{ASSEMBLIES_DIR}/{{sample}}.fasta", sample=SAMPLES),
+        expand(f"{RNAQUAST_DIR}/{{sample}}_{{lineage}}", sample=SAMPLES, lineage=LINEAGES),
         # MEGAHIT Coassembly and annotation
         #f"{MEGAHIT_DIR}/final.contigs.fa",
         #f"{PRODIGAL_DIR}/coassembly.faa",
@@ -164,105 +165,7 @@ rule all:
         # Required logs or done markers
         #f"{LOG_DIR}/rgi_reload_db.done"
 
-rule rna_spades:
-    input:
-        R1 = f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R1.fastq.gz",
-        R2 = f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R2.fastq.gz"
-    output:
-        fasta = f"{ASSEMBLIES_DIR}/{{sample}}.fasta",
-    log:
-        f"{LOG_DIR}/spades/{{sample}}.log"
-    conda:
-        "envs/RNAspades.yaml"
-    threads: 48
-    params:
-        memory = "64000"
-    shell:
-        r"""
-        set -euo pipefail
-        echo "Running on: $(hostname)" >> {log}
-        echo 'SPAdes version:' >> {log}
-        spades.py --version >> {log}
 
-        # Wall time tracking
-        start_time=$(date +%s)
-        start_hr=$(date)
-        echo "Started at: $start_hr" >> {log}
-
-        export TMPDIR="${{TMPDIR:-/tmp}}/spades_{wildcards.sample}_$RANDOM"
-        mkdir -p "$TMPDIR" || (echo "Failed to create TMPDIR $TMPDIR" && exit 1)
-        echo "Using TMPDIR: $TMPDIR" >> {log}
-
-        
-        outdir=$(mktemp -d "$TMPDIR/rnaspades_{wildcards.sample}_XXXXXX")
-        spades_tmp="$outdir/tmp"
-        mkdir -p "$spades_tmp"
-
-        spades.py --rna \
-            -t {threads} \
-            -m {params.memory} \
-            --tmp-dir "$spades_tmp" \
-            -1 {input.R1} \
-            -2 {input.R2} \
-            -o "$outdir" >> {log} 2>&1 || true
-
-         # Always produce an output
-        if [ ! -s "$outdir/transcripts.fasta" ]; then
-            echo "Failed to assemble for {wildcards.sample}: transcripts.fasta not produced or empty." >> {log} 2>&1
-            echo ">dummy_sequence" > {output.fasta}
-        else
-            cp "$outdir/transcripts.fasta" {output.fasta}
-        fi
-
-        # Wall time logging
-        end_time=$(date +%s)
-        end_hr=$(date)
-        runtime=$((end_time - start_time))
-        hours=$((runtime / 3600))
-        mins=$(((runtime % 3600) / 60))
-        secs=$((runtime % 60))
-        echo "Finished at: $end_hr" >> {log}
-        echo "Wall time: ${{hours}}h ${{mins}}m ${{secs}}s (total ${{runtime}} seconds)" >> {log}
-        echo "Temporary directory to be removed: $outdir" >> {log}
-        rm -rf "$outdir"
-        """
-rule rnaquast_busco:
-    input:
-        fasta = f"{ASSEMBLIES_DIR}/{{sample}}.fasta",
-        busco_lineage = lambda wc: BUSCO_LINEAGES[wc.lineage]
-    output:
-        report_dir = directory(f"{RNAQUAST_DIR}/{{sample}}_{{lineage}}")
-    log:
-        f"{LOG_DIR}/rnaquast/{{sample}}_{{lineage}}.log"
-    conda: 
-        "envs/rnaquast.yaml"
-    threads: 4 
-    shell:
-        r"""
-        set -euo pipefail
-
-        echo "Running on: $(hostname)" > {log}
-        
-        start_time=$(date +%s)
-        start_hr=$(date)
-        echo "Started at: $start_hr" >> {log}
-
-        rnaQUAST.py --transcripts {input.fasta} \
-            --output {output.report_dir} \
-            --threads {threads} \
-            --busco {input.busco_lineage} \
-            &>> {log}
-            
-        # Wall time logging
-        end_time=$(date +%s)
-        end_hr=$(date)
-        runtime=$((end_time - start_time))
-        hours=$((runtime / 3600))
-        mins=$(((runtime % 3600) / 60))
-        secs=$((runtime % 60))
-        echo "Finished at: $end_hr" >> {log}
-        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> {log}
-        """
 rule megahit_coassembly:
     input: 
         r1 = expand(f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R1.fastq.gz", sample=SAMPLES),

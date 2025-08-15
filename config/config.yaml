@@ -51,7 +51,7 @@ bowtie2_align:
   view_threads: 4
   sort_threads: 8
 extract_unmapped_fastq:
-  threads: 60
+  threads: 20
 ## sortmerna.smk
 sortmerna_pe:
   threads: 48
