@@ -14,3 +14,6 @@ localDB/
 
 # Do not ignore the local-wrappers directory, but ignore its contents
 workflow/local-wrappers/*
+
+#cond env
+/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/metatranscriptomic-conda-env/
