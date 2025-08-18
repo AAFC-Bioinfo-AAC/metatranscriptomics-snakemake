@@ -18,14 +18,14 @@ rule fastp_pe:
     log:
         f"{LOG_DIR}/fastp/{{sample}}.fastp.log"
     params:
-        cut_tail = "--cut_tail" if config["fastp"].get("cut_tail", True) else "",
-        cut_front = "--cut_front" if config["fastp"].get("cut_front", True) else "",
-        detect_adapter = "--detect_adapter_for_pe" if config["fastp"].get("detect_adapter_for_pe", True) else "",
-        cut_mean_quality = config["fastp"].get("cut_mean_quality", 20),
-        cut_window_size = config["fastp"].get("cut_window_size", 4),
-        qualified_quality_phred = config["fastp"].get("qualified_quality_phred", 15),
-        length_required = config["fastp"].get("length_required", 100)
-    threads: config["fastp"].get("threads", 4)
+        cut_tail = "--cut_tail" if config.get("fastp", {}).get("cut_tail", True) else "",
+        cut_front = "--cut_front" if config.get("fastp", {}).get("cut_front", True) else "",
+        detect_adapter = "--detect_adapter_for_pe" if config.get("fastp", {}).get("detect_adapter_for_pe", True) else "",
+        cut_mean_quality = config.get("fastp", {}).get("cut_mean_quality", 20),
+        cut_window_size = config.get("fastp", {}).get("cut_window_size", 4),
+        qualified_quality_phred = config.get("fastp", {}).get("qualified_quality_phred", 15),
+        length_required = config.get("fastp", {}).get("length_required", 100)
+    threads: config.get("fastp", {}).get("threads", 2)
     conda: "../envs/fastp.yaml"
     shell:
         r"""
@@ -56,19 +56,24 @@ rule bowtie2_align:
     log:
         f"{LOG_DIR}/bowtie2/{{sample}}.log"
     params:
-        bt2_threads = config["bowtie2_align"].get("bt2_threads", 12),
-        view_threads = config["bowtie2_align"].get("view_threads", 4),
-        sort_threads = config["bowtie2_align"].get("sort_threads", 8),
         extra= lambda wc: f"-R '@RG\\tID:{wc.sample}\\tSM:{wc.sample}'"
-    threads: config["bowtie2_align"].get("threads", 24)
+    threads: config.get("bowtie2_align", {}).get("threads", 12)
     conda:
         "../envs/bowtie2.yaml"
     shell:
         r"""
+
+        #divide threads
+        bt2_threads=$(( {threads} / 2 ))
+        [ $bt2_threads -lt 1 ] && bt2_threads=1
+        view_threads=$(( {threads} / 6 ))
+        [ $view_threads -lt 1 ] && view_threads=1
+        sort_threads=$(( {threads} / 3 ))
+        [ $sort_threads -lt 1 ] && sort_threads=1
         set -euo pipefail
-        bowtie2 -x {BOWTIE_INDEX} -1 {input.r1} -2 {input.r2} --threads {params.bt2_threads} {params.extra} 2>> {log} \
-        | samtools view -u -@ {params.view_threads} 2>> {log} \
-        | samtools sort -@ {params.sort_threads} -o {output.bam} 2>> {log}
+        bowtie2 -x {BOWTIE_INDEX} -1 {input.r1} -2 {input.r2} --threads $bt2_threads {params.extra} 2>> {log} \
+        | samtools view -u -@ $view_threads 2>> {log} \
+        | samtools sort -@ $sort_threads -o {output.bam} 2>> {log}
         """  
 rule extract_unmapped_fastq:
     input:
@@ -79,7 +84,7 @@ rule extract_unmapped_fastq:
 
     log:
         f"{LOG_DIR}/bedtools/{{sample}}.log"
-    threads: config["extract_unmapped_fastq"].get("threads", 60)
+    threads: config.get("extract_unmapped_fastq", {}).get("threads", 4)
     conda:
         "../envs/bedtools.yaml"
     shell:

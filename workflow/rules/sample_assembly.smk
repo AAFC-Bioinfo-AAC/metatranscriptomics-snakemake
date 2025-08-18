@@ -14,10 +14,10 @@ rule rna_spades:
         f"{LOG_DIR}/spades/{{sample}}.log"
     conda:
         "../envs/RNAspades.yaml"
-    threads: config["rna_spades"].get("threads", 48)
+    threads: config.get("rna_spades", {}).get("threads", 24)
     params:
         # SPAdes -m expects MB (megabytes)!
-        memory = config["rna_spades"].get("memory", 64000)
+        memory = config.get("rna_spades", {}).get("memory", 64000)
     shell:
         r"""
         set -euo pipefail
@@ -77,7 +77,7 @@ rule rnaquast_busco:
         f"{LOG_DIR}/rnaquast/{{sample}}_{{lineage}}.log"
     conda:
         "../envs/rnaquast.yaml"
-    threads: config["rnaquast_busco"].get("threads", 4)
+    threads: config.get("rnaquast_busco", {}).get("threads", 4)
     shell:
         r"""
         set -euo pipefail

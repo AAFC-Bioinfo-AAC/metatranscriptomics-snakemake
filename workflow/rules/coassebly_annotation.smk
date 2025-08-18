@@ -11,7 +11,7 @@ rule megahit_coassembly:
         r2 = expand(f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R2.fastq.gz", sample=SAMPLES)
     output:
         f"{MEGAHIT_DIR}/final.contigs.fa"
-    threads: 48
+    threads: config.get("megahit_coassembly", {}).get("threads", 8)
     conda:
         "../envs/megahit.yaml"
     log:
@@ -53,7 +53,7 @@ rule index_coassembly:
         ]
     log:
         f"{LOG_DIR}/coassembly/coassembly_index.log"
-    threads: 8  
+    threads: config.get("index_coassembly", {}).get("threads", 8)
     conda:
         "../envs/bowtie2.yaml"  
     params:
@@ -74,7 +74,7 @@ rule bowtie2_map_transcripts:
         bam = f"{ASSEMBLY_MAPPING}/{{sample}}.coassembly.sorted.bam"
     log:
         f"{LOG_DIR}/sorted_bam/{{sample}}_sorted.log"
-    threads: 16
+    threads: config.get("bowtie2_map_transcripts", {}).get("threads", 16)
     conda:
         "../envs/bowtie2.yaml"
     params:
@@ -83,9 +83,13 @@ rule bowtie2_map_transcripts:
         r"""
         set -euo pipefail
 
-        bowtie2 -x {params.index_prefix} -1 {input.r1} -2 {input.r2} --local -p {threads} 2>> {log}\
+        #divide threads
+        t_bowtie2=$(( ({threads} + 1) / 2 ))
+        t_sort=$(( {threads} - t_bowtie2 ))
+
+        bowtie2 -x {params.index_prefix} -1 {input.r1} -2 {input.r2} --local -p {t_bowtie2} 2>> {log}\
         | samtools view -bS - 2>> {log} \
-        | samtools sort -@ {threads} -o {output.bam} 2>> {log}
+        | samtools sort -@ {t_sort} -o {output.bam} 2>> {log}
         """
 rule assembly_stats_depth:
     input:
@@ -94,7 +98,7 @@ rule assembly_stats_depth:
         stats = f"{ASSEMBLY_MAPPING}/{{sample}}.flagstat.txt",
         depth = f"{ASSEMBLY_MAPPING}/{{sample}}.coverage.txt.gz",
         idxstats = f"{ASSEMBLY_MAPPING}/{{sample}}.idxstats.txt.gz"
-    threads: 2
+    threads: config.get("assembly_stats_depth", {}).get("threads", 2)
     conda: 
         "../envs/bedtools.yaml"
     shell:
@@ -139,7 +143,7 @@ rule featurecounts:
         bam = f"{ASSEMBLY_MAPPING}/{{sample}}.coassembly.sorted.bam"
     output:
         counts = f"{FEATURECOUNTS_DIR}/{{sample}}_counts.txt"
-    threads: 4
+    threads: config.get("featurecounts", {}).get("threads", 4)
     log:
         f"{LOG_DIR}/featurecounts/{{sample}}_featurecounts.log"
     conda:

@@ -15,7 +15,7 @@ rule sortmerna_pe:
         stats=f"{RRNA_DEP_DIR}/{{sample}}_sortmerna_pe.stats"
     log:
         f"{LOG_DIR}/sortmerna/{{sample}}reads_pe.log"
-    threads: config["sortmerna_pe"].get("threads", 48)
+    threads: config.get("sortmerna_pe", {}).get("threads", 24)
     conda:
         "../envs/sortmerna.yaml"
     shell:

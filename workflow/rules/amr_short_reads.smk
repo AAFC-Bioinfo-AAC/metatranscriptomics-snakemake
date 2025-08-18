@@ -71,13 +71,15 @@ rule rgi_bwt:
         R2 = f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R2.fastq.gz",
         symlink_marker = f"{LOG_DIR}/rgi_symlink.done"
     output:
-        json = f"{CARD_RGI_OUTPUT_DIR}/{{sample}}_paired.allele_mapping_data.json",
-        allele = f"{CARD_RGI_OUTPUT_DIR}/{{sample}}_paired.allele_mapping_data.txt"
+        json = temp(f"{CARD_RGI_OUTPUT_DIR}/{{sample}}/{{sample}}_paired.allele_mapping_data.json"),
+        bai = temp(f"{CARD_RGI_OUTPUT_DIR}/{{sample}}/{{sample}}_paired.sorted.length_100.bam.bai"),
+        bam = temp(f"{CARD_RGI_OUTPUT_DIR}/{{sample}}/{{sample}}_paired.sorted.length_100.bam"),
+        allele = f"{CARD_RGI_OUTPUT_DIR}/{{sample}}/{{sample}}_paired.allele_mapping_data.txt"
     params:
-        outprefix = lambda wc: f"{CARD_RGI_OUTPUT_DIR}/{wc.sample}_paired"
+        outprefix = lambda wc: f"{CARD_RGI_OUTPUT_DIR}/{wc.sample}/{wc.sample}_paired"
     log:
         f"{LOG_DIR}/rgi/bwt_{{sample}}.log"
-    threads: config["rgi_bwt"].get("threads", 20)
+    threads: config.get("rgi_bwt", {}).get("threads", 20)
     conda:
         "../envs/rgi.yaml"
     shell:

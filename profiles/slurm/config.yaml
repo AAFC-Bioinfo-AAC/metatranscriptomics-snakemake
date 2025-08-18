@@ -55,7 +55,7 @@ set-resources:
     slurm_account: aafc_aac
 
   sortmerna_pe:
-    cpus: 48
+    cpus: 24
     mem_mb: 32000
     runtime: 360
     slurm_partition: standard
@@ -97,14 +97,14 @@ set-resources:
     slurm_account: aafc_aac
 
   rgi_bwt:
-    cpus: 20
+    cpus: 8
     mem_mb: 64000
     runtime: 60
     slurm_partition: standard
     slurm_account: aafc_aac
 
   rna_spades:             
-    cpus: 48
+    cpus: 24
     mem_mb: 64000
     runtime: 240
     slurm_partition: standard
@@ -118,7 +118,7 @@ set-resources:
     slurm_account: aafc_aac
 
   megahit_coassembly:
-    cpus: 48
+    cpus: 24
     mem_mb: 256000
     runtime: 240
     slurm_partition: standard

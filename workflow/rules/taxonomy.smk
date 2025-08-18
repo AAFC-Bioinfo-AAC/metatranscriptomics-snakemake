@@ -18,9 +18,9 @@ rule kraken2:
         f"{LOG_DIR}/kraken2/{{sample}}.log"
     conda:
         "../envs/kraken2.yaml"
-    threads: config["kraken2"].get("threads", 2)
+    threads: config.get("kraken2", {}).get("threads", 2)
     params:
-        conf_threshold = config['kraken2'].get("conf_threshold", "0.5")
+        conf_threshold = config.get("kraken2", {}).get("conf_threshold", "0.5")
     shell:
         r"""
         set -euo pipefail
@@ -49,9 +49,9 @@ rule bracken:
         f"{LOG_DIR}/bracken/{{sample}}.log"
     conda:
         "../envs/kraken2.yaml"
-    threads: config["bracken"].get("threads", 2)
+    threads: config.get("bracken", {}).get("threads", 2)
     params:
-        readlen = config["bracken"].get("readlen", 150)
+        readlen = config.get("bracken", {}).get("readlen", 150)
     shell:
         r"""
         set -euo pipefail
@@ -98,7 +98,7 @@ rule bracken_extract:
     output:
         species_raw = f"{BRACKEN_OUTPUT_DIR}/Bracken_species_raw_abundance.csv",
         species_rel = f"{BRACKEN_OUTPUT_DIR}/Bracken_species_relative_abundance.csv", 
-        genus_raw = f"{KRAKEN_OUTPUT_DIR}/Bracken_genus_raw_abundance.csv",
+        genus_raw = f"{BRACKEN_OUTPUT_DIR}/Bracken_genus_raw_abundance.csv",
         genus_rel = f"{BRACKEN_OUTPUT_DIR}/Bracken_genus_relative_abundance.csv",
         phylum_raw = f"{BRACKEN_OUTPUT_DIR}/Bracken_phylum_raw_abundance.csv",
         phylum_rel = f"{BRACKEN_OUTPUT_DIR}/Bracken_phylum_relative_abundance.csv"

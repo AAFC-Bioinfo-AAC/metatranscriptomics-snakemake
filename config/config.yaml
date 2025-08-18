@@ -38,7 +38,7 @@ card_latest: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomic
 ### Parameters for rules ###
 ## preprocessing.smk
 fastp:
-  threads: 4
+  threads: 2
   cut_tail: true
   cut_front: true
   cut_mean_quality: 20
@@ -47,15 +47,12 @@ fastp:
   detect_adapter_for_pe: true
   length_required: 100
 bowtie2_align:
-  threads: 24
-  bt2_threads: 12
-  view_threads: 4
-  sort_threads: 8
+  threads: 12
 extract_unmapped_fastq:
-  threads: 20
+  threads: 8
 ## sortmerna.smk
 sortmerna_pe:
-  threads: 48
+  threads: 12
 ## amr_short_reads.smk
 rgi_bwt:
   threads: 20
@@ -68,7 +65,18 @@ bracken:
   readlen: 150
 ## sample_assembly.smk
 rna_spades:
-  threads: 48
+  threads: 24
   memory: "64000"
 rnaquast_busco:
+  threads: 4
+## coassembly_annotation.smk
+megahit_coassembly:
+  threads: 24
+index_coassembly:
+  threads: 8
+bowtie2_map_transcripts:
+  threads: 16
+assembly_stats_depth:
+  threads: 2
+featurecounts:
   threads: 4

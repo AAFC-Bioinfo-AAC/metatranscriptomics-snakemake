@@ -16,7 +16,8 @@ export PATH="$PWD/bin:$PATH"
   snakemake \
     --profile /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/profiles/slurm \
     --configfile /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/config/config.yaml \
-    --conda-prefix /gpfs/fs7/aafc/scratch/kjg000/tmpdir/metatranscriptomics_conda \
+    --conda-prefix /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/metatranscriptomic-conda-env \
     --printshellcmds \
+    --latency-wait 120 \
     --keep-going
     
