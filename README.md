@@ -132,13 +132,11 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 - **Purpose:** Performs adapter trimming, quality trimming, and filtering of paired-end reads.
 - **Inputs:** `samplesheet.csv` defines sample IDs and corresponding read pairs.
 - **Outputs:**
-  - Trimmed paired reads: `*_r1.fastq.gz`, `*_r2.fastq.gz`
-  - Unpaired reads: `*_u1.fastq.gz`, `*_u2.fastq.gz`
-  - QC reports (HTML and JSON)
-
+  - Trimmed paired reads: `sample_r1.fastq.gz`, `sample_r2.fastq.gz`
+  
 - **Notes:**
   - Parameters are defined in **`config/config.ymal`** for `fastp`.
-  - Outputs are marked as **temporary** and automatically cleaned up once no longer needed.
+  - These files are marked as temporary in the rule: `sample_u1.fastq.gz`, `sample_r2.fastq.gz`,`sample.fastp.html`, and `sample.fastp.json`. If these are required the temporary() flag on the output files in the rule can be removed.
 
 
 🔹 **`rule bowtie2_align` *Alignment to Host/Phix***
@@ -147,11 +145,11 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   - Trimmed paired reads: `*_r1.fastq.gz`, `*_r2.fastq.gz`
   - Bowtie2 index files with the suffix `.bt2`
 - **Outputs:**
-  - Reference-aligned `BAM` file
+  - None. The reference-aligned `BAM` file is marked as temporary and automatically cleaned up once no longer needed by the pipeline.
 
 - **Notes:**
   - Uses **default parameters** from `Bowtie2`.
-  - Outputs are marked as **temporary** and automatically cleaned up once no longer needed.
+  - This file is marked as temporary in the rule: `sample.bam`. If it is required the temporary() flag on the output file in the rule can be removed.
 - **Performance Notes:**
   > **Wall time:**  
   > - 60 cores (bowtie2: 44, SAMtools view: 4, SAMtools sort: 12): 12m 18s  
@@ -161,12 +159,11 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 🔹 **`rule extract_unmapped_fastq` *Decontamination***
 - **Purpose:** extracts the reads that did not align into paired-end FASTQ files depleted of host and PhiX reads
 - **Inputs:**
-  - Sorted BAM file
+  - Sorted BAM file: `sample.bam`
 - **Outputs:**
-  - Clean read pairs: `*_trimmed_clean_R1.fastq.gz`/`*_trimmed_clean_R2.fastq.gz` 
+  - Clean read pairs: `sample_trimmed_clean_R1.fastq.gz`/`sample_trimmed_clean_R2.fastq.gz` 
 - **Notes:**
   - Uses **default parameters** from `Bowtie2`.
-  - ## *Add the parameters to the `config/config.yaml`*
 - **Performance Notes:**
   >  **Wall time:**  
   > - 60 cores, no splitting: 17m 57s  
@@ -177,12 +174,11 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 🔹 **`rule sortmerna` *rRNA Removal***
 - **Purpose:** Align the clean read pairs to an rRNA database and outputs the rRNA-depleted reads
 - **Inputs:**
-  - Clean read pairs: `*_trimmed_clean_R1.fastq.gz`/`*_trimmed_clean_R2.fastq.gz` 
+  - Clean read pairs: `sample_trimmed_clean_R1.fastq.gz`/`sample_trimmed_clean_R2.fastq.gz` 
 - **Outputs:**
-  -rRNA-depleted reads: `*_rRNAdep_R1.fastq.gz`/`*_rRNAdep_R2.fastq.gz`
+  - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
 - **Notes:**
   - Uses **default parameters** from `SortMeRNA`
-  - Parameters need to be moved from rule and into `config/config.yaml`
   - The database used for testing the pipeline was `smr_v4.3_default_db.fasta`, available from the Reference RNA databases (database.tar.gz) file at [sortmerna release v4.3.3](https://github.com/sortmerna/sortmerna/releases/tag/v4.3.3)
 
 - **Performance Notes:**
@@ -192,17 +188,17 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 
 --- 
 ### Module  `taxonomy.smk` contains these rules:
-### ALL parameters still need to go into config/config.yaml and wall time needs to be removed
 
 🔹 **`rule kraken2` *Assign Taxonomy***
 - **Purpose:** Assign taxonomy to the clean reads using a Kraken2-formatted GTDB
 - **Inputs:**
-  -rRNA-depleted reads: `*_rRNAdep_R1.fastq.gz`/`*_rRNAdep_R2.fastq.gz`
+  - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
 - **Outputs:**
-  -Kraken and report for each sample: `*.kraken`/`*.report`
+  - Kraken and report for each sample: `sample.kraken` and `sample.report.txt`
 - **Notes:**
-  - Uses confidence threshold of 0.5 and **default parameters** from `Kraken2`
-  - New Kraken2 database has not been tested yet
+  - Uses confidence threshold of 0.5 and default parameters from `Kraken2`
+  - New Kraken2 database in GPSC common has not been tested yet.
+  - Devin Holman's database with additional references has been tested and worked when memory was increased to 840 GB
   - Must use **Large compute node**
 
 - **Performance Notes:**
@@ -212,15 +208,15 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 
 🔹 **`rule bracken` *Abundance Estimation***
   - **Purpose:** Refines Kraken classification to provide abundance estimates at the species, genus and phylum level for each sample.
-  - **Inputs:** Report file from `kraken`
+  - **Inputs:** Kraken report: `sample.report.txt`
   - **Outputs:**  
   - Bracken reports at:
-    - Species level
-    - Genus level
-    - Phylum level
+    - Species level: `sample_bracken.species.report.txt`
+    - Genus level: `sample_bracken.genus.report.txt`
+    - Phylum level: `sample_bracken.phylum.report.txt`
  - **Notes:**
   - Outputs are used as **intermediate files** for downstream rule: `combine_bracken_outputs`
-  - his rule is also making `.report_bracken_species.txt` at each level in the `06_kraken` directory. At some point see if we can either place these into a directory called `reports` or have them cleaned up in the shell block.
+  - his rule is also making `sample.report_bracken_species.txt` at each level in the `kraken2` directory. At some point see if we can either place these into a directory called `reports` or have them cleaned up in the shell block.
 
 - **Performance Notes:**
   >  **Wall time:**  
@@ -232,25 +228,24 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   - Bracken reports at species, genus, and phylum levels from `rule bracken`
 - **Outputs:**  
   - Combined abundance tables for:
-    - Species level
-    - Genus level
-    - Phylum level
+    - Species level: `merged_abundance_species.txt`
+    - Genus level: `merged_abundance_genus.txt`
+    - Phylum level: `merged_abundance_pylum.txt`
 
 🔹 **`rule bracken_extract` *Relative Abundance Tables***
 - **Purpose:** generate tables for the raw and relative abundance for each taxonomic level for all samples
 - **Inputs:**
   - Combined abundance tables for:
-    - Species level
-    - Genus level
-    - Phylum level
+    - Species level: `merged_abundance_species.txt`
+    - Genus level: `merged_abundance_genus.txt`
+    - Phylum level: `merged_abundance_pylum.txt`
 - **Outputs:**
   - Combined relative and raw abundance tables for
-    - Species level
-    - Genus level
-    - Phylum level
+    - Species level: `Bracken_species_raw_abundance.csv` and `Bracken_species_relative_abundance.csv`
+    - Genus level: `Bracken_genus_raw_abundance.csv` and `Bracken_genus_relative_abundance.csv`
+    - Phylum level: `Bracken_phylum_raw_abundance.csv` and `Bracken_genus_relative_abundance.csv`
 ---
 ### Module  `amr_short_reads.smk` contains these rules:
-### ALL parameters still need to go into config/config.yaml and wall time needs to be removed
 🔹 **`rule rgi_reload_database` *Load CARD DB***
 - **Purpose:** Checks if the CARD Database has been loaded from a common directory or user specific directory
 - **Inputs:** 
@@ -265,24 +260,22 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 🔹 **`rule rgi_bwt` *Antimicrobial Resistance Gene Profiling***
 - **Purpose:** performs antimicrobial resistance gene profiling on the cleaned reads using *k*-mer alignment (kma)
 - **Inputs:** 
-  -rRNA-depleted reads: `*_rRNAdep_R1.fastq.gz`/`*_rRNAdep_R2.fastq.gz`
-- **Outputs:**  
-  - `*_paired.allele_mapping_data.json` – JSON-formatted allele mapping results  
-  - `*_paired.allele_mapping_data.txt` – Text-formatted allele mapping  
-  - `*_paired.artifacts_mapping_stats.txt` – Statistics on mapping artifacts  
-  - `*_paired.gene_mapping_data.txt` – Per-gene alignment details  
-  - `*_paired.overall_mapping_stats.txt` – Summary statistics across all mappings  
-  - `*_paired.reference_mapping_stats.txt` – Reference-specific mapping stats  
-  - `*_paired.sorted.length_100.bam` – Filtered and sorted BAM file with reads ≥100 bp  
-  - `*_paired.sorted.length_100.bam.bai` – BAM index for downstream access
+  - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
+- **Outputs:**    
+  - `sample_paired.allele_mapping_data.txt` – Text-formatted allele mapping  
+  - `sample_paired.artifacts_mapping_stats.txt` – Statistics on mapping artifacts  
+  - `sample_paired.gene_mapping_data.txt` – Per-gene alignment details  
+  - `sample_paired.overall_mapping_stats.txt` – Summary statistics across all mappings  
+  - `sample_paired.reference_mapping_stats.txt` – Reference-specific mapping stats  
 
 - **Notes:**
   - Uses default RGI BWT parameters.
+  - These files are marked as temporary in the rule: `sample_paired.allele_mapping_data.json`, `sample_paired.sorted.length_100.bam`, and `sample_paired.sorted.length_100.bam.bai`. If these are required the temporary() flag on the output files in the rule can be removed.
 
 - **Performance Notes:**
   >  **Wall time:**  
   > - 40 cores wall time: 18m 7s
-  > - 20 cores wall time: ??If time does not increase much further reduce cores.
+  > - 4 cores wall time: ??If time does not increase much further reduce cores.
 
 ---   
 - **`rule coverm`**
@@ -291,35 +284,104 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 - **`rules Cazymes`**
      > **Note to self:** Do we want to include this in the pipeline or use transcripts in existing Bash pipeline made by Arun.
 ---
+### Module  `sample_assembly.smk` contains these rules:
+🔹 **`rule rna_spades` *Assemble transcripts***
+- **Purpose:** The rRNA-depleted reads are assembled into presumptive mRNA transcripts
+- **Inputs:**
+  - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
+- **Outputs**
+  - Presumptive transcripts: `sample.fasta`
 
-- **`rule rna_spades`** The rRNA-depleted reads are assembled into presumptive mRNA transcripts using the `--rna` flag and default parameters. The transcripts are output to a `*.fasta` file.
+- **Notes:**
+  - Uses default SPAdes parameters with the -rna flag.
 
-  > **Wall time:** One sample with 60 cores ran for 2h 15m 53s. The wall time logging and log file has been fixed. Try 48 and 32 cores to see if wall time is similar. Reduce cores if so.
+- **Performance Notes:**
+
+  >  **Wall time:** 
+  > -  One sample with 60 cores ran for 2h 15m 53s.
+  > -  Try 48 and 32 cores to see if wall time is similar. Reduce cores if so.
   
-- **`rule rnaquast_busco`** uses the transcripts from RNA SPAses to print the number of transcripts, transcripts over 500 bp, transcripts over 1000 bp and the BUSCO completeness. The software is not intended for metatranscriptomics. Use caution when interpreting the results. For instance the BUSCO completeness cannot be interpreted as the percentage of assembly quality but instead it is a representation of the core functions from the bacteria_odb12 and archaea_odb12 lineages.  
+🔹 **`rule rnaquast_busco` *QC for transcripts***
+- **Purpose:** Reports the number of transcripts, transcripts over 500 bp, transcripts over 1000 bp and the BUSCO completeness.
+- **Inputs:**
+  - Presumptive transcripts: `sample.fasta`
+  - Busco lineage: `bacteria_odb12` and `archaea_odb12`
+- **Outputs:**
+  - QUAST report in `sample_bacteria` and `sample_archaea` directories 
 
----  
-- **`megahit_coassembly`** here the rRNA-depleted reads are co-assembled with MEGAHIT. If Metagenomic sequencing was done the co-assembly of those reads would be a better choice. The Co-assembly is used as a index to produce sorted BAM files for each assembly. These sorted BAM files can then be used in featureCounts and downstream expression analysis.
+- **Notes:**
+  - The software is not intended for metatranscriptomics. Use caution when interpreting the results. For instance the BUSCO completeness cannot be interpreted as the percentage of assembly quality but instead it is a representation of the core functions from the bacteria_odb12 and archaea_odb12 lineages.
 
-  > **Wall time:** For the co-assembly of three samples was 52 min 28 sec with 60 cores. For large co-assemblies a large mem node will need to be used (will need to be tested at some point)
+--- 
+### Module  `coassebly_annotation.smk` contains these rules:
+ 🔹 **`megahit_coassembly` *Co-assembly of all samples***
+- **Purpose:** rRNA-depleted reads are co-assembled with MEGAHIT
+- **Inputs:**
+  - Cleaned sample reads from all samples: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
+- **Outputs:**
+  - Presumptive transcripts from the coassembly: `final.contigs.fa`
 
-- **`index_coassembly`** use Bowtie2 to make an index that can be used to map the reads to the co-assembly.
-  > **Wall time:** Wall time with 8 threads was 1m 5s.
+- **Notes:**
+  - If Metagenomic sequencing was done the co-assembly of those reads would be a better choice.
+  - The Co-assembly is used as a index to produce sorted BAM files for each assembly. These sorted BAM files can then be used in featureCounts and downstream expression analysis.
 
-- **`bowtie2_map_transcripts`** Maps the cleaned reads to the co-assembly resulting in a `.coassembly.sorted.bam` for each sample.
+- **Performance Notes:**
+  >  **Wall time:** 
+  > - For the co-assembly of three samples was 52 min 28 sec with 60 cores. 
+  > - For large co-assemblies a large mem node will need to be used (will need to be tested at some point)
+  
+ 🔹 **`index_coassembly` *Create index***
+- **Purpose:** Bowtie2 is used to make an index that can be used to map the reads to the co-assembly
+- **Inputs:**
+  - Presumptive transcripts from the coassembly: `final.contigs.fa`
+- **Outputs:**
+  - Bowtie2 index `coassembly.1.bt2`, `coassembly.2.bt2`, `coassembly.3.bt2`, `coassembly.4.bt2`, `coassembly.rev.1.bt2`, and `coassembly.rev.2.bt2`
 
-  > **Wall time:** For one sample using 40 cores was 9m 53s. Reduced cores to 16 and will check wall time.
+- **Performance Notes:**
+  >  **Wall time:** 
+  > - Wall time with 8 threads was 1m 5s for a 185 kb assembly. 
 
-- **`assembly_stats_depth`** produces a `flagstat.txt` summary of the reads that mapped back to the assembly, a `coverage.txt.gz` depth file with per-base coverage across the co-assembly for each sample, and a `idxstats.txt.gz` with read counts per transcript for each sample.
+🔹 **`bowtie2_map_transcripts` *Map samples to co-assembly***
+- **Purpose:** Map the rRNA depleted cleaned reads from each sample to the co-assembly
+- **Inputs:**
+  - Bowtie2 index `coassembly.1.bt2`, `coassembly.2.bt2`, `coassembly.3.bt2`, `coassembly.4.bt2`, `coassembly.rev.1.bt2`, and `coassembly.rev.2.bt2`
+  - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
+- **Outputs:**
+  - BAM file for each sample: `sample.coassembly.sorted.bam`
 
-- **`rule prodigal_genes`** used to make a FASTA file of predicted protein sequences `coassembly.faa` and the predicted genes `coassembly.fna`, a feature formatted annotation file `coassembly.gff` and a simplified annotation formate file `coassembly.saf` that is used by feature counts.
+- **Performance Notes:**
+  > **Wall time:**
+  > - For one sample using 40 cores was 9m 53s. Reduced cores to 16 and will check wall time.
 
-  > **Temp file:** Go back and decided if this output should be designated temporary
-  > **Wall time** was 8m with 1 core. prodigal does not support more than one core.
+🔹 **`assembly_stats_depth` *QC and coverage for mapped reads***
+- **Purpose:** `samtools flagstat` provides alignment statisitics that include the total reads, reads that mapped to the co-assembly, properly paired reads and duplicates. The flagstat is used to check how each sample aligns to the co-assembly. `samtools depth` computes the per-base sequencing depth across the co-assembly to evaluate sequncing depth and uniformity of coverage. `samtools idxstats` provides sequnces level mapping statistics with the sample contig name that is used to identify contigs that are over or under represented.
+- **Inputs:**
+  - BAM file for each sample: `sample.coassembly.sorted.bam`
+**Outputs:**
+  - Alignment statistics: `sample.flagstat.txt`
+  - Sequencing depth: `sample.coverage.txt.gz`
+  - Mapping statiscics: `sample.idxstats.txt.gz` 
 
-- **`rule featurecounts`** generates a table for each sample that includes the Geneid (unique identifier), the co-assembly contig name, the start and end positions of each gene on the contig, the strand orientation (+ or -), the gene length, and the number of reads mapped to each gene. Since all samples are mapped to the same co-assembly reference, the resulting tables can be combined for downstream analysis of gene expression across samples.
+🔹 **`rule prodigal_genes` *Gene prediction***
+- **Purpose:** Predict the protein and nucleotide sequnces in the co-assembly. Generate a simplified annotation formate file that is used by `featurecounts`.
+- **Inputs:**
+  - Presumptive transcripts from the coassembly: `final.contigs.fa`
+- **Outputs:**
+  - Predicted protein sequnces: `coassembly.faa`
+  - Predicted nuelotide sequnces: `coassembly.fna`
+  - Feature formatted annotation file: `coassembly.gff`
+  - Simplified annotation formate file: `coassembly.saf`
 
-  > **Wall time** for one sample with 4 cores was 17s.
+- **Notes:**
+  - Go back and decided if this output should be designated temporary.
+
+🔹 **`rule featurecounts` *Generate table for gene expression analysis across samples***
+- **Purpose:** generates a table for each sample that includes the Geneid (unique identifier), the co-assembly contig name, the start and end positions of each gene on the contig, the strand orientation (+ or -), the gene length, and the number of reads mapped to each gene. Since all samples are mapped to the same co-assembly reference, the resulting tables can be combined for downstream analysis of gene expression across samples.
+- **Inputs:**
+  - Simplified annotation formate file: `coassembly.saf`
+  - BAM file for each sample: `sample.coassembly.sorted.bam`
+- **Outputs:**
+  - Featurecounts table: `sample_counts.txt`
 ---
 
 ## Data
