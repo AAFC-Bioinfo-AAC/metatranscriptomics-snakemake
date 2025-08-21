@@ -7,6 +7,9 @@ retries: 2
 max-jobs-per-second: 2 
 executor: slurm
 
+# Prevent rerunning jobs just for Snakefile edits
+## flags available [input, mtime, params, software-env, code, resources, none]
+rerun-triggers: [input, params, software-env]
 
 ### Env Vars ###
 envvars:

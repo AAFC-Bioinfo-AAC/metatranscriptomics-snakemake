@@ -495,7 +495,7 @@ metatranscriptomics_pipeline/
 └── ...                         
 ```
 ##### 2.2. Profile Configuration
-The SLURM execution settings are configured in profiles/slurm/config.yaml. This file defines resource defaults, cluster submission commands, and job script templates for Snakemake. The pre-rule resources need to be adjusted for the size and number of input samples for each rule.
+The SLURM execution settings are configured in profiles/slurm/config.yaml. This file defines resource defaults, cluster submission commands, and job script templates for Snakemake. This file should be adjusted for each HPC configuration. Remember to adjust `rerun-triggers: [input, params, software-env]` pipeline is being modified. The pre-rule resources need to be adjusted for the size and number of input samples for each rule.
 
 **Example for profiles/slurm/config.yaml:**
 ```bash
@@ -508,6 +508,9 @@ retries: 2
 max-jobs-per-second: 2 
 executor: slurm
 
+# Prevent rerunning jobs just for Snakefile edits
+## flags available [input, mtime, params, software-env, code, resources, none]
+rerun-triggers: [input, params, software-env]
 
 ### Env Vars ###
 envvars:
