@@ -4,11 +4,11 @@
 
 ## About
 
-The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illumina shotgun metatranscriptomic sequencing as input. The first part of the pipeline processes the reads using fastp, Bowtie2, and SortMeRNA to perform quality filtering, deplete host and PhiX reads, and removes ribosomal (r)RNA. These cleaned reads are then used for taxonomic classification with Kraken2 and GTDB, antimicrobial gene profiling with RGI and CARD, and transcriptome assembly into presumptive messenger (m)RNA transcripts using RNA SPAdes. To asses the quality of transcripts rnaQUAST and mapping the cleaned reads back to assembly are used. The SAM files from mapping the reads back to the assembly can be used in further expression studies.
+The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illumina shotgun metatranscriptomic sequencing as input. The pipeline can be broken down into four main stages: sample read processing, sort read analysis, individual sample assembly, and co-assembly. Sample processing consists of fastp, Bowtie2, and SortMeRNA to perform quality filtering, remove host and PhiX contamination, and ribosomal (r)RNA depletion. These cleaned reads are used for the sort read analysis consisting of taxonomic classification with Kraken2 using GTDB and antimicrobial gene profiling with RGI using CARD. Individual samples are assembled into presumptive messenger (m)RNA transcripts using RNA SPAdes. Assembly quality is evaluated with rnaQUAST. The co-assembly stage prepares the data for gene expression analysis. All cleaned reads are co-assembled with MEGAHIT, and the resulting co-assembly is indexed with Bowtie2. The cleaned sample reads are then mapped back to the co-assembly, and SAMtools is used generate assembly statistics, mapping summaries, and sequencing depth across the co-assembly. With Prodigal the protein and nucleotide coding regions of the co-assembly are predicted. FeatureCounts quantifies the predicted coding regions and generates a table for gene expression analysis. If metagenomic sequencing was done for these samples then the trimmed and host/PhiX removed metagenomic reads should be used for the co-assembly step.
 
-- *Tools that still need to be added to the pipeline are CoverM, and CAZyme analysis*
-- *The different ways the code can be configured or customized for specific use cases.*
-- *Could include a brief mention of any unique features or benefits of the project.*
+### Future Additions
+
+Contemplated future additions to this pipeline include the tool CoverM to map the metatransriptomic reads to the assembled metagenomes, and a CAZyme analysis module.
 
 ---
 
@@ -16,10 +16,17 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 
 - [Metatranscriptomics Snakemake Pipeline](#metatranscriptomics-snakemake-pipeline)
   - [About](#about)
+    - [Future Additions](#future-additions)
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
     - [Workflow diagram](#workflow-diagram)
     - [Snakemake rules](#snakemake-rules)
+    - [Module  `preprocessing.smk` contains these rules:](#module--preprocessingsmk-contains-these-rules)
+    - [Module  `sortmerna.smk` contains this rule:](#module--sortmernasmk-contains-this-rule)
+    - [Module  `taxonomy.smk` contains these rules:](#module--taxonomysmk-contains-these-rules)
+    - [Module  `amr_short_reads.smk` contains these rules:](#module--amr_short_readssmk-contains-these-rules)
+    - [Module  `sample_assembly.smk` contains these rules:](#module--sample_assemblysmk-contains-these-rules)
+    - [Module  `coassebly_annotation.smk` contains these rules:](#module--coassebly_annotationsmk-contains-these-rules)
   - [Data](#data)
   - [Parameters](#parameters)
   - [Usage](#usage)
@@ -28,12 +35,16 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
       - [Databases](#databases)
     - [Setup Instructions](#setup-instructions)
       - [1. Installation](#1-installation)
-      - [2. Configuration](#2-configuration)
-        - [2.1. config.yaml](#21-configyaml)
-        - [2.2. Environment file](#22-environment-file)
-        - [2.3. Sample list](#23-sample-list)
-      - [3. Running the pipeline](#3-running-the-pipeline)
-        - [3.1.Conda environments](#31conda-environments)
+      - [2. SLURM Profile](#2-slurm-profile)
+        - [2.1. SLURM Profile Directory Structure](#21-slurm-profile-directory-structure)
+        - [2.2. Profile Configuration](#22-profile-configuration)
+      - [3. Configuration](#3-configuration)
+        - [3.1. config/config.yaml](#31-configconfigyaml)
+        - [3.2. Environment file](#32-environment-file)
+        - [3.3. Sample list](#33-sample-list)
+      - [4. Running the pipeline](#4-running-the-pipeline)
+        - [4.1. Conda environments](#41-conda-environments)
+        - [4.2. SLURM launcher](#42-slurm-launcher)
     - [Notes](#notes)
       - [Warnings](#warnings)
       - [Current issues](#current-issues)
@@ -61,7 +72,7 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 
     subgraph PREPROC [Pre-processing]
         A[Paired Reads] -->|QC & trim| B{fastp}
-        B --> C[Trimmed Reads]
+        B --> C[Trimmed Reads - temp]
         B --> L((Fastp QC Report))
         C -->|Host/PhiX removal| D{Bowtie2}
         D --> E[Non-host, Non-PhiX Reads]
@@ -117,13 +128,15 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
         G --> W{RGI}
         W --> Q((AMR Profile))
     end
+
+    %% TEMP FILE STYLING
+    style C fill:#f2f2f2,stroke-dasharray: 5 5
+    style L fill:#f2f2f2,stroke-dasharray: 5 5
 ```
 
 ### Snakemake rules
 
-## Preprocessing Module Overview
-
-The pipeline is modularized, with each module located in the `metatranscriptomics-snakemake/workflow/rules` directory. The modules are `preprocessing.smk`, `sortmerna.smk`, and `amr_short_reads.smk`. **More modules to follow**
+The pipeline is modularized, with each module located in the `metatranscriptomics-snakemake/workflow/rules` directory. The modules are `preprocessing.smk`, `sortmerna.smk`, `taxonomy.smk`,`amr_short_reads.smk`, and `coassebly_annotation.smk`. 
 
 ---   
 ### Module  `preprocessing.smk` contains these rules:
@@ -375,7 +388,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 - **Notes:**
   - Go back and decided if this output should be designated temporary.
 
-🔹 **`rule featurecounts` *Generate table for gene expression analysis across samples***
+🔹 **`rule featurecounts` *Count table***
 - **Purpose:** generates a table for each sample that includes the Geneid (unique identifier), the co-assembly contig name, the start and end positions of each gene on the contig, the strand orientation (+ or -), the gene length, and the number of reads mapped to each gene. Since all samples are mapped to the same co-assembly reference, the resulting tables can be combined for downstream analysis of gene expression across samples.
 - **Inputs:**
   - Simplified annotation formate file: `coassembly.saf`
@@ -388,9 +401,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 
 The raw input data must be in the form of paired-end FASTQ files generated from metatranscriptomics experiments.
 
-- Each sample should include both forward (R1) and reverse (R2) read files.
-- The path to the `PROJECT_ROOT` needs to be specified in the `.evn` file
-- Raw fastq file directory must be specified in the `config.yaml` file.
+- Each sample must include both forward (R1) and reverse (R2) read files.
 
 **Example:**
 
@@ -402,7 +413,13 @@ The raw input data must be in the form of paired-end FASTQ files generated from 
 
 | Parameter          | Value                                                                                               |
 | -------------------- | ----------------------------------------------------------------------------------------------------- |
-| *parameter_name_1* | *Description of what the parameter does and the expected value (e.g., integer, string, file path).* |
+| *samplesheet.csv* | *The samplesheet is described here: [Sample list](#sample-list)* |
+| *preprocessing* | *The papameters are changed in the config/config.yaml. They are `cut_tail: true`, `cut_front: true`
+  cut_mean_quality: 20
+  cut_window_size: 4
+  qualified_quality_phred: 15
+  detect_adapter_for_pe: true
+  length_required: 100*              |
 | *parameter_name_2* | *Description of what the parameter does and the expected value (e.g., boolean, list).*              |
 
 ---
@@ -523,6 +540,7 @@ set-resources:
     runtime: 40
     slurm_partition: standard
     slurm_account: aafc_aac
+    slurm_cluster: gpsc8
 
   bowtie2_align:
     cpus: 24
@@ -530,6 +548,7 @@ set-resources:
     runtime: 30
     slurm_partition: standard
     slurm_account: aafc_aac
+    slurm_cluster: gpsc8
 ```
 
 #### 3. Configuration
@@ -603,6 +622,7 @@ snakemake --use-conda \
 ```
 ##### 4.2. SLURM launcher
 This is the script you use to submit the Snakemake pipeline to SLURM.
+- **Before submitting job to SLURM run `export SLURM_CONF="/etc/slurm-llnl/gpsc8.science.gc.ca.conf"`**
 - Defines resources for the job scheduler
 - Activates the Snakemake environment
 - Submits and manages jobs using the Snakemake `--profile` configuration `(profiles/slurm/)`.

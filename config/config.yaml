@@ -55,7 +55,7 @@ sortmerna_pe:
   threads: 12
 ## amr_short_reads.smk
 rgi_bwt:
-  threads: 20
+  threads: 8
 ## taxonomy.smk
 kraken2:
   threads: 2

@@ -83,13 +83,19 @@ rule bowtie2_map_transcripts:
         r"""
         set -euo pipefail
 
-        #divide threads
-        t_bowtie2=$(( ({threads} + 1) / 2 ))
-        t_sort=$(( {threads} - t_bowtie2 ))
+        # Split threads using modulus
+        half_threads=$(( {threads} / 2 ))
+        remainder=$(( {threads} % 2 ))
 
-        bowtie2 -x {params.index_prefix} -1 {input.r1} -2 {input.r2} --local -p {t_bowtie2} 2>> {log}\
+        t_bowtie2=$(( half_threads + remainder ))  # Bowtie2 gets the extra thread if odd
+        [ $t_bowtie2 -lt 1 ] && t_bowtie2=1
+
+        t_sort=$(( {threads} - t_bowtie2 ))
+        [ $t_sort -lt 1 ] && t_sort=1
+
+        bowtie2 -x {params.index_prefix} -1 {input.r1} -2 {input.r2} --local -p $t_bowtie2 2>> {log}\
         | samtools view -bS - 2>> {log} \
-        | samtools sort -@ {t_sort} -o {output.bam} 2>> {log}
+        | samtools sort -@ $t_sort -o {output.bam} 2>> {log}
         """
 rule assembly_stats_depth:
     input:
