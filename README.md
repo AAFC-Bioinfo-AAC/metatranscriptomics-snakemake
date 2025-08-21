@@ -29,6 +29,7 @@ Contemplated future additions to this pipeline include the tool CoverM to map th
     - [Module  `coassebly_annotation.smk` contains these rules:](#module--coassebly_annotationsmk-contains-these-rules)
   - [Data](#data)
   - [Parameters](#parameters)
+  - [| *rna\_spades:memory*| *Memory limit set in mb.*|](#-rna_spadesmemory-memory-limit-set-in-mb)
   - [Usage](#usage)
     - [Pre-requisites](#pre-requisites)
       - [Software](#software)
@@ -411,17 +412,21 @@ The raw input data must be in the form of paired-end FASTQ files generated from 
 
 ## Parameters
 
+The `config/config.yaml` file contains the editable pipeline parameters, thread allocation for rules with more than one core, and the realtive file paths for input and output. The prefix of the absolute file path must go in `.env`. Most tools in the pipeline have default parameters. The tools with papmerts differnt from defult or that can be editied in the `config/config.ymal` file are listed below.
+
 | Parameter          | Value                                                                                               |
 | -------------------- | ----------------------------------------------------------------------------------------------------- |
-| *samplesheet.csv* | *The samplesheet is described here: [Sample list](#sample-list)* |
-| *preprocessing* | *The papameters are changed in the config/config.yaml. They are `cut_tail: true`, `cut_front: true`
-  cut_mean_quality: 20
-  cut_window_size: 4
-  qualified_quality_phred: 15
-  detect_adapter_for_pe: true
-  length_required: 100*              |
-| *parameter_name_2* | *Description of what the parameter does and the expected value (e.g., boolean, list).*              |
-
+| *samplesheet.csv* | *The samplesheet is described here: [Sample list](#33-sample-list)* |
+| *fastp: cut_tail* | *If true, trim low quality bases from the 3′ end until a base meets or exceeds the cut_mean_quality threshold. If false,disabled.*|
+| *fastp: cut_front* | *If true, trim low quality bases from the 5′ end until a base meets or exceeds the cut_mean_quality threshold. If false,disabled.*|
+| *fastp: cut_mean_quality* | *A positive integer specifying the minimum average quality score threshold for sliding window trimming.*|
+| *fastp: cut_window_size* | *A positive interger specifing the sliding window size in bp when using cut_mean_quality.*|
+| *fastp: qualified_quality_phred* | *A positive interger specifing the minimum Phed score that a base needs to be considered qualified*.| 
+| *fastp: detect_adapter_for_pe* | *If true, auto adapter detection. If false,disabled.*| 
+| *fastp: length_required* | *Reads shorter then this positive interger will be discarded.*| 
+| *kraken2: conf_threshold* | *Interval between 0 and 1. Higher values require more of a read’s k-mers to match the same taxon before it is classified, increasing precision but reducing sensitivity.*              |
+| *bracken: readlen* | *The read length of your data in bp.*              |
+| *rna_spades:memory*| *Memory limit set in mb.*|
 ---
 
 ## Usage
