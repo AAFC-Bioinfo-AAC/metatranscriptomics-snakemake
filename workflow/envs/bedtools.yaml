@@ -1,3 +1,4 @@
+name: bedtools
 channels:
   - conda-forge
   - bioconda
@@ -8,3 +9,4 @@ dependencies:
   - libdeflate=1.24
   - bedtools=2.31
   - pigz=2.6
+  - ncurses

@@ -1,0 +1,113 @@
+'''
+    Filename: amr_short_reads.smk
+    Author: Katherine James-Gzyl
+    Date created: 2025/07/16
+    Snakemake version: 9.6.0
+'''
+rule rgi_reload_database:
+    input:
+        card_json = f"{RGI_CARD}/card.json",
+        card_fasta = f"{RGI_CARD}/card_reference.fasta"
+    output:
+        reload_marker = f"{LOG_DIR}/rgi_reload_db.done"
+    log:
+        f"{LOG_DIR}/rgi/rgi_reload_db.log"
+    conda:
+        "../envs/rgi.yaml"
+    shell:
+        r"""
+        set -e
+
+        LOCALDB={RGI_CARD}
+
+        # Standard "is file, not dir" check
+        if [ -f "$LOCALDB" ]; then
+            echo "ERROR: localDB exists as a file, but should be a directory." >&2
+            exit 1
+        fi
+        mkdir -p "$LOCALDB"
+
+        # Debug output
+        echo "Current files in $LOCALDB before loading:" >> {log}
+        ls -lh "$LOCALDB" >> {log}
+
+        # Only reload if DB is not present (or is empty)
+        if [ -f "$LOCALDB/card.json" ] && [ -s "$LOCALDB/card.json" ] && \
+        [ -f "$LOCALDB/card_reference.fasta" ] && [ -s "$LOCALDB/card_reference.fasta" ]; then
+            echo "CARD local database already present in $LOCALDB, skipping reload." >> {log}
+        else
+            echo "Reloading CARD into $LOCALDB..." >> {log}
+            export RGI_DATA_PATH="$LOCALDB"
+            rgi load --card_json {input.card_json} --card_annotation {input.card_fasta} --local >> {log} 2>&1
+        fi
+
+        touch {output.reload_marker}
+        """
+rule symlink_rgi_card:
+    input:
+        reload_marker = f"{LOG_DIR}/rgi_reload_db.done"
+    output:
+        done = f"{LOG_DIR}/rgi_symlink.done"
+    log:
+        f"{LOG_DIR}/rgi/symlink_rgi_card.log"
+    shell:
+        r"""
+        set -o pipefail
+
+        mkdir -p $(dirname {log})
+
+        # Create symlink in working directory to shared CARD DB
+        mkdir -p localDB
+        ln -sf "{RGI_CARD}/card_reference.fasta" localDB/
+        ln -sf "{RGI_CARD}/card.json" localDB/
+        ln -sf "{RGI_CARD}/loaded_databases.json" localDB/
+        ln -sf "{RGI_CARD}/README" localDB/
+        ln -sfn "{RGI_CARD}/bwt" localDB/
+        touch {output.done}
+        """
+rule rgi_bwt:
+    input:
+        R1 = f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R1.fastq.gz",
+        R2 = f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R2.fastq.gz",
+        symlink_marker = f"{LOG_DIR}/rgi_symlink.done"
+    output:
+        json = temp(f"{CARD_RGI_OUTPUT_DIR}/{{sample}}/{{sample}}_paired.allele_mapping_data.json"),
+        bai = temp(f"{CARD_RGI_OUTPUT_DIR}/{{sample}}/{{sample}}_paired.sorted.length_100.bam.bai"),
+        bam = temp(f"{CARD_RGI_OUTPUT_DIR}/{{sample}}/{{sample}}_paired.sorted.length_100.bam"),
+        allele = f"{CARD_RGI_OUTPUT_DIR}/{{sample}}/{{sample}}_paired.allele_mapping_data.txt"
+    params:
+        outprefix = lambda wc: f"{CARD_RGI_OUTPUT_DIR}/{wc.sample}/{wc.sample}_paired"
+    log:
+        f"{LOG_DIR}/rgi/bwt_{{sample}}.log"
+    threads: config.get("rgi_bwt", {}).get("threads", 20)
+    conda:
+        "../envs/rgi.yaml"
+    shell:
+        r"""
+        set -o pipefail
+
+        mkdir -p $(dirname {log})
+
+        # Ensure RGI_DATA_PATH is set to the localDB directory
+        export RGI_DATA_PATH=localDB
+        echo "RGI_DATA_PATH: $RGI_DATA_PATH" >> {log}
+
+        mkdir -p {CARD_RGI_OUTPUT_DIR}
+
+        rgi bwt \
+            -1 {input.R1} \
+            -2 {input.R2} \
+            -a kma \
+            -n {threads} \
+            -o {params.outprefix} \
+            --local \
+            --clean \
+            2>&1 | egrep -av '\[W::sam_parse1\]|mapped query cannot have zero coordinate' | awk 'NF' >> {log}
+
+        rgistatus=${{PIPESTATUS[0]}}
+        if [ $rgistatus -ne 0 ]; then
+            echo "ERROR: rgi bwt failed with exit code $rgistatus" >> {log}
+            exit $rgistatus
+        fi
+        """
+

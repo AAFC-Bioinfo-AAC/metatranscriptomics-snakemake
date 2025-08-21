@@ -1,3 +1,4 @@
+name: RNAspades
 channels:
   - bioconda
   - conda-forge
