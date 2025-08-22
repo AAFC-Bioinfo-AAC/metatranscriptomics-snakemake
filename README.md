@@ -21,12 +21,12 @@ Contemplated future additions to this pipeline include the tool CoverM to map th
   - [Overview](#overview)
     - [Workflow diagram](#workflow-diagram)
     - [Snakemake rules](#snakemake-rules)
-    - [Module  `preprocessing.smk` contains these rules:](#module--preprocessingsmk-contains-these-rules)
-    - [Module  `sortmerna.smk` contains this rule:](#module--sortmernasmk-contains-this-rule)
-    - [Module  `taxonomy.smk` contains these rules:](#module--taxonomysmk-contains-these-rules)
-    - [Module  `amr_short_reads.smk` contains these rules:](#module--amr_short_readssmk-contains-these-rules)
-    - [Module  `sample_assembly.smk` contains these rules:](#module--sample_assemblysmk-contains-these-rules)
-    - [Module  `coassebly_annotation.smk` contains these rules:](#module--coassebly_annotationsmk-contains-these-rules)
+    - [Module `preprocessing.smk`](#module-preprocessingsmk)
+    - [Module  `sortmerna.smk`](#module--sortmernasmk)
+    - [Module  `taxonomy.smk`](#module--taxonomysmk)
+    - [Module  `amr_short_reads.smk`](#module--amr_short_readssmk)
+    - [Module  `sample_assembly.smk`](#module--sample_assemblysmk)
+    - [Module  `coassebly_annotation.smk`](#module--coassebly_annotationsmk)
   - [Data](#data)
   - [Parameters](#parameters)
   - [Usage](#usage)
@@ -42,9 +42,11 @@ Contemplated future additions to this pipeline include the tool CoverM to map th
         - [3.1. config/config.yaml](#31-configconfigyaml)
         - [3.2. Environment file](#32-environment-file)
         - [3.3. Sample list](#33-sample-list)
+        - [3.4. Scripts called in rules](#34-scripts-called-in-rules)
       - [4. Running the pipeline](#4-running-the-pipeline)
         - [4.1. Conda environments](#41-conda-environments)
         - [4.2. SLURM launcher](#42-slurm-launcher)
+        - [4.3. Submit launcher to SLURM](#43-submit-launcher-to-slurm)
     - [Notes](#notes)
       - [Warnings](#warnings)
       - [Current issues](#current-issues)
@@ -138,8 +140,10 @@ Contemplated future additions to this pipeline include the tool CoverM to map th
 
 The pipeline is modularized, with each module located in the `metatranscriptomics-snakemake/workflow/rules` directory. The modules are `preprocessing.smk`, `sortmerna.smk`, `taxonomy.smk`,`amr_short_reads.smk`, and `coassebly_annotation.smk`. 
 
----   
-### Module  `preprocessing.smk` contains these rules:
+---
+
+### Module `preprocessing.smk`
+
 **`rule fastp_pe` *Quality Control & Trimming***
 
 - **Purpose:** Performs adapter trimming, quality trimming, and filtering of paired-end reads.
@@ -152,8 +156,9 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   - These files are marked as temporary in the rule: `sample_u1.fastq.gz`, `sample_r2.fastq.gz`,`sample.fastp.html`, and `sample.fastp.json`. If these are required the temporary() flag on the output files in the rule can be removed.
 
 **`rule bowtie2_align` *Alignment to Host/Phix***
+
 - **Purpose:** Aligns trimmed reads to a user created reference (Host/PhiX) that has been indexed by Bowtie2 index.
-- **Inputs:** 
+- **Inputs:**
   - Trimmed paired reads: `*_r1.fastq.gz`, `*_r2.fastq.gz`
   - Bowtie2 index files with the suffix `.bt2`
 - **Outputs:**
@@ -164,14 +169,19 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   - This file is marked as temporary in the rule: `sample.bam`. If it is required the temporary() flag on the output file in the rule can be removed.
 
 **`rule extract_unmapped_fastq` *Decontamination***
+
 - **Purpose:** extracts the reads that did not align into paired-end FASTQ files depleted of host and PhiX reads
 - **Inputs:**
   - Sorted BAM file: `sample.bam`
 - **Outputs:**
   - Clean read pairs: `sample_trimmed_clean_R1.fastq.gz`/`sample_trimmed_clean_R2.fastq.gz` 
----  
-### Module  `sortmerna.smk` contains this rule:
+  
+---
+
+### Module  `sortmerna.smk`
+
 **`rule sortmerna` *rRNA Removal***
+
 - **Purpose:** Align the clean read pairs to an rRNA database and outputs the rRNA-depleted reads
 - **Inputs:**
   - Clean read pairs: `sample_trimmed_clean_R1.fastq.gz`/`sample_trimmed_clean_R2.fastq.gz` 
@@ -179,10 +189,13 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
 - **Notes:**
   - The database used for testing the pipeline was `smr_v4.3_default_db.fasta`, available from the Reference RNA databases (database.tar.gz) file at [sortmerna release v4.3.3](https://github.com/sortmerna/sortmerna/releases/tag/v4.3.3)
---- 
-### Module  `taxonomy.smk` contains these rules:
+
+---
+
+### Module  `taxonomy.smk`
 
 **`rule kraken2` *Assign Taxonomy***
+
 - **Purpose:** Assign taxonomy to the clean reads using a Kraken2-formatted GTDB
 - **Inputs:**
   - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
@@ -192,18 +205,20 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   - Must use **Large compute node** with at least 600 GB. 
 
 **`rule bracken` *Abundance Estimation***
-  - **Purpose:** Refines Kraken classification to provide abundance estimates at the species, genus and phylum level for each sample.
-  - **Inputs:** Kraken report: `sample.report.txt`
-  - **Outputs:**  
+
+- **Purpose:** Refines Kraken classification to provide abundance estimates at the species, genus and phylum level for each sample.
+- **Inputs:** Kraken report: `sample.report.txt`
+- **Outputs:**  
   - Bracken reports at:
     - Species level: `sample_bracken.species.report.txt`
     - Genus level: `sample_bracken.genus.report.txt`
     - Phylum level: `sample_bracken.phylum.report.txt`
- - **Notes:**
+- **Notes:**
   - Outputs are used as **intermediate files** for downstream rule: `combine_bracken_outputs`
   - This rule is also making `sample.report_bracken_species.txt` at each level in the `kraken2` directory. At some point see if we can either place these into a directory called `reports` or have them cleaned up in the shell block.
 
 **`rule combine_bracken_outputs` *Merging Abundance Tables***
+
 - **Inputs:**  
   - Bracken reports at:
     - Species level: `sample_bracken.species.report.txt`
@@ -216,6 +231,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
     - Phylum level: `merged_abundance_pylum.txt`
 
 **`rule bracken_extract` *Relative Abundance Tables***
+
 - **Purpose:** generate tables for the raw and relative abundance for each taxonomic level for all samples
 - **Inputs:**
   - Combined abundance tables for:
@@ -227,9 +243,12 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
     - Species level: `Bracken_species_raw_abundance.csv` and `Bracken_species_relative_abundance.csv`
     - Genus level: `Bracken_genus_raw_abundance.csv` and `Bracken_genus_relative_abundance.csv`
     - Phylum level: `Bracken_phylum_raw_abundance.csv` and `Bracken_genus_relative_abundance.csv`
+  
 ---
-### Module  `amr_short_reads.smk` contains these rules:
+### Module  `amr_short_reads.smk`
+
 **`rule rgi_reload_database` *Load CARD DB***
+
 - **Purpose:** Checks if the CARD Database has been loaded from a common directory or user specific directory
 - **Inputs:** 
   - `card_reference.fasta`
@@ -238,13 +257,15 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   - Done marker `rgi_reload_db.done` to prevent the rule from re-running every time the pipeline is called.
 
 **`symlink_rgi_card` *Symlink CARD to the working directory***
+
 - **Purpose:** Prevent the re-loading of the CARD DB
 
 **`rule rgi_bwt` *Antimicrobial Resistance Gene Profiling***
+
 - **Purpose:** performs antimicrobial resistance gene profiling on the cleaned reads using *k*-mer alignment (kma)
-- **Inputs:** 
+- **Inputs:**
   - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
-- **Outputs:**    
+- **Outputs:**
   - `sample_paired.allele_mapping_data.txt` 
   - `sample_paired.artifacts_mapping_stats.txt` 
   - `sample_paired.gene_mapping_data.txt` 
@@ -255,15 +276,21 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   - Uses default RGI BWT parameters.
   - For large sample files the large memory node may be required.
   - These files are marked as temporary in the rule: `sample_paired.allele_mapping_data.json`, `sample_paired.sorted.length_100.bam`, and `sample_paired.sorted.length_100.bam.bai`. If these are required the temporary() flag on the output files in the rule can be removed.
----   
+  
+---
+
 - **`rule coverm`**
    > **Note to self:** Add in the option of running CoverM. This should not be part of the main pipeline but an option if MAGs from metagenomic sequencing of the same samples are available.
 
 - **`rules Cazymes`**
      > **Note to self:** Do we want to include this in the pipeline or use transcripts in existing Bash pipeline made by Arun.
+
 ---
-### Module  `sample_assembly.smk` contains these rules:
+
+### Module  `sample_assembly.smk`
+
 **`rule rna_spades` *Assemble transcripts***
+
 - **Purpose:** The rRNA-depleted reads are assembled into presumptive mRNA transcripts
 - **Inputs:**
   - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
@@ -283,9 +310,12 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 - **Notes:**
   - The software is not intended for metatranscriptomics. Use caution when interpreting the results. For instance the BUSCO completeness cannot be interpreted as the percentage of assembly quality but instead it is a representation of the core functions from the bacteria_odb12 and archaea_odb12 lineages.
 
---- 
-### Module  `coassebly_annotation.smk` contains these rules:
+---
+
+### Module  `coassebly_annotation.smk`
+
  **`megahit_coassembly` *Co-assembly of all samples***
+
 - **Purpose:** rRNA-depleted reads are co-assembled with MEGAHIT
 - **Inputs:**
   - Cleaned sample reads from all samples: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
@@ -297,13 +327,15 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   - The Co-assembly is used as a index to produce sorted BAM files for each assembly. These sorted BAM files can then be used in featureCounts and downstream expression analysis.
 
  **`index_coassembly` *Create index***
+
 - **Purpose:** Bowtie2 is used to make an index that can be used to map the reads to the co-assembly
 - **Inputs:**
   - Presumptive transcripts from the coassembly: `final.contigs.fa`
 - **Outputs:**
   - Bowtie2 index `coassembly.1.bt2`, `coassembly.2.bt2`, `coassembly.3.bt2`, `coassembly.4.bt2`, `coassembly.rev.1.bt2`, and `coassembly.rev.2.bt2`
- 
+
 **`bowtie2_map_transcripts` *Map samples to co-assembly***
+
 - **Purpose:** Map the rRNA depleted cleaned reads from each sample to the co-assembly
 - **Inputs:**
   - Bowtie2 index `coassembly.1.bt2`, `coassembly.2.bt2`, `coassembly.3.bt2`, `coassembly.4.bt2`, `coassembly.rev.1.bt2`, and `coassembly.rev.2.bt2`
@@ -312,6 +344,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   - BAM file for each sample: `sample.coassembly.sorted.bam`
 
 **`assembly_stats_depth` *QC and coverage for mapped reads***
+
 - **Purpose:** `samtools flagstat` provides alignment statisitics that include the total reads, reads that mapped to the co-assembly, properly paired reads and duplicates. The flagstat is used to check how each sample aligns to the co-assembly. `samtools depth` computes the per-base sequencing depth across the co-assembly to evaluate sequncing depth and uniformity of coverage. `samtools idxstats` provides sequnces level mapping statistics with the sample contig name that is used to identify contigs that are over or under represented.
 - **Inputs:**
   - BAM file for each sample: `sample.coassembly.sorted.bam`
@@ -321,6 +354,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   - Mapping statiscics: `sample.idxstats.txt.gz` 
 
 **`rule prodigal_genes` *Gene prediction***
+
 - **Purpose:** Predict the protein and nucleotide sequnces in the co-assembly. Generate a simplified annotation formate file that is used by `featurecounts`.
 - **Inputs:**
   - Presumptive transcripts from the coassembly: `final.contigs.fa`
@@ -334,12 +368,14 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   - Go back and decided if this output should be designated temporary.
 
 **`rule featurecounts` *Count table***
+
 - **Purpose:** generates a table for each sample that includes the Geneid (unique identifier), the co-assembly contig name, the start and end positions of each gene on the contig, the strand orientation (+ or -), the gene length, and the number of reads mapped to each gene. Since all samples are mapped to the same co-assembly reference, the resulting tables can be combined for downstream analysis of gene expression across samples.
 - **Inputs:**
   - Simplified annotation formate file: `coassembly.saf`
   - BAM file for each sample: `sample.coassembly.sorted.bam`
 - **Outputs:**
   - Featurecounts table: `sample_counts.txt`
+
 ---
 
 ## Data
@@ -428,7 +464,9 @@ cd /path/to/code/directory
 git clone <repository-url>
 ```
 #### 2. SLURM Profile
+
 ##### 2.1. SLURM Profile Directory Structure
+
 ```
 metatranscriptomics_pipeline/
 ├── Workflow/
@@ -444,7 +482,9 @@ metatranscriptomics_pipeline/
 ├── .env
 └── ...                         
 ```
+
 ##### 2.2. Profile Configuration
+
 The SLURM execution settings are configured in profiles/slurm/config.yaml. This file defines resource defaults, cluster submission commands, and job script templates for Snakemake. This file should be adjusted for each HPC configuration. Remember to adjust `rerun-triggers: [input, params, software-env]` pipeline is being modified. The pre-rule resources need to be adjusted for the size and number of input samples for each rule.
 
 **Example for profiles/slurm/config.yaml:**
@@ -548,6 +588,12 @@ sample,fastq_1,fastq_2
 test_LLC82Nov10GR,test_LLC82Nov10GR_r1.fastq.gz,test_LLC82Nov10GR_r2.fastq.gz
 test_LLC82Sep06GR,test_LLC82Sep06GR_r1.fastq.gz,test_LLC82Sep06GR_r2.fastq.gz
 
+##### 3.4. Scripts called in rules
+
+The scripts called in the Snakemake pipeline are located in workflow/scripts.
+
+- Module [taxonomy.smk](#module--taxonomysmk-contains-these-rules) uses the `extract_bracken_columns.py` script in `rule combine_bracken_outputs`.
+
 #### 4. Running the pipeline
 
 Complete steps **1.Installation**, **2.SLURM Profile**, and **3.Configuration** and ensure database paths have been added to the 'config/config.yaml'. Required databases are described in the [Pre-requisites](#pre-requisites).
@@ -573,14 +619,21 @@ snakemake --use-conda \
   --conda-create-envs-only \
   --conda-prefix path/to/common/lab/folder/conda/metatranscriptomics-snakemake-conda
 ```
+
 ##### 4.2. SLURM launcher
+
 This is the script you use to submit the Snakemake pipeline to SLURM.
-- **Before submitting job to SLURM run `export SLURM_CONF="/etc/slurm-llnl/gpsc8.science.gc.ca.conf"`**
+
 - Defines resources for the job scheduler
 - Activates the Snakemake environment
 - Submits and manages jobs using the Snakemake `--profile` configuration `(profiles/slurm/)`.
 - Contains any additional Snakemake arguments (e.g.., `--unlock`, `--dry-run`, `--rerun-incomplete`)
 - For a snakemake report with runtime and software versions use --report path/to/metatranscriptomics_report.html after the pipeline has completed
+  
+##### 4.3. Submit launcher to SLURM
+
+- **Before submitting job to SLURM run `export SLURM_CONF="/etc/slurm-llnl/gpsc8.science.gc.ca.conf"`**
+- Submit on GPSC bash terminal with `sbatch name_of_your_script.sh`
 
 ```bash
 #!/bin/bash
@@ -605,8 +658,11 @@ export PATH="$PWD/bin:$PATH"
     --printshellcmds \
     --keep-going 
   ```
+
 ### Notes
+
 - temp folder is set to `/gpfs/fs7/aafc/scratch/$USER/tmpdir` for running on the GPSC.
+  
 #### Warnings
 
 - The conda environments will not be created if the conda configuration is `conda config --set channel_priority strict`.
