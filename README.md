@@ -29,7 +29,6 @@ Contemplated future additions to this pipeline include the tool CoverM to map th
     - [Module  `coassebly_annotation.smk` contains these rules:](#module--coassebly_annotationsmk-contains-these-rules)
   - [Data](#data)
   - [Parameters](#parameters)
-  - [| *rna\_spades:memory*| *Memory limit set in mb.*|](#-rna_spadesmemory-memory-limit-set-in-mb)
   - [Usage](#usage)
     - [Pre-requisites](#pre-requisites)
       - [Software](#software)
@@ -141,7 +140,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 
 ---   
 ### Module  `preprocessing.smk` contains these rules:
-🔹 **`rule fastp_pe` *Quality Control & Trimming***
+**`rule fastp_pe` *Quality Control & Trimming***
 
 - **Purpose:** Performs adapter trimming, quality trimming, and filtering of paired-end reads.
 - **Inputs:** `samplesheet.csv` defines sample IDs and corresponding read pairs.
@@ -152,75 +151,47 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   - Parameters are defined in **`config/config.ymal`** for `fastp`.
   - These files are marked as temporary in the rule: `sample_u1.fastq.gz`, `sample_r2.fastq.gz`,`sample.fastp.html`, and `sample.fastp.json`. If these are required the temporary() flag on the output files in the rule can be removed.
 
-
-🔹 **`rule bowtie2_align` *Alignment to Host/Phix***
+**`rule bowtie2_align` *Alignment to Host/Phix***
 - **Purpose:** Aligns trimmed reads to a user created reference (Host/PhiX) that has been indexed by Bowtie2 index.
 - **Inputs:** 
   - Trimmed paired reads: `*_r1.fastq.gz`, `*_r2.fastq.gz`
   - Bowtie2 index files with the suffix `.bt2`
 - **Outputs:**
-  - None. The reference-aligned `BAM` file is marked as temporary and automatically cleaned up once no longer needed by the pipeline.
+  - Sorted BAM file: `sample.bam`
 
 - **Notes:**
   - Uses **default parameters** from `Bowtie2`.
   - This file is marked as temporary in the rule: `sample.bam`. If it is required the temporary() flag on the output file in the rule can be removed.
-- **Performance Notes:**
-  > **Wall time:**  
-  > - 60 cores (bowtie2: 44, SAMtools view: 4, SAMtools sort: 12): 12m 18s  
-  > - 24 cores (bowtie2: 16, SAMtools view: 4, SAMtools sort: 8): ??
 
-
-🔹 **`rule extract_unmapped_fastq` *Decontamination***
+**`rule extract_unmapped_fastq` *Decontamination***
 - **Purpose:** extracts the reads that did not align into paired-end FASTQ files depleted of host and PhiX reads
 - **Inputs:**
   - Sorted BAM file: `sample.bam`
 - **Outputs:**
   - Clean read pairs: `sample_trimmed_clean_R1.fastq.gz`/`sample_trimmed_clean_R2.fastq.gz` 
-- **Notes:**
-  - Uses **default parameters** from `Bowtie2`.
-- **Performance Notes:**
-  >  **Wall time:**  
-  > - 60 cores, no splitting: 17m 57s  
-  > - Optimized run with core splitting at a 80:20 ratio between SAMtools and pigz (SAMtools: 48, pigz: 12) : time???
-
 ---  
 ### Module  `sortmerna.smk` contains this rule:
-🔹 **`rule sortmerna` *rRNA Removal***
+**`rule sortmerna` *rRNA Removal***
 - **Purpose:** Align the clean read pairs to an rRNA database and outputs the rRNA-depleted reads
 - **Inputs:**
   - Clean read pairs: `sample_trimmed_clean_R1.fastq.gz`/`sample_trimmed_clean_R2.fastq.gz` 
 - **Outputs:**
   - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
 - **Notes:**
-  - Uses **default parameters** from `SortMeRNA`
   - The database used for testing the pipeline was `smr_v4.3_default_db.fasta`, available from the Reference RNA databases (database.tar.gz) file at [sortmerna release v4.3.3](https://github.com/sortmerna/sortmerna/releases/tag/v4.3.3)
-
-- **Performance Notes:**
-  >  **Wall time:**  
-  > - 60 cores wall time: 4h 48m 56s
-  > - 48 cores wall time: ??
-
 --- 
 ### Module  `taxonomy.smk` contains these rules:
 
-🔹 **`rule kraken2` *Assign Taxonomy***
+**`rule kraken2` *Assign Taxonomy***
 - **Purpose:** Assign taxonomy to the clean reads using a Kraken2-formatted GTDB
 - **Inputs:**
   - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
 - **Outputs:**
   - Kraken and report for each sample: `sample.kraken` and `sample.report.txt`
 - **Notes:**
-  - Uses confidence threshold of 0.5 and default parameters from `Kraken2`
-  - New Kraken2 database in GPSC common has not been tested yet.
-  - Devin Holman's database with additional references has been tested and worked when memory was increased to 840 GB
-  - Must use **Large compute node**
+  - Must use **Large compute node** with at least 600 GB. 
 
-- **Performance Notes:**
-  >  **Wall time:**  
-  > - Large compute node with 600 GB. With 16 CUPs wall time was 7m 56s
-  > - Large compute node with 600 GB. With 2 CUPs wall time was 19m 13s
-
-🔹 **`rule bracken` *Abundance Estimation***
+**`rule bracken` *Abundance Estimation***
   - **Purpose:** Refines Kraken classification to provide abundance estimates at the species, genus and phylum level for each sample.
   - **Inputs:** Kraken report: `sample.report.txt`
   - **Outputs:**  
@@ -230,23 +201,21 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
     - Phylum level: `sample_bracken.phylum.report.txt`
  - **Notes:**
   - Outputs are used as **intermediate files** for downstream rule: `combine_bracken_outputs`
-  - his rule is also making `sample.report_bracken_species.txt` at each level in the `kraken2` directory. At some point see if we can either place these into a directory called `reports` or have them cleaned up in the shell block.
+  - This rule is also making `sample.report_bracken_species.txt` at each level in the `kraken2` directory. At some point see if we can either place these into a directory called `reports` or have them cleaned up in the shell block.
 
-- **Performance Notes:**
-  >  **Wall time:**  
-  > - 10 threads the wall time was 9s.
-  > - 2 threads ??
-
-🔹 **`rule combine_bracken_outputs` *Merging Abundance Tables***
+**`rule combine_bracken_outputs` *Merging Abundance Tables***
 - **Inputs:**  
-  - Bracken reports at species, genus, and phylum levels from `rule bracken`
+  - Bracken reports at:
+    - Species level: `sample_bracken.species.report.txt`
+    - Genus level: `sample_bracken.genus.report.txt`
+    - Phylum level: `sample_bracken.phylum.report.txt`
 - **Outputs:**  
   - Combined abundance tables for:
     - Species level: `merged_abundance_species.txt`
     - Genus level: `merged_abundance_genus.txt`
     - Phylum level: `merged_abundance_pylum.txt`
 
-🔹 **`rule bracken_extract` *Relative Abundance Tables***
+**`rule bracken_extract` *Relative Abundance Tables***
 - **Purpose:** generate tables for the raw and relative abundance for each taxonomic level for all samples
 - **Inputs:**
   - Combined abundance tables for:
@@ -260,7 +229,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
     - Phylum level: `Bracken_phylum_raw_abundance.csv` and `Bracken_genus_relative_abundance.csv`
 ---
 ### Module  `amr_short_reads.smk` contains these rules:
-🔹 **`rule rgi_reload_database` *Load CARD DB***
+**`rule rgi_reload_database` *Load CARD DB***
 - **Purpose:** Checks if the CARD Database has been loaded from a common directory or user specific directory
 - **Inputs:** 
   - `card_reference.fasta`
@@ -268,29 +237,24 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 - **Outputs:**
   - Done marker `rgi_reload_db.done` to prevent the rule from re-running every time the pipeline is called.
 
-🔹 **`symlink_rgi_card` *Symlink CARD to the working directory***
+**`symlink_rgi_card` *Symlink CARD to the working directory***
 - **Purpose:** Prevent the re-loading of the CARD DB
 
-🔹 **`rule rgi_bwt` *Antimicrobial Resistance Gene Profiling***
+**`rule rgi_bwt` *Antimicrobial Resistance Gene Profiling***
 - **Purpose:** performs antimicrobial resistance gene profiling on the cleaned reads using *k*-mer alignment (kma)
 - **Inputs:** 
   - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
 - **Outputs:**    
-  - `sample_paired.allele_mapping_data.txt` – Text-formatted allele mapping  
-  - `sample_paired.artifacts_mapping_stats.txt` – Statistics on mapping artifacts  
-  - `sample_paired.gene_mapping_data.txt` – Per-gene alignment details  
-  - `sample_paired.overall_mapping_stats.txt` – Summary statistics across all mappings  
-  - `sample_paired.reference_mapping_stats.txt` – Reference-specific mapping stats  
+  - `sample_paired.allele_mapping_data.txt` 
+  - `sample_paired.artifacts_mapping_stats.txt` 
+  - `sample_paired.gene_mapping_data.txt` 
+  - `sample_paired.overall_mapping_stats.txt`  
+  - `sample_paired.reference_mapping_stats.txt` 
 
 - **Notes:**
   - Uses default RGI BWT parameters.
+  - For large sample files the large memory node may be required.
   - These files are marked as temporary in the rule: `sample_paired.allele_mapping_data.json`, `sample_paired.sorted.length_100.bam`, and `sample_paired.sorted.length_100.bam.bai`. If these are required the temporary() flag on the output files in the rule can be removed.
-
-- **Performance Notes:**
-  >  **Wall time:**  
-  > - 40 cores wall time: 18m 7s
-  > - 4 cores wall time: ??If time does not increase much further reduce cores.
-
 ---   
 - **`rule coverm`**
    > **Note to self:** Add in the option of running CoverM. This should not be part of the main pipeline but an option if MAGs from metagenomic sequencing of the same samples are available.
@@ -299,23 +263,16 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
      > **Note to self:** Do we want to include this in the pipeline or use transcripts in existing Bash pipeline made by Arun.
 ---
 ### Module  `sample_assembly.smk` contains these rules:
-🔹 **`rule rna_spades` *Assemble transcripts***
+**`rule rna_spades` *Assemble transcripts***
 - **Purpose:** The rRNA-depleted reads are assembled into presumptive mRNA transcripts
 - **Inputs:**
   - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
 - **Outputs**
   - Presumptive transcripts: `sample.fasta`
-
 - **Notes:**
-  - Uses default SPAdes parameters with the -rna flag.
-
-- **Performance Notes:**
-
-  >  **Wall time:** 
-  > -  One sample with 60 cores ran for 2h 15m 53s.
-  > -  Try 48 and 32 cores to see if wall time is similar. Reduce cores if so.
+  - Poor quality samples that result in no assembly hav an empty sample.fasta file
   
-🔹 **`rule rnaquast_busco` *QC for transcripts***
+  **`rule rnaquast_busco` *QC for transcripts***
 - **Purpose:** Reports the number of transcripts, transcripts over 500 bp, transcripts over 1000 bp and the BUSCO completeness.
 - **Inputs:**
   - Presumptive transcripts: `sample.fasta`
@@ -328,7 +285,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 
 --- 
 ### Module  `coassebly_annotation.smk` contains these rules:
- 🔹 **`megahit_coassembly` *Co-assembly of all samples***
+ **`megahit_coassembly` *Co-assembly of all samples***
 - **Purpose:** rRNA-depleted reads are co-assembled with MEGAHIT
 - **Inputs:**
   - Cleaned sample reads from all samples: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
@@ -339,23 +296,14 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   - If Metagenomic sequencing was done the co-assembly of those reads would be a better choice.
   - The Co-assembly is used as a index to produce sorted BAM files for each assembly. These sorted BAM files can then be used in featureCounts and downstream expression analysis.
 
-- **Performance Notes:**
-  >  **Wall time:** 
-  > - For the co-assembly of three samples was 52 min 28 sec with 60 cores. 
-  > - For large co-assemblies a large mem node will need to be used (will need to be tested at some point)
-  
- 🔹 **`index_coassembly` *Create index***
+ **`index_coassembly` *Create index***
 - **Purpose:** Bowtie2 is used to make an index that can be used to map the reads to the co-assembly
 - **Inputs:**
   - Presumptive transcripts from the coassembly: `final.contigs.fa`
 - **Outputs:**
   - Bowtie2 index `coassembly.1.bt2`, `coassembly.2.bt2`, `coassembly.3.bt2`, `coassembly.4.bt2`, `coassembly.rev.1.bt2`, and `coassembly.rev.2.bt2`
-
-- **Performance Notes:**
-  >  **Wall time:** 
-  > - Wall time with 8 threads was 1m 5s for a 185 kb assembly. 
-
-🔹 **`bowtie2_map_transcripts` *Map samples to co-assembly***
+ 
+**`bowtie2_map_transcripts` *Map samples to co-assembly***
 - **Purpose:** Map the rRNA depleted cleaned reads from each sample to the co-assembly
 - **Inputs:**
   - Bowtie2 index `coassembly.1.bt2`, `coassembly.2.bt2`, `coassembly.3.bt2`, `coassembly.4.bt2`, `coassembly.rev.1.bt2`, and `coassembly.rev.2.bt2`
@@ -363,11 +311,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 - **Outputs:**
   - BAM file for each sample: `sample.coassembly.sorted.bam`
 
-- **Performance Notes:**
-  > **Wall time:**
-  > - For one sample using 40 cores was 9m 53s. Reduced cores to 16 and will check wall time.
-
-🔹 **`assembly_stats_depth` *QC and coverage for mapped reads***
+**`assembly_stats_depth` *QC and coverage for mapped reads***
 - **Purpose:** `samtools flagstat` provides alignment statisitics that include the total reads, reads that mapped to the co-assembly, properly paired reads and duplicates. The flagstat is used to check how each sample aligns to the co-assembly. `samtools depth` computes the per-base sequencing depth across the co-assembly to evaluate sequncing depth and uniformity of coverage. `samtools idxstats` provides sequnces level mapping statistics with the sample contig name that is used to identify contigs that are over or under represented.
 - **Inputs:**
   - BAM file for each sample: `sample.coassembly.sorted.bam`
@@ -376,7 +320,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   - Sequencing depth: `sample.coverage.txt.gz`
   - Mapping statiscics: `sample.idxstats.txt.gz` 
 
-🔹 **`rule prodigal_genes` *Gene prediction***
+**`rule prodigal_genes` *Gene prediction***
 - **Purpose:** Predict the protein and nucleotide sequnces in the co-assembly. Generate a simplified annotation formate file that is used by `featurecounts`.
 - **Inputs:**
   - Presumptive transcripts from the coassembly: `final.contigs.fa`
@@ -389,7 +333,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 - **Notes:**
   - Go back and decided if this output should be designated temporary.
 
-🔹 **`rule featurecounts` *Count table***
+**`rule featurecounts` *Count table***
 - **Purpose:** generates a table for each sample that includes the Geneid (unique identifier), the co-assembly contig name, the start and end positions of each gene on the contig, the strand orientation (+ or -), the gene length, and the number of reads mapped to each gene. Since all samples are mapped to the same co-assembly reference, the resulting tables can be combined for downstream analysis of gene expression across samples.
 - **Inputs:**
   - Simplified annotation formate file: `coassembly.saf`
@@ -412,21 +356,22 @@ The raw input data must be in the form of paired-end FASTQ files generated from 
 
 ## Parameters
 
-The `config/config.yaml` file contains the editable pipeline parameters, thread allocation for rules with more than one core, and the realtive file paths for input and output. The prefix of the absolute file path must go in `.env`. Most tools in the pipeline have default parameters. The tools with papmerts differnt from defult or that can be editied in the `config/config.ymal` file are listed below.
+The `config/config.yaml` file contains the editable pipeline parameters, thread allocation for rules with more than one core, and the realtive file paths for input and output. The prefix of the absolute file path must go in `.env`. Most tools in the pipeline have default parameters. The tools with parameters different from defult or that can be editied in the `config/config.ymal` file are listed below.
 
 | Parameter          | Value                                                                                               |
 | -------------------- | ----------------------------------------------------------------------------------------------------- |
 | *samplesheet.csv* | *The samplesheet is described here: [Sample list](#33-sample-list)* |
-| *fastp: cut_tail* | *If true, trim low quality bases from the 3′ end until a base meets or exceeds the cut_mean_quality threshold. If false,disabled.*|
-| *fastp: cut_front* | *If true, trim low quality bases from the 5′ end until a base meets or exceeds the cut_mean_quality threshold. If false,disabled.*|
-| *fastp: cut_mean_quality* | *A positive integer specifying the minimum average quality score threshold for sliding window trimming.*|
-| *fastp: cut_window_size* | *A positive interger specifing the sliding window size in bp when using cut_mean_quality.*|
-| *fastp: qualified_quality_phred* | *A positive interger specifing the minimum Phed score that a base needs to be considered qualified*.| 
-| *fastp: detect_adapter_for_pe* | *If true, auto adapter detection. If false,disabled.*| 
-| *fastp: length_required* | *Reads shorter then this positive interger will be discarded.*| 
+| *fastp: cut_tail* | *If true, trim low quality bases from the 3′ end until a base meets or exceeds the cut_mean_quality threshold. If false,disabled.* |
+| *fastp: cut_front* | *If true, trim low quality bases from the 5′ end until a base meets or exceeds the cut_mean_quality threshold. If false,disabled.* |
+| *fastp: cut_mean_quality* | *A positive integer specifying the minimum average quality score threshold for sliding window trimming.* |
+| *fastp: cut_window_size* | *A positive interger specifing the sliding window size in bp when using cut_mean_quality.* |
+| *fastp: qualified_quality_phred* | *A positive interger specifing the minimum Phed score that a base needs to be considered qualified*. | 
+| *fastp: detect_adapter_for_pe* | *If true, auto adapter detection. If false,disabled.* | 
+| *fastp: length_required* | *Reads shorter then this positive interger will be discarded.* | 
 | *kraken2: conf_threshold* | *Interval between 0 and 1. Higher values require more of a read’s k-mers to match the same taxon before it is classified, increasing precision but reducing sensitivity.*              |
 | *bracken: readlen* | *The read length of your data in bp.*              |
-| *rna_spades:memory*| *Memory limit set in mb.*|
+| *rna_spades: memory* | *Memory limit set in mb.* |
+
 ---
 
 ## Usage
@@ -441,16 +386,16 @@ The `config/config.yaml` file contains the editable pipeline parameters, thread 
 #### Databases
 
 - **Bowtie2**  
-  Bowtie2 uses an index of reference sequences to align reads. This index must be created before running the pipeline. The index files (with the `.bt2` extension) must be located in the directory you specify in the `config/config.yaml` file. Make sure to update the prefix of these files in the `config.yaml` file.
+  Bowtie2 uses an index of reference sequences to align reads. This index must be created before running the pipeline. The index files (with the `.bt2` extension) must be located in the directory specified in `config/config.yaml`. Make sure to update the prefix of these files in the `config.yaml` file. For instructions on creating the index please see the [Bowtie2 GitHub repository](https://github.com/BenLangmead/bowtie2).
 
 - **SortMeRNA**  
   SortMeRNA requires a ribosomal (r)RNA database in the `rRNA_DB` directory. Update the `config.yaml` file with the filename of the database used. You can download the database from [SortMeRNA releases](https://github.com/sortmerna/sortmerna/releases/tag/v4.3.3). The file `smr_v4.3_default_db.fasta` was used for pipeline testing.
 
 - **Kraken2**  
-  Kraken2 requires a Kraken2-formatted GTDB database. The GTDB release tested with this pipeline was 220.
+  Kraken2 requires a Kraken2-formatted GTDB. The GTDB release tested with this pipeline was 220. Pre-built Kraken2-formatted GTDB are avalible from [Kraken 2, KrakenUniq and Bracken indexes](https://benlangmead.github.io/aws-indexes/k2), and nstructions for building custom Kraken2-formatted GTDBs are available on the [Kraken2 GitHub repository](https://github.com/DerrickWood/kraken2).  
 
 - **RGI BWT/CARD**  RGI BWT requires the CARD (Comprehensive Antibiotic Resistance Database) database. The version tested in this pipeline was 4.0.1. The database can be located on a common drive or in your working directory.  
-  Instructions for installing the CARD database are available on [CARD RGI github](https://github.com/arpcard/rgi/blob/master/docs/rgi_bwt.rst).  
+  Instructions for installing the CARD database are available on [CARD RGI GitHub repository](https://github.com/arpcard/rgi/blob/master/docs/rgi_bwt.rst).  
   Steps copied from the RGI documentation:
 
   **Download CARD data:**
@@ -469,7 +414,7 @@ The `config/config.yaml` file contains the editable pipeline parameters, thread 
   **Note:** the files after loading and annotating card must be called `card.json` and `card_reference.fasta`
 
 - **BUSCO**
-rnaQUAST uses the BUSCO bacterial and archaeal lineages. The directory path to these lineages must be provided.
+rnaQUAST uses the BUSCO bacterial and archaeal lineages. The directory path to these lineages must be provided in `config/config.yaml`. The [BUSCO lineages](https://busco.ezlab.org/busco_userguide.html#lineage-datasets) are available on the webpage.
 
 ### Setup Instructions
 
@@ -671,12 +616,11 @@ export PATH="$PWD/bin:$PATH"
 #### Current issues
 
 - In the .env file /gpfs/fs7/aafc/scratch/$USER/ was not solving to user so as a temporary fix I put in my user name.
-- When poor sample reads are used in the pipeline rna SPAdes cannot make an transcripts.fasta file. A temporary solution is to make a dummy fasta file. This results in failed downstream rules for rnaQUAST.
 
 #### Resource usage
 
 - Kraken2: Large compute node with 600 GB. With 16 CUPs wall time was 7m 56s. With 2 CPUs wall time was 19m 13s.
-
+- Generate Snakemake report to track walltime
 ## OUTPUT
 
 *Provide format, location, and naming of result files, and a brief description.*
