@@ -245,6 +245,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
     - Phylum level: `Bracken_phylum_raw_abundance.csv` and `Bracken_genus_relative_abundance.csv`
   
 ---
+
 ### Module  `amr_short_reads.smk`
 
 **`rule rgi_reload_database` *Load CARD DB***
@@ -463,11 +464,12 @@ Clone the repository into the directory where you want to run the metatranscript
 cd /path/to/code/directory
 git clone <repository-url>
 ```
+
 #### 2. SLURM Profile
 
 ##### 2.1. SLURM Profile Directory Structure
 
-```
+```bash
 metatranscriptomics_pipeline/
 ├── Workflow/
 │   └── Snakemake/
@@ -488,6 +490,7 @@ metatranscriptomics_pipeline/
 The SLURM execution settings are configured in profiles/slurm/config.yaml. This file defines resource defaults, cluster submission commands, and job script templates for Snakemake. This file should be adjusted for each HPC configuration. Remember to adjust `rerun-triggers: [input, params, software-env]` pipeline is being modified. The pre-rule resources need to be adjusted for the size and number of input samples for each rule.
 
 **Example for profiles/slurm/config.yaml:**
+
 ```bash
 ### How Snakemake assigns resources to rules
 cores: 60
@@ -592,7 +595,7 @@ test_LLC82Sep06GR,test_LLC82Sep06GR_r1.fastq.gz,test_LLC82Sep06GR_r2.fastq.gz
 
 The scripts called in the Snakemake pipeline are located in workflow/scripts.
 
-- Module [taxonomy.smk](#module--taxonomysmk-contains-these-rules) uses the `extract_bracken_columns.py` script in `rule combine_bracken_outputs`.
+- Module [taxonomy.smk](#module--taxonomysmk) uses the `extract_bracken_columns.py` script in `rule combine_bracken_outputs`.
 
 #### 4. Running the pipeline
 
@@ -677,19 +680,27 @@ export PATH="$PWD/bin:$PATH"
 
 - Kraken2: Large compute node with 600 GB. With 16 CUPs wall time was 7m 56s. With 2 CPUs wall time was 19m 13s.
 - Generate Snakemake report to track walltime
+  
 ## OUTPUT
 
-*Provide format, location, and naming of result files, and a brief description.*
+**All output file paths are set in the `config/config.ymal` file and need to be edited prior to running the pipeline.**
 
-*Example Output:*
+The following table includes the key outputs of the metatranscriptomics pipeline. The [Snakemake](#snakemake-rules) section provides greater detail on all file outputs.
 
-*Output files include:*
-
-*- results/reports/summary.csv: Key metrics from analysis.*
-
-*- results/logs/pipeline.log: Step-by-step log.*
-
-*- results/plots/visualization.png: Output plot.*
+| Output Type         | Description                                                       | Filename                                       |
+| -------------------- | ----------------------------------------------------------|------------------------------------------- |
+| *Processed sample reads* | *Processed reads with Host reads and rRNA removed.* |sample_rRNAdep_R1.fastq.gz/sample_rRNAdep_R2.fastq.gz|
+| *Assembled transcripts* | *Individual sample assemblies* | *sample.fasta*|
+| *Transcripts from Co-assembly* | *Co-assembly of all samples* | *final.contigs.fa* |
+| *Report* | *Kraken taxonomy summary for each sample* |  *sample.report.txt* |
+| *Report* | *Bracken report for the raw, and relative abundance at each taxonomic level*| *Bracken_species_raw_abundance.csv, Bracken_species_relative_abundance.csv,Bracken_genus_raw_abundance.csv, Bracken_genus_relative_abundance.csv, Bracken_phylum_raw_abundance.csv, Bracken_genus_relative_abundance.csv*|
+|*Report* | *Antimicrobial resistance gene profiling using RGI and the CARD.* | *sample_paired.allele_mapping_data.txt, sample_paired.artifacts_mapping_stats.txt, sample_paired.gene_mapping_data.txt, sample_paired.overall_mapping_stats.txt, sample_paired.reference_mapping_stats.txt*|
+|*Report*| *rnaQUAST quality control report for individual sample assemblies using the BUSCO bacteria and archaea lineages*| *Reports are found in sample_bacteria/ and sample_archaea/ directories which contain the short_report files with .pdf, .tsv, and .txt extensions*|
+|*Report*| *Alignment statistics of the sample reads to the co-assembly* | *sample.flagstat.txt*|
+|*Report*| *Per-base sequencing depth across the co-assembly* | *sample.coverage.txt.gz*|
+|*Report*| *Sequence level mapping statistics with the sample contig name*| *sample.idxstats.txt.gz*|
+|*Annotation files*| *Annotation tables for gene prediction of the co-assembly with protein sequences and nucleotide sequences*| *coassembly.faa, coassembly.fna, coassembly.gff, coassembly.saf*|
+|*Report*| *Feature count table for each sample* |*sample_counts.txt*|
 
 ---
 
