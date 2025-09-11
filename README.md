@@ -280,14 +280,6 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   
 ---
 
-- **`rule coverm`**
-   > **Note to self:** Add in the option of running CoverM. This should not be part of the main pipeline but an option if MAGs from metagenomic sequencing of the same samples are available.
-
-- **`rules Cazymes`**
-     > **Note to self:** Do we want to include this in the pipeline or use transcripts in existing Bash pipeline made by Arun.
-
----
-
 ### Module  `sample_assembly.smk`
 
 **`rule rna_spades` *Assemble transcripts***
@@ -418,7 +410,7 @@ The `config/config.yaml` file contains the editable pipeline parameters, thread 
 #### Software
 
 - Snakemake version 9.6.0 *Most rules also tested with Snakemake version 9.9.0.*
-- Snakemake-executor-plugin-slurm
+- Snakemake-executor-plugin-slurm version 1.6.1. *Earlier version resulted in SLURM communication issues*
 
 #### Databases
 
