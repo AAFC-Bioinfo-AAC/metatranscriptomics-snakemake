@@ -122,7 +122,7 @@ include: "rules/sortmerna.smk"
 include: "rules/taxonomy.smk"
 include: "rules/amr_short_reads.smk"
 include: "rules/sample_assembly.smk"
-include: "rules/coassebly_annotation.smk"
+include: "rules/coassembly_annotation.smk"
 
 ## Rule outputs files ##
 rule all:

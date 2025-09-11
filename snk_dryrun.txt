@@ -1,0 +1,1502 @@
+DEBUG: Using TMPDIR = /gpfs/fs7/aafc/scratch/kjg000
+host: inter-aafc-ubuntu2204.science.gc.ca
+Building DAG of jobs...
+Job stats:
+job                        count
+-----------------------  -------
+all                            1
+assembly_stats_depth           3
+bowtie2_map_transcripts        3
+bracken                        3
+combine_bracken_outputs        1
+extract_unmapped_fastq         3
+featurecounts                  3
+kraken2                        3
+rgi_bwt                        3
+rna_spades                     3
+rnaquast_busco                 6
+sortmerna_pe                   3
+total                         35
+
+
+[Fri Jul 11 10:59:31 2025]
+rule extract_unmapped_fastq:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/02_trimmed/bam/test_LLC81Sep06CR.bam
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC81Sep06CR_trimmed_clean_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC81Sep06CR_trimmed_clean_R2.fastq.gz
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC81Sep06CR.log
+    jobid: 2
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC81Sep06CR_trimmed_clean_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC81Sep06CR_trimmed_clean_R2.fastq.gz; Updated input files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/02_trimmed/bam/test_LLC81Sep06CR.bam
+    wildcards: sample=test_LLC81Sep06CR
+    threads: 60
+    resources: mem_mb=64000, mem_mib=61036, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=30, cpus=60
+Shell command: 
+        # Split threads between samtools and pigz; bedtools is single-threaded
+        SAMTOOLS_THREADS=$(( 60 * 4 / 5 ))
+        PIGZ_THREADS=$(( 60 / 5 ))
+        [ $SAMTOOLS_THREADS -lt 1 ] && SAMTOOLS_THREADS=1
+        [ $PIGZ_THREADS -lt 1 ] && PIGZ_THREADS=1
+
+        echo 'Bedtools version:' > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC81Sep06CR.log
+        bedtools --version >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC81Sep06CR.log
+        echo 'Samtools version:' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC81Sep06CR.log
+        samtools --version | head -n 1 >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC81Sep06CR.log
+        echo "SAMTOOLS_THREADS: $SAMTOOLS_THREADS" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC81Sep06CR.log
+        echo "PIGZ_THREADS: $PIGZ_THREADS" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC81Sep06CR.log
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC81Sep06CR.log
+
+        TMPDIR="{TMPDIR:-/tmp}"
+        JOB_ID="{SLURM_JOB_ID:-manual}"
+        TMPJOB=$(mktemp -d "${TMPDIR}/bam2fq_${JOB_ID}_XXXXXX")
+
+        samtools view -u -f 12 -F 256 --threads $SAMTOOLS_THREADS /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/02_trimmed/bam/test_LLC81Sep06CR.bam 2>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC81Sep06CR.log \
+        | samtools sort -n --threads $SAMTOOLS_THREADS -T $TMPJOB/test_LLC81Sep06CR_sort_tmp -O BAM - 2>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC81Sep06CR.log \
+        | bedtools bamtofastq -i - 2>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC81Sep06CR.log \
+            -fq >(pigz -p $PIGZ_THREADS --fast > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC81Sep06CR_trimmed_clean_R1.fastq.gz) \
+            -fq2 >(pigz -p $PIGZ_THREADS --fast > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC81Sep06CR_trimmed_clean_R2.fastq.gz)
+
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC81Sep06CR.log
+        echo "Wall time: ${hours}h ${mins}m ${secs}s (total ${runtime} seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC81Sep06CR.log
+        echo "Temporary directory to be removed: $TMPJOB" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC81Sep06CR.log
+        #rm -rf "$TMPJOB"
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule extract_unmapped_fastq:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/02_trimmed/bam/test_LLC82Sep06GR.bam
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Sep06GR_trimmed_clean_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Sep06GR_trimmed_clean_R2.fastq.gz
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Sep06GR.log
+    jobid: 10
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Sep06GR_trimmed_clean_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Sep06GR_trimmed_clean_R2.fastq.gz; Updated input files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/02_trimmed/bam/test_LLC82Sep06GR.bam
+    wildcards: sample=test_LLC82Sep06GR
+    threads: 60
+    resources: mem_mb=64000, mem_mib=61036, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=30, cpus=60
+Shell command: 
+        # Split threads between samtools and pigz; bedtools is single-threaded
+        SAMTOOLS_THREADS=$(( 60 * 4 / 5 ))
+        PIGZ_THREADS=$(( 60 / 5 ))
+        [ $SAMTOOLS_THREADS -lt 1 ] && SAMTOOLS_THREADS=1
+        [ $PIGZ_THREADS -lt 1 ] && PIGZ_THREADS=1
+
+        echo 'Bedtools version:' > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Sep06GR.log
+        bedtools --version >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Sep06GR.log
+        echo 'Samtools version:' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Sep06GR.log
+        samtools --version | head -n 1 >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Sep06GR.log
+        echo "SAMTOOLS_THREADS: $SAMTOOLS_THREADS" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Sep06GR.log
+        echo "PIGZ_THREADS: $PIGZ_THREADS" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Sep06GR.log
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Sep06GR.log
+
+        TMPDIR="{TMPDIR:-/tmp}"
+        JOB_ID="{SLURM_JOB_ID:-manual}"
+        TMPJOB=$(mktemp -d "${TMPDIR}/bam2fq_${JOB_ID}_XXXXXX")
+
+        samtools view -u -f 12 -F 256 --threads $SAMTOOLS_THREADS /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/02_trimmed/bam/test_LLC82Sep06GR.bam 2>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Sep06GR.log \
+        | samtools sort -n --threads $SAMTOOLS_THREADS -T $TMPJOB/test_LLC82Sep06GR_sort_tmp -O BAM - 2>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Sep06GR.log \
+        | bedtools bamtofastq -i - 2>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Sep06GR.log \
+            -fq >(pigz -p $PIGZ_THREADS --fast > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Sep06GR_trimmed_clean_R1.fastq.gz) \
+            -fq2 >(pigz -p $PIGZ_THREADS --fast > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Sep06GR_trimmed_clean_R2.fastq.gz)
+
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Sep06GR.log
+        echo "Wall time: ${hours}h ${mins}m ${secs}s (total ${runtime} seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Sep06GR.log
+        echo "Temporary directory to be removed: $TMPJOB" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Sep06GR.log
+        #rm -rf "$TMPJOB"
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule extract_unmapped_fastq:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/02_trimmed/bam/test_LLC82Nov10GR.bam
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Nov10GR_trimmed_clean_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Nov10GR_trimmed_clean_R2.fastq.gz
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Nov10GR.log
+    jobid: 6
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Nov10GR_trimmed_clean_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Nov10GR_trimmed_clean_R2.fastq.gz; Updated input files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/02_trimmed/bam/test_LLC82Nov10GR.bam
+    wildcards: sample=test_LLC82Nov10GR
+    threads: 60
+    resources: mem_mb=64000, mem_mib=61036, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=30, cpus=60
+Shell command: 
+        # Split threads between samtools and pigz; bedtools is single-threaded
+        SAMTOOLS_THREADS=$(( 60 * 4 / 5 ))
+        PIGZ_THREADS=$(( 60 / 5 ))
+        [ $SAMTOOLS_THREADS -lt 1 ] && SAMTOOLS_THREADS=1
+        [ $PIGZ_THREADS -lt 1 ] && PIGZ_THREADS=1
+
+        echo 'Bedtools version:' > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Nov10GR.log
+        bedtools --version >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Nov10GR.log
+        echo 'Samtools version:' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Nov10GR.log
+        samtools --version | head -n 1 >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Nov10GR.log
+        echo "SAMTOOLS_THREADS: $SAMTOOLS_THREADS" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Nov10GR.log
+        echo "PIGZ_THREADS: $PIGZ_THREADS" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Nov10GR.log
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Nov10GR.log
+
+        TMPDIR="{TMPDIR:-/tmp}"
+        JOB_ID="{SLURM_JOB_ID:-manual}"
+        TMPJOB=$(mktemp -d "${TMPDIR}/bam2fq_${JOB_ID}_XXXXXX")
+
+        samtools view -u -f 12 -F 256 --threads $SAMTOOLS_THREADS /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/02_trimmed/bam/test_LLC82Nov10GR.bam 2>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Nov10GR.log \
+        | samtools sort -n --threads $SAMTOOLS_THREADS -T $TMPJOB/test_LLC82Nov10GR_sort_tmp -O BAM - 2>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Nov10GR.log \
+        | bedtools bamtofastq -i - 2>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Nov10GR.log \
+            -fq >(pigz -p $PIGZ_THREADS --fast > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Nov10GR_trimmed_clean_R1.fastq.gz) \
+            -fq2 >(pigz -p $PIGZ_THREADS --fast > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Nov10GR_trimmed_clean_R2.fastq.gz)
+
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Nov10GR.log
+        echo "Wall time: ${hours}h ${mins}m ${secs}s (total ${runtime} seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Nov10GR.log
+        echo "Temporary directory to be removed: $TMPJOB" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bedtools/test_LLC82Nov10GR.log
+        #rm -rf "$TMPJOB"
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule sortmerna_pe:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/resources/rRNA_DB/smr_v4.3_default_db.fasta, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC81Sep06CR_trimmed_clean_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC81Sep06CR_trimmed_clean_R2.fastq.gz
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R2.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_sortmerna_pe.stats
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC81Sep06CRreads_pe.log
+    jobid: 1
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R2.fastq.gz; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC81Sep06CR_trimmed_clean_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC81Sep06CR_trimmed_clean_R2.fastq.gz
+    wildcards: sample=test_LLC81Sep06CR
+    threads: 48
+    resources: mem_mb=32000, mem_mib=30518, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=360, cpus=48
+Shell command: 
+        set -euo pipefail
+
+        # Wall time tracking
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC81Sep06CRreads_pe.log
+
+        export TMPDIR=/gpfs/fs7/aafc/scratch/kjg000
+        WORKDIR="$TMPDIR/smrn_test_LLC81Sep06CR_$RANDOM"
+        mkdir -p "$WORKDIR"
+
+        echo "Temporary workdir: $WORKDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC81Sep06CRreads_pe.log
+        echo "Using SortMeRNA version:" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC81Sep06CRreads_pe.log
+        sortmerna --version >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC81Sep06CRreads_pe.log
+
+        # Actually run SortMeRNA
+        sortmerna \
+            --ref /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/resources/rRNA_DB/smr_v4.3_default_db.fasta \
+            --reads /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC81Sep06CR_trimmed_clean_R1.fastq.gz \
+            --reads /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC81Sep06CR_trimmed_clean_R2.fastq.gz \
+            --aligned "$WORKDIR/aligned_reads" \
+            --other "$WORKDIR/other_reads" \
+            --fastx \
+            --idx-dir idx \
+            --paired_in \
+            --out2 \
+            --workdir "$WORKDIR" \
+            --threads 48 \
+            >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC81Sep06CRreads_pe.log 2>&1
+
+        # Move/copy output files to expected workflow outputs.
+        cp "$WORKDIR/other_reads_fwd.fq.gz" /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R1.fastq.gz
+        cp "$WORKDIR/other_reads_rev.fq.gz" /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R2.fastq.gz
+
+        # Save the main SortMeRNA alignment/summary log as the .stats file
+        if [ -f "$WORKDIR/aligned_reads.log" ]; then
+            cp "$WORKDIR/aligned_reads.log" /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_sortmerna_pe.stats
+            # Add a footer
+            echo -e "\nSortMeRNA run finished at $(date)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_sortmerna_pe.stats
+        else
+            echo "SortMeRNA stats not found; see main log for errors." > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_sortmerna_pe.stats
+        fi
+
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC81Sep06CRreads_pe.log
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC81Sep06CRreads_pe.log
+        echo "Temporary directory to be removed: $WORKDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC81Sep06CRreads_pe.log
+        rm -rf "$WORKDIR"
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule sortmerna_pe:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/resources/rRNA_DB/smr_v4.3_default_db.fasta, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Nov10GR_trimmed_clean_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Nov10GR_trimmed_clean_R2.fastq.gz
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R2.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_sortmerna_pe.stats
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC82Nov10GRreads_pe.log
+    jobid: 5
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R2.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R1.fastq.gz; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Nov10GR_trimmed_clean_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Nov10GR_trimmed_clean_R2.fastq.gz
+    wildcards: sample=test_LLC82Nov10GR
+    threads: 48
+    resources: mem_mb=32000, mem_mib=30518, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=360, cpus=48
+Shell command: 
+        set -euo pipefail
+
+        # Wall time tracking
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC82Nov10GRreads_pe.log
+
+        export TMPDIR=/gpfs/fs7/aafc/scratch/kjg000
+        WORKDIR="$TMPDIR/smrn_test_LLC82Nov10GR_$RANDOM"
+        mkdir -p "$WORKDIR"
+
+        echo "Temporary workdir: $WORKDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC82Nov10GRreads_pe.log
+        echo "Using SortMeRNA version:" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC82Nov10GRreads_pe.log
+        sortmerna --version >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC82Nov10GRreads_pe.log
+
+        # Actually run SortMeRNA
+        sortmerna \
+            --ref /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/resources/rRNA_DB/smr_v4.3_default_db.fasta \
+            --reads /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Nov10GR_trimmed_clean_R1.fastq.gz \
+            --reads /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Nov10GR_trimmed_clean_R2.fastq.gz \
+            --aligned "$WORKDIR/aligned_reads" \
+            --other "$WORKDIR/other_reads" \
+            --fastx \
+            --idx-dir idx \
+            --paired_in \
+            --out2 \
+            --workdir "$WORKDIR" \
+            --threads 48 \
+            >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC82Nov10GRreads_pe.log 2>&1
+
+        # Move/copy output files to expected workflow outputs.
+        cp "$WORKDIR/other_reads_fwd.fq.gz" /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R1.fastq.gz
+        cp "$WORKDIR/other_reads_rev.fq.gz" /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R2.fastq.gz
+
+        # Save the main SortMeRNA alignment/summary log as the .stats file
+        if [ -f "$WORKDIR/aligned_reads.log" ]; then
+            cp "$WORKDIR/aligned_reads.log" /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_sortmerna_pe.stats
+            # Add a footer
+            echo -e "\nSortMeRNA run finished at $(date)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_sortmerna_pe.stats
+        else
+            echo "SortMeRNA stats not found; see main log for errors." > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_sortmerna_pe.stats
+        fi
+
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC82Nov10GRreads_pe.log
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC82Nov10GRreads_pe.log
+        echo "Temporary directory to be removed: $WORKDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC82Nov10GRreads_pe.log
+        rm -rf "$WORKDIR"
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule sortmerna_pe:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/resources/rRNA_DB/smr_v4.3_default_db.fasta, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Sep06GR_trimmed_clean_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Sep06GR_trimmed_clean_R2.fastq.gz
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R2.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_sortmerna_pe.stats
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC82Sep06GRreads_pe.log
+    jobid: 9
+    reason: Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Sep06GR_trimmed_clean_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Sep06GR_trimmed_clean_R2.fastq.gz
+    wildcards: sample=test_LLC82Sep06GR
+    threads: 48
+    resources: mem_mb=32000, mem_mib=30518, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=360, cpus=48
+Shell command: 
+        set -euo pipefail
+
+        # Wall time tracking
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC82Sep06GRreads_pe.log
+
+        export TMPDIR=/gpfs/fs7/aafc/scratch/kjg000
+        WORKDIR="$TMPDIR/smrn_test_LLC82Sep06GR_$RANDOM"
+        mkdir -p "$WORKDIR"
+
+        echo "Temporary workdir: $WORKDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC82Sep06GRreads_pe.log
+        echo "Using SortMeRNA version:" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC82Sep06GRreads_pe.log
+        sortmerna --version >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC82Sep06GRreads_pe.log
+
+        # Actually run SortMeRNA
+        sortmerna \
+            --ref /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/resources/rRNA_DB/smr_v4.3_default_db.fasta \
+            --reads /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Sep06GR_trimmed_clean_R1.fastq.gz \
+            --reads /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/03_host_dep/test_LLC82Sep06GR_trimmed_clean_R2.fastq.gz \
+            --aligned "$WORKDIR/aligned_reads" \
+            --other "$WORKDIR/other_reads" \
+            --fastx \
+            --idx-dir idx \
+            --paired_in \
+            --out2 \
+            --workdir "$WORKDIR" \
+            --threads 48 \
+            >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC82Sep06GRreads_pe.log 2>&1
+
+        # Move/copy output files to expected workflow outputs.
+        cp "$WORKDIR/other_reads_fwd.fq.gz" /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R1.fastq.gz
+        cp "$WORKDIR/other_reads_rev.fq.gz" /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R2.fastq.gz
+
+        # Save the main SortMeRNA alignment/summary log as the .stats file
+        if [ -f "$WORKDIR/aligned_reads.log" ]; then
+            cp "$WORKDIR/aligned_reads.log" /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_sortmerna_pe.stats
+            # Add a footer
+            echo -e "\nSortMeRNA run finished at $(date)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_sortmerna_pe.stats
+        else
+            echo "SortMeRNA stats not found; see main log for errors." > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_sortmerna_pe.stats
+        fi
+
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC82Sep06GRreads_pe.log
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC82Sep06GRreads_pe.log
+        echo "Temporary directory to be removed: $WORKDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sortmerna/test_LLC82Sep06GRreads_pe.log
+        rm -rf "$WORKDIR"
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule bowtie2_map_transcripts:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/10_coassembly_index/coassembly.1.bt2, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R2.fastq.gz
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.coassembly.sorted.bam
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC81Sep06CR_sorted.log
+    jobid: 35
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.coassembly.sorted.bam; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R2.fastq.gz
+    wildcards: sample=test_LLC81Sep06CR
+    threads: 16
+    resources: mem_mb=32000, mem_mib=30518, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=30, cpus=16
+Shell command: 
+        set -euo pipefail
+
+        echo 'Bowtie2 version:' > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC81Sep06CR_sorted.log
+        bowtie2 --version >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC81Sep06CR_sorted.log
+        echo 'Samtools version:' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC81Sep06CR_sorted.log
+        samtools --version | head -n 1 >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC81Sep06CR_sorted.log
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC81Sep06CR_sorted.log
+
+        bowtie2 -x /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/10_coassembly_index/coassembly -1 /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R1.fastq.gz -2 /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R2.fastq.gz --local -p 16 2>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC81Sep06CR_sorted.log\
+        | samtools view -bS - 2>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC81Sep06CR_sorted.log \
+        | samtools sort -@ 16 -o /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.coassembly.sorted.bam 2>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC81Sep06CR_sorted.log
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC81Sep06CR_sorted.log
+        echo "Wall time: ${hours}h ${mins}m ${secs}s (total ${runtime} seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC81Sep06CR_sorted.log
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule bowtie2_map_transcripts:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/10_coassembly_index/coassembly.1.bt2, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R2.fastq.gz
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.coassembly.sorted.bam
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC82Sep06GR_sorted.log
+    jobid: 38
+    reason: Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R2.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R1.fastq.gz
+    wildcards: sample=test_LLC82Sep06GR
+    threads: 16
+    resources: mem_mb=32000, mem_mib=30518, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=30, cpus=16
+Shell command: 
+        set -euo pipefail
+
+        echo 'Bowtie2 version:' > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC82Sep06GR_sorted.log
+        bowtie2 --version >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC82Sep06GR_sorted.log
+        echo 'Samtools version:' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC82Sep06GR_sorted.log
+        samtools --version | head -n 1 >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC82Sep06GR_sorted.log
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC82Sep06GR_sorted.log
+
+        bowtie2 -x /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/10_coassembly_index/coassembly -1 /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R1.fastq.gz -2 /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R2.fastq.gz --local -p 16 2>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC82Sep06GR_sorted.log\
+        | samtools view -bS - 2>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC82Sep06GR_sorted.log \
+        | samtools sort -@ 16 -o /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.coassembly.sorted.bam 2>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC82Sep06GR_sorted.log
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC82Sep06GR_sorted.log
+        echo "Wall time: ${hours}h ${mins}m ${secs}s (total ${runtime} seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC82Sep06GR_sorted.log
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule rgi_bwt:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R2.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi_reload_db.done
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC82Nov10GR_paired.allele_mapping_data.json, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC82Nov10GR_paired.allele_mapping_data.txt
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Nov10GR.log
+    jobid: 23
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC82Nov10GR_paired.allele_mapping_data.json, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC82Nov10GR_paired.allele_mapping_data.txt; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R2.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R1.fastq.gz
+    wildcards: sample=test_LLC82Nov10GR
+    threads: 20
+    resources: mem_mb=64000, mem_mib=61036, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=60, cpus=20
+Shell command: 
+        set -o pipefail
+        export TMPDIR=/gpfs/fs7/aafc/scratch/kjg000/bwt_test_LLC82Nov10GR_$RANDOM
+        mkdir -p "$TMPDIR"
+        echo "Using TMPDIR: $TMPDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Nov10GR.log
+        export RGI_DATA_PATH=/gpfs/fs7/aafc/labs/kommadatha_lab/data/databases/CARD/v401
+        echo "RGI_DATA_PATH: /gpfs/fs7/aafc/labs/kommadatha_lab/data/databases/CARD/v401" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Nov10GR.log
+        start_time=$(date +%s)
+        echo "Started at: $(date)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Nov10GR.log
+        echo 'RGI version:' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Nov10GR.log
+        rgi main --version >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Nov10GR.log
+        echo 'bwt without wildcard' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Nov10GR.log
+        mkdir -p /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi
+        (rgi bwt \
+            -1 /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R1.fastq.gz \
+            -2 /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R2.fastq.gz \
+            -a kma \
+            -n 20 \
+            -o /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC82Nov10GR_paired \
+            --local \
+            --clean \
+            ) 2>&1 | egrep -av '\[W::sam_parse1\]|mapped query cannot have zero coordinate' | awk 'NF' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Nov10GR.log
+
+        rgistatus=${PIPESTATUS[0]}
+        if [ $rgistatus -ne 0 ]; then
+        echo "ERROR: rgi bwt failed with exit code $rgistatus" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Nov10GR.log
+        exit $rgistatus
+        fi
+
+        end_time=$(date +%s)
+        runtime=$((end_time - start_time))
+
+        echo "Finished at: $(date)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Nov10GR.log
+        echo "Wall time: $((runtime/3600))h $(((runtime%3600)/60))m $((runtime%60))s (total $runtime s)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Nov10GR.log
+
+        echo "Cleaning up temp dir: $TMPDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Nov10GR.log
+        rm -rf "$TMPDIR"
+        echo "Cleanup completed for: $TMPDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Nov10GR.log
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule rna_spades:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R2.fastq.gz
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC81Sep06CR.fasta
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC81Sep06CR.log
+    jobid: 25
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC81Sep06CR.fasta; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R2.fastq.gz
+    wildcards: sample=test_LLC81Sep06CR
+    threads: 48
+    resources: mem_mb=64000, mem_mib=61036, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=240, cpus=48
+Shell command: 
+        set -euo pipefail
+
+        export TMPDIR=/gpfs/fs7/aafc/scratch/kjg000
+        mkdir -p "$TMPDIR"
+
+        echo 'SPAdes version:' > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC81Sep06CR.log
+        spades.py --version >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC81Sep06CR.log
+
+        # Wall time tracking
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC81Sep06CR.log
+
+        outdir=$(mktemp -d "$TMPDIR/rnaspades_test_LLC81Sep06CR_XXXXXX")
+        spades_tmp="$outdir/tmp"
+        mkdir -p "$spades_tmp"
+
+        spades.py --rna \
+            -t 48 \
+            -m 64000 \
+            --tmp-dir "$spades_tmp" \
+            -1 /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R1.fastq.gz \
+            -2 /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R2.fastq.gz \
+            -o "$outdir" \
+            &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC81Sep06CR.log
+
+        # Try to copy the rnaSPAdes output
+        if [ -f "$outdir/transcripts.fasta" ]; then
+            cp "$outdir/transcripts.fasta" /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC81Sep06CR.fasta
+        else
+            echo "ERROR: Expected transcripts.fasta not found in $outdir!" >&2
+            ls -lh "$outdir"
+            exit 1
+        fi
+
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC81Sep06CR.log
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC81Sep06CR.log
+        echo "Temporary directory to be removed: $outdir" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC81Sep06CR.log
+        rm -rf "$outdir"
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule rna_spades:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R2.fastq.gz
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC82Sep06GR.fasta
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC82Sep06GR.log
+    jobid: 27
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC82Sep06GR.fasta; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R2.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R1.fastq.gz
+    wildcards: sample=test_LLC82Sep06GR
+    threads: 48
+    resources: mem_mb=64000, mem_mib=61036, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=240, cpus=48
+Shell command: 
+        set -euo pipefail
+
+        export TMPDIR=/gpfs/fs7/aafc/scratch/kjg000
+        mkdir -p "$TMPDIR"
+
+        echo 'SPAdes version:' > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC82Sep06GR.log
+        spades.py --version >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC82Sep06GR.log
+
+        # Wall time tracking
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC82Sep06GR.log
+
+        outdir=$(mktemp -d "$TMPDIR/rnaspades_test_LLC82Sep06GR_XXXXXX")
+        spades_tmp="$outdir/tmp"
+        mkdir -p "$spades_tmp"
+
+        spades.py --rna \
+            -t 48 \
+            -m 64000 \
+            --tmp-dir "$spades_tmp" \
+            -1 /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R1.fastq.gz \
+            -2 /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R2.fastq.gz \
+            -o "$outdir" \
+            &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC82Sep06GR.log
+
+        # Try to copy the rnaSPAdes output
+        if [ -f "$outdir/transcripts.fasta" ]; then
+            cp "$outdir/transcripts.fasta" /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC82Sep06GR.fasta
+        else
+            echo "ERROR: Expected transcripts.fasta not found in $outdir!" >&2
+            ls -lh "$outdir"
+            exit 1
+        fi
+
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC82Sep06GR.log
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC82Sep06GR.log
+        echo "Temporary directory to be removed: $outdir" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC82Sep06GR.log
+        rm -rf "$outdir"
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule bowtie2_map_transcripts:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/10_coassembly_index/coassembly.1.bt2, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R2.fastq.gz
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.coassembly.sorted.bam
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC82Nov10GR_sorted.log
+    jobid: 37
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.coassembly.sorted.bam; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R2.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R1.fastq.gz
+    wildcards: sample=test_LLC82Nov10GR
+    threads: 16
+    resources: mem_mb=32000, mem_mib=30518, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=30, cpus=16
+Shell command: 
+        set -euo pipefail
+
+        echo 'Bowtie2 version:' > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC82Nov10GR_sorted.log
+        bowtie2 --version >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC82Nov10GR_sorted.log
+        echo 'Samtools version:' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC82Nov10GR_sorted.log
+        samtools --version | head -n 1 >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC82Nov10GR_sorted.log
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC82Nov10GR_sorted.log
+
+        bowtie2 -x /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/10_coassembly_index/coassembly -1 /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R1.fastq.gz -2 /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R2.fastq.gz --local -p 16 2>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC82Nov10GR_sorted.log\
+        | samtools view -bS - 2>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC82Nov10GR_sorted.log \
+        | samtools sort -@ 16 -o /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.coassembly.sorted.bam 2>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC82Nov10GR_sorted.log
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC82Nov10GR_sorted.log
+        echo "Wall time: ${hours}h ${mins}m ${secs}s (total ${runtime} seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/sorted_bam/test_LLC82Nov10GR_sorted.log
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule kraken2:
+    input: /gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R2.fastq.gz
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC81Sep06CR.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC81Sep06CR.kraken
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC81Sep06CR.log
+    jobid: 13
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC81Sep06CR.kraken, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC81Sep06CR.report.txt; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R2.fastq.gz
+    wildcards: sample=test_LLC81Sep06CR
+    threads: 2
+    resources: mem_mb=600000, mem_mib=572205, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=30, cpus=2
+Shell command: 
+        set -euo pipefail
+
+        # Wall time tracking
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC81Sep06CR.log
+
+        echo 'Kraken2 version:' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC81Sep06CR.log
+        kraken2 --version >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC81Sep06CR.log
+        # echo 'Database is GTDB 220' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC81Sep06CR.log #uncomment if there is a text file with the version
+        # cat /gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220/VERSION.txt >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC81Sep06CR.log #uncomment if there is a text file with the version 
+
+        kraken2 --use-names \
+            --threads 2 \
+            --db /gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220 \
+            --confidence 0.5 \
+            --report-zero-counts \
+            --paired /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R1.fastq.gz /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R2.fastq.gz \
+            --report /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC81Sep06CR.report.txt \
+            --output /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC81Sep06CR.kraken \
+            &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC81Sep06CR.log
+            
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC81Sep06CR.log
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC81Sep06CR.log
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule rgi_bwt:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R2.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi_reload_db.done
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC81Sep06CR_paired.allele_mapping_data.json, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC81Sep06CR_paired.allele_mapping_data.txt
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC81Sep06CR.log
+    jobid: 21
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC81Sep06CR_paired.allele_mapping_data.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC81Sep06CR_paired.allele_mapping_data.json; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R2.fastq.gz
+    wildcards: sample=test_LLC81Sep06CR
+    threads: 20
+    resources: mem_mb=64000, mem_mib=61036, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=60, cpus=20
+Shell command: 
+        set -o pipefail
+        export TMPDIR=/gpfs/fs7/aafc/scratch/kjg000/bwt_test_LLC81Sep06CR_$RANDOM
+        mkdir -p "$TMPDIR"
+        echo "Using TMPDIR: $TMPDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC81Sep06CR.log
+        export RGI_DATA_PATH=/gpfs/fs7/aafc/labs/kommadatha_lab/data/databases/CARD/v401
+        echo "RGI_DATA_PATH: /gpfs/fs7/aafc/labs/kommadatha_lab/data/databases/CARD/v401" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC81Sep06CR.log
+        start_time=$(date +%s)
+        echo "Started at: $(date)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC81Sep06CR.log
+        echo 'RGI version:' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC81Sep06CR.log
+        rgi main --version >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC81Sep06CR.log
+        echo 'bwt without wildcard' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC81Sep06CR.log
+        mkdir -p /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi
+        (rgi bwt \
+            -1 /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R1.fastq.gz \
+            -2 /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R2.fastq.gz \
+            -a kma \
+            -n 20 \
+            -o /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC81Sep06CR_paired \
+            --local \
+            --clean \
+            ) 2>&1 | egrep -av '\[W::sam_parse1\]|mapped query cannot have zero coordinate' | awk 'NF' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC81Sep06CR.log
+
+        rgistatus=${PIPESTATUS[0]}
+        if [ $rgistatus -ne 0 ]; then
+        echo "ERROR: rgi bwt failed with exit code $rgistatus" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC81Sep06CR.log
+        exit $rgistatus
+        fi
+
+        end_time=$(date +%s)
+        runtime=$((end_time - start_time))
+
+        echo "Finished at: $(date)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC81Sep06CR.log
+        echo "Wall time: $((runtime/3600))h $(((runtime%3600)/60))m $((runtime%60))s (total $runtime s)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC81Sep06CR.log
+
+        echo "Cleaning up temp dir: $TMPDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC81Sep06CR.log
+        rm -rf "$TMPDIR"
+        echo "Cleanup completed for: $TMPDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC81Sep06CR.log
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule kraken2:
+    input: /gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R2.fastq.gz
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Nov10GR.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Nov10GR.kraken
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC82Nov10GR.log
+    jobid: 14
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Nov10GR.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Nov10GR.kraken; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R2.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R1.fastq.gz
+    wildcards: sample=test_LLC82Nov10GR
+    threads: 2
+    resources: mem_mb=600000, mem_mib=572205, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=30, cpus=2
+Shell command: 
+        set -euo pipefail
+
+        # Wall time tracking
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC82Nov10GR.log
+
+        echo 'Kraken2 version:' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC82Nov10GR.log
+        kraken2 --version >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC82Nov10GR.log
+        # echo 'Database is GTDB 220' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC82Nov10GR.log #uncomment if there is a text file with the version
+        # cat /gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220/VERSION.txt >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC82Nov10GR.log #uncomment if there is a text file with the version 
+
+        kraken2 --use-names \
+            --threads 2 \
+            --db /gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220 \
+            --confidence 0.5 \
+            --report-zero-counts \
+            --paired /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R1.fastq.gz /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R2.fastq.gz \
+            --report /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Nov10GR.report.txt \
+            --output /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Nov10GR.kraken \
+            &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC82Nov10GR.log
+            
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC82Nov10GR.log
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC82Nov10GR.log
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule rgi_bwt:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R2.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi_reload_db.done
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC82Sep06GR_paired.allele_mapping_data.json, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC82Sep06GR_paired.allele_mapping_data.txt
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Sep06GR.log
+    jobid: 24
+    reason: Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R2.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R1.fastq.gz
+    wildcards: sample=test_LLC82Sep06GR
+    threads: 20
+    resources: mem_mb=64000, mem_mib=61036, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=60, cpus=20
+Shell command: 
+        set -o pipefail
+        export TMPDIR=/gpfs/fs7/aafc/scratch/kjg000/bwt_test_LLC82Sep06GR_$RANDOM
+        mkdir -p "$TMPDIR"
+        echo "Using TMPDIR: $TMPDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Sep06GR.log
+        export RGI_DATA_PATH=/gpfs/fs7/aafc/labs/kommadatha_lab/data/databases/CARD/v401
+        echo "RGI_DATA_PATH: /gpfs/fs7/aafc/labs/kommadatha_lab/data/databases/CARD/v401" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Sep06GR.log
+        start_time=$(date +%s)
+        echo "Started at: $(date)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Sep06GR.log
+        echo 'RGI version:' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Sep06GR.log
+        rgi main --version >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Sep06GR.log
+        echo 'bwt without wildcard' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Sep06GR.log
+        mkdir -p /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi
+        (rgi bwt \
+            -1 /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R1.fastq.gz \
+            -2 /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R2.fastq.gz \
+            -a kma \
+            -n 20 \
+            -o /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC82Sep06GR_paired \
+            --local \
+            --clean \
+            ) 2>&1 | egrep -av '\[W::sam_parse1\]|mapped query cannot have zero coordinate' | awk 'NF' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Sep06GR.log
+
+        rgistatus=${PIPESTATUS[0]}
+        if [ $rgistatus -ne 0 ]; then
+        echo "ERROR: rgi bwt failed with exit code $rgistatus" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Sep06GR.log
+        exit $rgistatus
+        fi
+
+        end_time=$(date +%s)
+        runtime=$((end_time - start_time))
+
+        echo "Finished at: $(date)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Sep06GR.log
+        echo "Wall time: $((runtime/3600))h $(((runtime%3600)/60))m $((runtime%60))s (total $runtime s)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Sep06GR.log
+
+        echo "Cleaning up temp dir: $TMPDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Sep06GR.log
+        rm -rf "$TMPDIR"
+        echo "Cleanup completed for: $TMPDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi/bwt_test_LLC82Sep06GR.log
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule kraken2:
+    input: /gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R2.fastq.gz
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Sep06GR.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Sep06GR.kraken
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC82Sep06GR.log
+    jobid: 15
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Sep06GR.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Sep06GR.kraken; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R2.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R1.fastq.gz
+    wildcards: sample=test_LLC82Sep06GR
+    threads: 2
+    resources: mem_mb=600000, mem_mib=572205, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=30, cpus=2
+Shell command: 
+        set -euo pipefail
+
+        # Wall time tracking
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC82Sep06GR.log
+
+        echo 'Kraken2 version:' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC82Sep06GR.log
+        kraken2 --version >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC82Sep06GR.log
+        # echo 'Database is GTDB 220' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC82Sep06GR.log #uncomment if there is a text file with the version
+        # cat /gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220/VERSION.txt >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC82Sep06GR.log #uncomment if there is a text file with the version 
+
+        kraken2 --use-names \
+            --threads 2 \
+            --db /gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220 \
+            --confidence 0.5 \
+            --report-zero-counts \
+            --paired /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R1.fastq.gz /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R2.fastq.gz \
+            --report /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Sep06GR.report.txt \
+            --output /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Sep06GR.kraken \
+            &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC82Sep06GR.log
+            
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC82Sep06GR.log
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/kraken2/test_LLC82Sep06GR.log
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule rna_spades:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R2.fastq.gz
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC82Nov10GR.fasta
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC82Nov10GR.log
+    jobid: 26
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC82Nov10GR.fasta; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R2.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R1.fastq.gz
+    wildcards: sample=test_LLC82Nov10GR
+    threads: 48
+    resources: mem_mb=64000, mem_mib=61036, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=240, cpus=48
+Shell command: 
+        set -euo pipefail
+
+        export TMPDIR=/gpfs/fs7/aafc/scratch/kjg000
+        mkdir -p "$TMPDIR"
+
+        echo 'SPAdes version:' > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC82Nov10GR.log
+        spades.py --version >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC82Nov10GR.log
+
+        # Wall time tracking
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC82Nov10GR.log
+
+        outdir=$(mktemp -d "$TMPDIR/rnaspades_test_LLC82Nov10GR_XXXXXX")
+        spades_tmp="$outdir/tmp"
+        mkdir -p "$spades_tmp"
+
+        spades.py --rna \
+            -t 48 \
+            -m 64000 \
+            --tmp-dir "$spades_tmp" \
+            -1 /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R1.fastq.gz \
+            -2 /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R2.fastq.gz \
+            -o "$outdir" \
+            &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC82Nov10GR.log
+
+        # Try to copy the rnaSPAdes output
+        if [ -f "$outdir/transcripts.fasta" ]; then
+            cp "$outdir/transcripts.fasta" /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC82Nov10GR.fasta
+        else
+            echo "ERROR: Expected transcripts.fasta not found in $outdir!" >&2
+            ls -lh "$outdir"
+            exit 1
+        fi
+
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC82Nov10GR.log
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC82Nov10GR.log
+        echo "Temporary directory to be removed: $outdir" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/spades/test_LLC82Nov10GR.log
+        rm -rf "$outdir"
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule bracken:
+    input: /gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Nov10GR.report.txt
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC82Nov10GR_bracken.species.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC82Nov10GR_bracken.genus.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC82Nov10GR_bracken.phylum.report.txt
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC82Nov10GR.log
+    jobid: 17
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC82Nov10GR_bracken.species.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC82Nov10GR_bracken.genus.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC82Nov10GR_bracken.phylum.report.txt; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Nov10GR.report.txt
+    wildcards: sample=test_LLC82Nov10GR
+    threads: 2
+    resources: mem_mb=4000, mem_mib=3815, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=10, cpus=2
+Shell command: 
+        set -euo pipefail
+
+        # Wall time tracking
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC82Nov10GR.log
+
+        echo 'bracken version:' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC82Nov10GR.log
+        bracken --version >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC82Nov10GR.log
+
+        mkdir -p $(dirname /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC82Nov10GR_bracken.species.report.txt) $(dirname /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC82Nov10GR_bracken.genus.report.txt) $(dirname /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC82Nov10GR_bracken.phylum.report.txt)
+
+        bracken -r 150 -t 2 -d /gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220 -i /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Nov10GR.report.txt -l S -o /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC82Nov10GR_bracken.species.report.txt &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC82Nov10GR.log
+
+        bracken -r 150 -t 2 -d /gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220 -i /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Nov10GR.report.txt -l G -o /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC82Nov10GR_bracken.genus.report.txt &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC82Nov10GR.log
+
+        bracken -r 150 -t 2 -d /gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220 -i /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Nov10GR.report.txt -l P -o /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC82Nov10GR_bracken.phylum.report.txt &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC82Nov10GR.log
+
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC82Nov10GR.log
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC82Nov10GR.log
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule rnaquast_busco:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC81Sep06CR.fasta, /gpfs/fs7/aafc/common/reference/busco/busco_downloads/lineages/bacteria_odb12
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC81Sep06CR_bacteria
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC81Sep06CR_bacteria.log
+    jobid: 28
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC81Sep06CR_bacteria; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC81Sep06CR.fasta
+    wildcards: sample=test_LLC81Sep06CR, lineage=bacteria
+    threads: 4
+    resources: mem_mb=16000, mem_mib=15259, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=10, cpus=4
+Shell command: 
+        set -euo pipefail
+
+        export TMPDIR=/gpfs/fs7/aafc/scratch/kjg000/rnaquast_test_LLC81Sep06CR_bacteria_$RANDOM
+        mkdir -p "$TMPDIR"
+        echo "TMPDIR is $TMPDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC81Sep06CR_bacteria.log
+
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC81Sep06CR_bacteria.log
+
+        rnaQUAST.py --transcripts /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC81Sep06CR.fasta \
+            --output /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC81Sep06CR_bacteria \
+            --threads 4 \
+            --busco /gpfs/fs7/aafc/common/reference/busco/busco_downloads/lineages/bacteria_odb12 \
+            &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC81Sep06CR_bacteria.log
+            
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC81Sep06CR_bacteria.log
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC81Sep06CR_bacteria.log
+        echo "Temporary files removed from $TMPDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC81Sep06CR_bacteria.log
+        # rm -rf "$TMPDIR"  # commented-out or removed, so tmpdir is kept.
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule rnaquast_busco:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC82Nov10GR.fasta, /gpfs/fs7/aafc/common/reference/busco/busco_downloads/lineages/bacteria_odb12
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC82Nov10GR_bacteria
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Nov10GR_bacteria.log
+    jobid: 30
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC82Nov10GR_bacteria; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC82Nov10GR.fasta
+    wildcards: sample=test_LLC82Nov10GR, lineage=bacteria
+    threads: 4
+    resources: mem_mb=16000, mem_mib=15259, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=10, cpus=4
+Shell command: 
+        set -euo pipefail
+
+        export TMPDIR=/gpfs/fs7/aafc/scratch/kjg000/rnaquast_test_LLC82Nov10GR_bacteria_$RANDOM
+        mkdir -p "$TMPDIR"
+        echo "TMPDIR is $TMPDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Nov10GR_bacteria.log
+
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Nov10GR_bacteria.log
+
+        rnaQUAST.py --transcripts /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC82Nov10GR.fasta \
+            --output /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC82Nov10GR_bacteria \
+            --threads 4 \
+            --busco /gpfs/fs7/aafc/common/reference/busco/busco_downloads/lineages/bacteria_odb12 \
+            &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Nov10GR_bacteria.log
+            
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Nov10GR_bacteria.log
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Nov10GR_bacteria.log
+        echo "Temporary files removed from $TMPDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Nov10GR_bacteria.log
+        # rm -rf "$TMPDIR"  # commented-out or removed, so tmpdir is kept.
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule assembly_stats_depth:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.coassembly.sorted.bam
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.flagstat.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.coverage.txt.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.idxstats.txt.gz
+    jobid: 40
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.idxstats.txt.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.coverage.txt.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.flagstat.txt; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.coassembly.sorted.bam
+    wildcards: sample=test_LLC82Nov10GR
+    threads: 2
+    resources: mem_mb=2000, mem_mib=1908, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=30, cpus=2
+Shell command: 
+        samtools flagstat /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.coassembly.sorted.bam > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.flagstat.txt &&
+        samtools depth /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.coassembly.sorted.bam | pigz -p 2 > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.coverage.txt.gz &&
+        samtools idxstats /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.coassembly.sorted.bam | pigz -p 2 > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.idxstats.txt.gz
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule rnaquast_busco:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC82Sep06GR.fasta, /gpfs/fs7/aafc/common/reference/busco/busco_downloads/lineages/bacteria_odb12
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC82Sep06GR_bacteria
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Sep06GR_bacteria.log
+    jobid: 32
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC82Sep06GR_bacteria; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC82Sep06GR.fasta
+    wildcards: sample=test_LLC82Sep06GR, lineage=bacteria
+    threads: 4
+    resources: mem_mb=16000, mem_mib=15259, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=10, cpus=4
+Shell command: 
+        set -euo pipefail
+
+        export TMPDIR=/gpfs/fs7/aafc/scratch/kjg000/rnaquast_test_LLC82Sep06GR_bacteria_$RANDOM
+        mkdir -p "$TMPDIR"
+        echo "TMPDIR is $TMPDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Sep06GR_bacteria.log
+
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Sep06GR_bacteria.log
+
+        rnaQUAST.py --transcripts /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC82Sep06GR.fasta \
+            --output /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC82Sep06GR_bacteria \
+            --threads 4 \
+            --busco /gpfs/fs7/aafc/common/reference/busco/busco_downloads/lineages/bacteria_odb12 \
+            &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Sep06GR_bacteria.log
+            
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Sep06GR_bacteria.log
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Sep06GR_bacteria.log
+        echo "Temporary files removed from $TMPDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Sep06GR_bacteria.log
+        # rm -rf "$TMPDIR"  # commented-out or removed, so tmpdir is kept.
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule featurecounts:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/12_prodigal/coassembly.saf, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.coassembly.sorted.bam
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/13_featurecounts/test_LLC81Sep06CR_counts.txt
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/featurecounts/test_LLC81Sep06CR_featurecounts.log
+    jobid: 42
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/13_featurecounts/test_LLC81Sep06CR_counts.txt; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.coassembly.sorted.bam
+    wildcards: sample=test_LLC81Sep06CR
+    threads: 4
+    resources: mem_mb=8000, mem_mib=7630, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=10, cpus=4
+Shell command: 
+        set -euo pipefail
+
+        # Ensure output directory exists
+        mkdir -p /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/13_featurecounts
+
+        # Wall time tracking
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/featurecounts/test_LLC81Sep06CR_featurecounts.log
+
+        echo 'featureCounts version:' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/featurecounts/test_LLC81Sep06CR_featurecounts.log
+        featureCounts -v >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/featurecounts/test_LLC81Sep06CR_featurecounts.log
+
+        featureCounts -a /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/12_prodigal/coassembly.saf -F SAF -p -T 4 -o /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/13_featurecounts/test_LLC81Sep06CR_counts.txt /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.coassembly.sorted.bam &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/featurecounts/test_LLC81Sep06CR_featurecounts.log
+
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/featurecounts/test_LLC81Sep06CR_featurecounts.log
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/featurecounts/test_LLC81Sep06CR_featurecounts.log
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule bracken:
+    input: /gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC81Sep06CR.report.txt
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC81Sep06CR_bracken.species.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC81Sep06CR_bracken.genus.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC81Sep06CR_bracken.phylum.report.txt
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC81Sep06CR.log
+    jobid: 16
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC81Sep06CR_bracken.species.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC81Sep06CR_bracken.genus.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC81Sep06CR_bracken.phylum.report.txt; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC81Sep06CR.report.txt
+    wildcards: sample=test_LLC81Sep06CR
+    threads: 2
+    resources: mem_mb=4000, mem_mib=3815, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=10, cpus=2
+Shell command: 
+        set -euo pipefail
+
+        # Wall time tracking
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC81Sep06CR.log
+
+        echo 'bracken version:' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC81Sep06CR.log
+        bracken --version >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC81Sep06CR.log
+
+        mkdir -p $(dirname /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC81Sep06CR_bracken.species.report.txt) $(dirname /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC81Sep06CR_bracken.genus.report.txt) $(dirname /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC81Sep06CR_bracken.phylum.report.txt)
+
+        bracken -r 150 -t 2 -d /gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220 -i /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC81Sep06CR.report.txt -l S -o /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC81Sep06CR_bracken.species.report.txt &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC81Sep06CR.log
+
+        bracken -r 150 -t 2 -d /gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220 -i /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC81Sep06CR.report.txt -l G -o /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC81Sep06CR_bracken.genus.report.txt &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC81Sep06CR.log
+
+        bracken -r 150 -t 2 -d /gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220 -i /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC81Sep06CR.report.txt -l P -o /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC81Sep06CR_bracken.phylum.report.txt &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC81Sep06CR.log
+
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC81Sep06CR.log
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC81Sep06CR.log
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule featurecounts:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/12_prodigal/coassembly.saf, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.coassembly.sorted.bam
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/13_featurecounts/test_LLC82Sep06GR_counts.txt
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/featurecounts/test_LLC82Sep06GR_featurecounts.log
+    jobid: 44
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/13_featurecounts/test_LLC82Sep06GR_counts.txt; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.coassembly.sorted.bam
+    wildcards: sample=test_LLC82Sep06GR
+    threads: 4
+    resources: mem_mb=8000, mem_mib=7630, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=10, cpus=4
+Shell command: 
+        set -euo pipefail
+
+        # Ensure output directory exists
+        mkdir -p /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/13_featurecounts
+
+        # Wall time tracking
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/featurecounts/test_LLC82Sep06GR_featurecounts.log
+
+        echo 'featureCounts version:' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/featurecounts/test_LLC82Sep06GR_featurecounts.log
+        featureCounts -v >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/featurecounts/test_LLC82Sep06GR_featurecounts.log
+
+        featureCounts -a /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/12_prodigal/coassembly.saf -F SAF -p -T 4 -o /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/13_featurecounts/test_LLC82Sep06GR_counts.txt /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.coassembly.sorted.bam &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/featurecounts/test_LLC82Sep06GR_featurecounts.log
+
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/featurecounts/test_LLC82Sep06GR_featurecounts.log
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/featurecounts/test_LLC82Sep06GR_featurecounts.log
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule bracken:
+    input: /gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Sep06GR.report.txt
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC82Sep06GR_bracken.species.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC82Sep06GR_bracken.genus.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC82Sep06GR_bracken.phylum.report.txt
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC82Sep06GR.log
+    jobid: 18
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC82Sep06GR_bracken.phylum.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC82Sep06GR_bracken.genus.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC82Sep06GR_bracken.species.report.txt; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Sep06GR.report.txt
+    wildcards: sample=test_LLC82Sep06GR
+    threads: 2
+    resources: mem_mb=4000, mem_mib=3815, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=10, cpus=2
+Shell command: 
+        set -euo pipefail
+
+        # Wall time tracking
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC82Sep06GR.log
+
+        echo 'bracken version:' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC82Sep06GR.log
+        bracken --version >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC82Sep06GR.log
+
+        mkdir -p $(dirname /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC82Sep06GR_bracken.species.report.txt) $(dirname /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC82Sep06GR_bracken.genus.report.txt) $(dirname /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC82Sep06GR_bracken.phylum.report.txt)
+
+        bracken -r 150 -t 2 -d /gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220 -i /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Sep06GR.report.txt -l S -o /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC82Sep06GR_bracken.species.report.txt &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC82Sep06GR.log
+
+        bracken -r 150 -t 2 -d /gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220 -i /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Sep06GR.report.txt -l G -o /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC82Sep06GR_bracken.genus.report.txt &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC82Sep06GR.log
+
+        bracken -r 150 -t 2 -d /gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220 -i /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Sep06GR.report.txt -l P -o /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC82Sep06GR_bracken.phylum.report.txt &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC82Sep06GR.log
+
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC82Sep06GR.log
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/test_LLC82Sep06GR.log
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule rnaquast_busco:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC81Sep06CR.fasta, /gpfs/fs7/aafc/common/reference/busco/busco_downloads/lineages/archaea_odb12
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC81Sep06CR_archaea
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC81Sep06CR_archaea.log
+    jobid: 29
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC81Sep06CR_archaea; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC81Sep06CR.fasta
+    wildcards: sample=test_LLC81Sep06CR, lineage=archaea
+    threads: 4
+    resources: mem_mb=16000, mem_mib=15259, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=10, cpus=4
+Shell command: 
+        set -euo pipefail
+
+        export TMPDIR=/gpfs/fs7/aafc/scratch/kjg000/rnaquast_test_LLC81Sep06CR_archaea_$RANDOM
+        mkdir -p "$TMPDIR"
+        echo "TMPDIR is $TMPDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC81Sep06CR_archaea.log
+
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC81Sep06CR_archaea.log
+
+        rnaQUAST.py --transcripts /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC81Sep06CR.fasta \
+            --output /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC81Sep06CR_archaea \
+            --threads 4 \
+            --busco /gpfs/fs7/aafc/common/reference/busco/busco_downloads/lineages/archaea_odb12 \
+            &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC81Sep06CR_archaea.log
+            
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC81Sep06CR_archaea.log
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC81Sep06CR_archaea.log
+        echo "Temporary files removed from $TMPDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC81Sep06CR_archaea.log
+        # rm -rf "$TMPDIR"  # commented-out or removed, so tmpdir is kept.
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule assembly_stats_depth:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.coassembly.sorted.bam
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.flagstat.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.coverage.txt.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.idxstats.txt.gz
+    jobid: 39
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.idxstats.txt.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.flagstat.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.coverage.txt.gz; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.coassembly.sorted.bam
+    wildcards: sample=test_LLC81Sep06CR
+    threads: 2
+    resources: mem_mb=2000, mem_mib=1908, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=30, cpus=2
+Shell command: 
+        samtools flagstat /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.coassembly.sorted.bam > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.flagstat.txt &&
+        samtools depth /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.coassembly.sorted.bam | pigz -p 2 > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.coverage.txt.gz &&
+        samtools idxstats /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.coassembly.sorted.bam | pigz -p 2 > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.idxstats.txt.gz
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule rnaquast_busco:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC82Nov10GR.fasta, /gpfs/fs7/aafc/common/reference/busco/busco_downloads/lineages/archaea_odb12
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC82Nov10GR_archaea
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Nov10GR_archaea.log
+    jobid: 31
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC82Nov10GR_archaea; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC82Nov10GR.fasta
+    wildcards: sample=test_LLC82Nov10GR, lineage=archaea
+    threads: 4
+    resources: mem_mb=16000, mem_mib=15259, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=10, cpus=4
+Shell command: 
+        set -euo pipefail
+
+        export TMPDIR=/gpfs/fs7/aafc/scratch/kjg000/rnaquast_test_LLC82Nov10GR_archaea_$RANDOM
+        mkdir -p "$TMPDIR"
+        echo "TMPDIR is $TMPDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Nov10GR_archaea.log
+
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Nov10GR_archaea.log
+
+        rnaQUAST.py --transcripts /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC82Nov10GR.fasta \
+            --output /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC82Nov10GR_archaea \
+            --threads 4 \
+            --busco /gpfs/fs7/aafc/common/reference/busco/busco_downloads/lineages/archaea_odb12 \
+            &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Nov10GR_archaea.log
+            
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Nov10GR_archaea.log
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Nov10GR_archaea.log
+        echo "Temporary files removed from $TMPDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Nov10GR_archaea.log
+        # rm -rf "$TMPDIR"  # commented-out or removed, so tmpdir is kept.
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule assembly_stats_depth:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.coassembly.sorted.bam
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.flagstat.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.coverage.txt.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.idxstats.txt.gz
+    jobid: 41
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.coverage.txt.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.idxstats.txt.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.flagstat.txt; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.coassembly.sorted.bam
+    wildcards: sample=test_LLC82Sep06GR
+    threads: 2
+    resources: mem_mb=2000, mem_mib=1908, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=30, cpus=2
+Shell command: 
+        samtools flagstat /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.coassembly.sorted.bam > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.flagstat.txt &&
+        samtools depth /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.coassembly.sorted.bam | pigz -p 2 > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.coverage.txt.gz &&
+        samtools idxstats /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.coassembly.sorted.bam | pigz -p 2 > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.idxstats.txt.gz
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule rnaquast_busco:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC82Sep06GR.fasta, /gpfs/fs7/aafc/common/reference/busco/busco_downloads/lineages/archaea_odb12
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC82Sep06GR_archaea
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Sep06GR_archaea.log
+    jobid: 33
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC82Sep06GR_archaea; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC82Sep06GR.fasta
+    wildcards: sample=test_LLC82Sep06GR, lineage=archaea
+    threads: 4
+    resources: mem_mb=16000, mem_mib=15259, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=10, cpus=4
+Shell command: 
+        set -euo pipefail
+
+        export TMPDIR=/gpfs/fs7/aafc/scratch/kjg000/rnaquast_test_LLC82Sep06GR_archaea_$RANDOM
+        mkdir -p "$TMPDIR"
+        echo "TMPDIR is $TMPDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Sep06GR_archaea.log
+
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Sep06GR_archaea.log
+
+        rnaQUAST.py --transcripts /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC82Sep06GR.fasta \
+            --output /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC82Sep06GR_archaea \
+            --threads 4 \
+            --busco /gpfs/fs7/aafc/common/reference/busco/busco_downloads/lineages/archaea_odb12 \
+            &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Sep06GR_archaea.log
+            
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Sep06GR_archaea.log
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Sep06GR_archaea.log
+        echo "Temporary files removed from $TMPDIR" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rnaquast/test_LLC82Sep06GR_archaea.log
+        # rm -rf "$TMPDIR"  # commented-out or removed, so tmpdir is kept.
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule featurecounts:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/12_prodigal/coassembly.saf, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.coassembly.sorted.bam
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/13_featurecounts/test_LLC82Nov10GR_counts.txt
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/featurecounts/test_LLC82Nov10GR_featurecounts.log
+    jobid: 43
+    reason: Missing output files: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/13_featurecounts/test_LLC82Nov10GR_counts.txt; Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.coassembly.sorted.bam
+    wildcards: sample=test_LLC82Nov10GR
+    threads: 4
+    resources: mem_mb=8000, mem_mib=7630, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=10, cpus=4
+Shell command: 
+        set -euo pipefail
+
+        # Ensure output directory exists
+        mkdir -p /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/13_featurecounts
+
+        # Wall time tracking
+        start_time=$(date +%s)
+        start_hr=$(date)
+        echo "Started at: $start_hr" > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/featurecounts/test_LLC82Nov10GR_featurecounts.log
+
+        echo 'featureCounts version:' >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/featurecounts/test_LLC82Nov10GR_featurecounts.log
+        featureCounts -v >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/featurecounts/test_LLC82Nov10GR_featurecounts.log
+
+        featureCounts -a /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/12_prodigal/coassembly.saf -F SAF -p -T 4 -o /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/13_featurecounts/test_LLC82Nov10GR_counts.txt /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.coassembly.sorted.bam &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/featurecounts/test_LLC82Nov10GR_featurecounts.log
+
+        # Wall time logging
+        end_time=$(date +%s)
+        end_hr=$(date)
+        runtime=$((end_time - start_time))
+        hours=$((runtime / 3600))
+        mins=$(((runtime % 3600) / 60))
+        secs=$((runtime % 60))
+        echo "Finished at: $end_hr" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/featurecounts/test_LLC82Nov10GR_featurecounts.log
+        echo "Wall time: $hours"h" $mins"m" $secs"s" (total $runtime seconds)" >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/featurecounts/test_LLC82Nov10GR_featurecounts.log
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule combine_bracken_outputs:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC81Sep06CR_bracken.species.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC82Nov10GR_bracken.species.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC82Sep06GR_bracken.species.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC81Sep06CR_bracken.genus.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC82Nov10GR_bracken.genus.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC82Sep06GR_bracken.genus.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC81Sep06CR_bracken.phylum.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC82Nov10GR_bracken.phylum.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC82Sep06GR_bracken.phylum.report.txt
+    output: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/merged_abundance_species.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/merged_abundance_genus.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/merged_abundance_phylum.txt
+    log: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/combine_bracken_outputs.log
+    jobid: 19
+    reason: Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC82Nov10GR_bracken.phylum.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC81Sep06CR_bracken.species.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC82Nov10GR_bracken.genus.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC82Sep06GR_bracken.genus.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC82Sep06GR_bracken.phylum.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC81Sep06CR_bracken.genus.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC82Sep06GR_bracken.species.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC81Sep06CR_bracken.phylum.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC82Nov10GR_bracken.species.report.txt
+    resources: mem_mb=2000, mem_mib=1908, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=20, cpus=1
+Shell command: 
+        set -euo pipefail
+
+        echo "Combining species bracken outputs..." > /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/combine_bracken_outputs.log
+        combine_bracken_outputs.py --files /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC81Sep06CR_bracken.species.report.txt /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC82Nov10GR_bracken.species.report.txt /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC82Sep06GR_bracken.species.report.txt --output /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/merged_abundance_species.txt &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/combine_bracken_outputs.log
+
+        echo "Combining genus bracken outputs..." >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/combine_bracken_outputs.log
+        combine_bracken_outputs.py --files /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC81Sep06CR_bracken.genus.report.txt /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC82Nov10GR_bracken.genus.report.txt /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC82Sep06GR_bracken.genus.report.txt --output /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/merged_abundance_genus.txt &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/combine_bracken_outputs.log
+
+        echo "Combining phylum bracken outputs..." >> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/combine_bracken_outputs.log
+        combine_bracken_outputs.py --files /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC81Sep06CR_bracken.phylum.report.txt /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC82Nov10GR_bracken.phylum.report.txt /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC82Sep06GR_bracken.phylum.report.txt --output /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/merged_abundance_phylum.txt &>> /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/bracken/combine_bracken_outputs.log
+        
+
+[Fri Jul 11 10:59:31 2025]
+rule all:
+    input: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R2.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R2.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R2.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC81Sep06CR.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Nov10GR.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Sep06GR.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC81Sep06CR.kraken, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Nov10GR.kraken, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Sep06GR.kraken, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC81Sep06CR_bracken.species.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC82Nov10GR_bracken.species.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC82Sep06GR_bracken.species.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC81Sep06CR_bracken.genus.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC82Nov10GR_bracken.genus.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC82Sep06GR_bracken.genus.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC81Sep06CR_bracken.phylum.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC82Nov10GR_bracken.phylum.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC82Sep06GR_bracken.phylum.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/merged_abundance_species.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/merged_abundance_genus.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/merged_abundance_phylum.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/Bracken_species_raw_abundance.csv, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/Bracken_species_relative_abundance.csv, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/Bracken_genus_raw_abundance.csv, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/Bracken_genus_relative_abundance.csv, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/Bracken_phylum_raw_abundance.csv, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/Bracken_phylum_relative_abundance.csv, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC81Sep06CR_paired.allele_mapping_data.json, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC82Nov10GR_paired.allele_mapping_data.json, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC82Sep06GR_paired.allele_mapping_data.json, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC81Sep06CR_paired.allele_mapping_data.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC82Nov10GR_paired.allele_mapping_data.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC82Sep06GR_paired.allele_mapping_data.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC81Sep06CR.fasta, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC82Nov10GR.fasta, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC82Sep06GR.fasta, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC81Sep06CR_bacteria, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC81Sep06CR_archaea, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC82Nov10GR_bacteria, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC82Nov10GR_archaea, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC82Sep06GR_bacteria, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC82Sep06GR_archaea, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/09_megahit_coassembly/final.contigs.fa, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/12_prodigal/coassembly.faa, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/12_prodigal/coassembly.fna, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/12_prodigal/coassembly.gff, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/12_prodigal/coassembly.saf, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.coassembly.sorted.bam, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.coassembly.sorted.bam, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.coassembly.sorted.bam, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.flagstat.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.flagstat.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.flagstat.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.coverage.txt.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.coverage.txt.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.coverage.txt.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.idxstats.txt.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.idxstats.txt.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.idxstats.txt.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/13_featurecounts/test_LLC81Sep06CR_counts.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/13_featurecounts/test_LLC82Nov10GR_counts.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/13_featurecounts/test_LLC82Sep06GR_counts.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/workflow/logs/rgi_reload_db.done
+    jobid: 0
+    reason: Input files updated by another job: /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC81Sep06CR_bracken.species.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.idxstats.txt.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC82Nov10GR_bracken.genus.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.coassembly.sorted.bam, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC82Sep06GR_bacteria, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.flagstat.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Nov10GR.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC81Sep06CR_bracken.genus.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.coassembly.sorted.bam, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/13_featurecounts/test_LLC81Sep06CR_counts.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/13_featurecounts/test_LLC82Sep06GR_counts.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC81Sep06CR_paired.allele_mapping_data.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC82Sep06GR_bracken.species.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC81Sep06CR.kraken, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R2.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC81Sep06CR_bacteria, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.flagstat.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/merged_abundance_phylum.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC81Sep06CR.fasta, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/13_featurecounts/test_LLC82Nov10GR_counts.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R2.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC82Nov10GR_paired.allele_mapping_data.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/merged_abundance_species.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC82Nov10GR_paired.allele_mapping_data.json, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC82Sep06GR_paired.allele_mapping_data.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC81Sep06CR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC81Sep06CR_paired.allele_mapping_data.json, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.flagstat.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC82Nov10GR.fasta, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC82Sep06GR_bracken.phylum.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/merged_abundance_genus.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Nov10GR_rRNAdep_R2.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.coverage.txt.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/species/test_LLC82Nov10GR_bracken.species.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/07_card_rgi/test_LLC82Sep06GR_paired.allele_mapping_data.json, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Sep06GR.kraken, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.idxstats.txt.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Nov10GR.idxstats.txt.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Sep06GR.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC82Nov10GR_bracken.phylum.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/data/raw/metatranscriptomics_test/04_rRNA_dep/test_LLC82Sep06GR_rRNAdep_R1.fastq.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/genus/test_LLC82Sep06GR_bracken.genus.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.coassembly.sorted.bam, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/05_assemblies/test_LLC82Sep06GR.fasta, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC81Sep06CR.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC81Sep06CR_archaea, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC82Sep06GR.coverage.txt.gz, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC82Sep06GR_archaea, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC82Nov10GR_archaea, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/phylum/test_LLC81Sep06CR_bracken.phylum.report.txt, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/08_rnaquast/test_LLC82Nov10GR_bacteria, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/06_kraken/test_LLC82Nov10GR.kraken, /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/workspace/metatranscriptomics-snakemake/11_sorted_assemblies/test_LLC81Sep06CR.coverage.txt.gz
+    resources: mem_mb=4000, mem_mib=3815, disk_mb=<TBD>, tmpdir=<TBD>, slurm_account=<TBD>, slurm_partition=<TBD>, slurm_cluster=<TBD>, runtime=60, cpus=1
+Shell command: None
+Job stats:
+job                        count
+-----------------------  -------
+all                            1
+assembly_stats_depth           3
+bowtie2_map_transcripts        3
+bracken                        3
+combine_bracken_outputs        1
+extract_unmapped_fastq         3
+featurecounts                  3
+kraken2                        3
+rgi_bwt                        3
+rna_spades                     3
+rnaquast_busco                 6
+sortmerna_pe                   3
+total                         35
+
+Reasons:
+    (check individual jobs above for details)
+    input files updated by another job:
+        all, assembly_stats_depth, bowtie2_map_transcripts, bracken, combine_bracken_outputs, featurecounts, kraken2, rgi_bwt, rna_spades, rnaquast_busco, sortmerna_pe
+    output files have to be generated:
+        assembly_stats_depth, bowtie2_map_transcripts, bracken, extract_unmapped_fastq, featurecounts, kraken2, rgi_bwt, rna_spades, rnaquast_busco, sortmerna_pe
+    updated input files:
+        extract_unmapped_fastq
+5 jobs have missing provenance/metadata so that it in part cannot be used to trigger re-runs.
+Rules with missing metadata: bracken_extract fastp_pe index_coassembly prodigal_genes
+This was a dry-run (flag -n). The order of jobs does not reflect the order of execution.
