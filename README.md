@@ -26,7 +26,7 @@ Contemplated future additions to this pipeline include the tool CoverM to map th
     - [Module  `taxonomy.smk`](#module--taxonomysmk)
     - [Module  `amr_short_reads.smk`](#module--amr_short_readssmk)
     - [Module  `sample_assembly.smk`](#module--sample_assemblysmk)
-    - [Module  `coassebly_annotation.smk`](#module--coassebly_annotationsmk)
+    - [Module  `coassembly_annotation.smk`](#module--coassembly_annotationsmk)
   - [Data](#data)
   - [Parameters](#parameters)
   - [Usage](#usage)
@@ -138,7 +138,7 @@ Contemplated future additions to this pipeline include the tool CoverM to map th
 
 ### Snakemake rules
 
-The pipeline is modularized, with each module located in the `metatranscriptomics-snakemake/workflow/rules` directory. The modules are `preprocessing.smk`, `sortmerna.smk`, `taxonomy.smk`,`amr_short_reads.smk`, and `coassebly_annotation.smk`. 
+The pipeline is modularized, with each module located in the `metatranscriptomics-snakemake/workflow/rules` directory. The modules are `preprocessing.smk`, `sortmerna.smk`, `taxonomy.smk`,`amr_short_reads.smk`, and `coassembly_annotation.smk`. 
 
 ---
 
@@ -305,7 +305,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 
 ---
 
-### Module  `coassebly_annotation.smk`
+### Module  `coassembly_annotation.smk`
 
  **`megahit_coassembly` *Co-assembly of all samples***
 
