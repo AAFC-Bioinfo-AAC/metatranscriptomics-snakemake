@@ -417,7 +417,7 @@ The `config/config.yaml` file contains the editable pipeline parameters, thread 
 
 #### Software
 
-- Snakemake version 9.6.0
+- Snakemake version 9.6.0 *Most rules also tested with Snakemake version 9.9.0.*
 - Snakemake-executor-plugin-slurm
 
 #### Databases
@@ -472,7 +472,7 @@ git clone <repository-url>
 ```bash
 metatranscriptomics_pipeline/
 ├── Workflow/
-│   └── Snakemake/
+│   └── Snakefile
 │   └── ... 
 ├── profiles/
 │   └── slurm/
@@ -516,6 +516,7 @@ default-resources:
   - runtime=60       # minutes
   - mem_mb=4000
   - cpus=1
+  - qos=low #If jobs are stuck in queue
 
 ### Env modules ###
 # use-envmodules: false 
@@ -557,8 +558,8 @@ The `config.yaml` file must be located in the `config` directory, which resides 
 
 - Path to the `samples.txt`  
 - Input and output directories  
-- File paths to required databases 
-- Parameters for each rule **NEED TO UPDATE RULES** 
+- File paths to required databases
+- Parameters for each rule
 
 **Note:**  
 You must edit `config.yaml` **before** running the pipeline to ensure all paths are correctly set.  
@@ -648,10 +649,11 @@ This is the script you use to submit the Snakemake pipeline to SLURM.
 #SBATCH --account=aafc_aac
 #SBATCH --mem=2000
 #SBATCH --time=8:00:00
+#SBATCH --qos=low #If jobs are stuck in queue
 
 source /gpfs/fs7/aafc/common/miniforge/miniforge3/etc/profile.d/conda.sh
 
-conda activate snakemake-9.6.0
+conda activate snakemake_env
 export PATH="$PWD/bin:$PATH"
 
   snakemake \
