@@ -5,16 +5,16 @@ Detailed citations of the resources used.
 ### Pipeline tools
 
 - [Snakemake](https://snakemake.github.io/)
-  > @article{koster2012snakemake,
-  > title={Snakemake—a scalable bioinformatics workflow engine},
-  > author={K{\"o}ster, Johannes and Rahmann, Sven},
-  > journal={Bioinformatics},
-  > volume={28},
-  > number={19},
-  > pages={2520--2522},
-  > year={2012},
-  > publisher={Oxford University Press}
-  > }
+  >@article{koster2012snakemake,
+  title={Snakemake—a scalable bioinformatics workflow engine},
+  author={K{\"o}ster, Johannes and Rahmann, Sven},
+  journal={Bioinformatics},
+  volume={28},
+  number={19},
+  pages={2520--2522},
+  year={2012},
+   publisher={Oxford University Press}
+  }
 
 ### Software packaging/containerisation tools
 
@@ -24,17 +24,16 @@ Detailed citations of the resources used.
 ### Software
 
 - [fastp](https://github.com/OpenGene/fastp)
-
-> @article{chen2018fastp,
-> title={fastp: an ultra-fast all-in-one FASTQ preprocessor},
-> author={Chen, Shifu and Zhou, Yanqing and Chen, Yaru and Gu, Jia},
-> journal={Bioinformatics},
-> volume={34},
-> number={17},
-> pages={i884--i890},
-> year={2018},
-> publisher={Oxford University Press}
-> }
+  > @article{chen2018fastp,
+  > title={fastp: an ultra-fast all-in-one FASTQ preprocessor},
+  > author={Chen, Shifu and Zhou, Yanqing and Chen, Yaru and Gu, Jia},
+  > journal={Bioinformatics},
+  > volume={34},
+  > number={17},
+  > pages={i884--i890},
+  > year={2018},
+  > publisher={Oxford University Press}
+  > }
 
 - [Bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml)
   > @article{langmead2012fast,
