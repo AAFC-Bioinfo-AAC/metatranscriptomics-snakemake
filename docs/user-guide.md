@@ -132,10 +132,10 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   - Trimmed paired reads: `sample_r1.fastq.gz`, `sample_r2.fastq.gz`
   
 - **Notes:**
-  - Parameters are defined in **`config/config.ymal`** for `fastp`.
+  - Parameters are defined in **`config/config.yaml`** for `fastp`.
   - These files are marked as temporary in the rule: `sample_u1.fastq.gz`, `sample_r2.fastq.gz`,`sample.fastp.html`, and `sample.fastp.json`. If these are required the temporary() flag on the output files in the rule can be removed.
 
-**`rule bowtie2_align` *Alignment to Host/Phix***
+**`rule bowtie2_align` *Alignment to Host/PhiX***
 
 - **Purpose:** Aligns trimmed reads to a user created reference (Host/PhiX) that has been indexed by Bowtie2 index.
 - **Inputs:**
@@ -208,7 +208,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   - Combined abundance tables for:
     - Species level: `merged_abundance_species.txt`
     - Genus level: `merged_abundance_genus.txt`
-    - Phylum level: `merged_abundance_pylum.txt`
+    - Phylum level: `merged_abundance_phylum.txt`
 
 **`rule bracken_extract` *Relative Abundance Tables***
 
@@ -217,7 +217,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   - Combined abundance tables for:
     - Species level: `merged_abundance_species.txt`
     - Genus level: `merged_abundance_genus.txt`
-    - Phylum level: `merged_abundance_pylum.txt`
+    - Phylum level: `merged_abundance_phylum.txt`
 - **Outputs:**
   - Combined relative and raw abundance tables for
     - Species level: `Bracken_species_raw_abundance.csv` and `Bracken_species_relative_abundance.csv`
@@ -318,24 +318,24 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 
 **`assembly_stats_depth` *QC and coverage for mapped reads***
 
-- **Purpose:** `samtools flagstat` provides alignment statisitics that include the total reads, reads that mapped to the co-assembly, properly paired reads and duplicates. The flagstat is used to check how each sample aligns to the co-assembly. `samtools depth` computes the per-base sequencing depth across the co-assembly to evaluate sequncing depth and uniformity of coverage. `samtools idxstats` provides sequnces level mapping statistics with the sample contig name that is used to identify contigs that are over or under represented.
+- **Purpose:** `samtools flagstat` provides alignment statistics that include the total reads, reads that mapped to the co-assembly, properly paired reads and duplicates. The flagstat is used to check how each sample aligns to the co-assembly. `samtools depth` computes the per-base sequencing depth across the co-assembly to evaluate sequencing depth and uniformity of coverage. `samtools idxstats` provides sequences level mapping statistics with the sample contig name that is used to identify contigs that are over or under represented.
 - **Inputs:**
   - BAM file for each sample: `sample.coassembly.sorted.bam`
 **Outputs:**
   - Alignment statistics: `sample.flagstat.txt`
   - Sequencing depth: `sample.coverage.txt.gz`
-  - Mapping statiscics: `sample.idxstats.txt.gz`
+  - Mapping statistics: `sample.idxstats.txt.gz`
 
 **`rule prodigal_genes` *Gene prediction***
 
-- **Purpose:** Predict the protein and nucleotide sequnces in the co-assembly. Generate a simplified annotation formate file that is used by `featurecounts`.
+- **Purpose:** Predict the protein and nucleotide sequences in the co-assembly. Generate a simplified annotation format file that is used by `featurecounts`.
 - **Inputs:**
   - Presumptive transcripts from the coassembly: `final.contigs.fa`
 - **Outputs:**
-  - Predicted protein sequnces: `coassembly.faa`
-  - Predicted nuelotide sequnces: `coassembly.fna`
+  - Predicted protein sequences: `coassembly.faa`
+  - Predicted nucleotide sequences: `coassembly.fna`
   - Feature formatted annotation file: `coassembly.gff`
-  - Simplified annotation formate file: `coassembly.saf`
+  - Simplified annotation format file: `coassembly.saf`
 
 - **Notes:**
   - Go back and decided if this output should be designated temporary.
@@ -365,7 +365,7 @@ The raw input data must be in the form of paired-end FASTQ files generated from 
 
 ## Parameters
 
-The `config/config.yaml` file contains the editable pipeline parameters, thread allocation for rules with more than one core, and the realtive file paths for input and output. The prefix of the absolute file path must go in `.env`. Most tools in the pipeline have default parameters. The tools with parameters different from defult or that can be editied in the `config/config.ymal` file are listed below.
+The `config/config.yaml` file contains the editable pipeline parameters, thread allocation for rules with more than one core, and the relative file paths for input and output. The prefix of the absolute file path must go in `.env`. Most tools in the pipeline have default parameters. The tools with parameters different from default or that can be edited in the `config/config.yaml` file are listed below.
 
 | Parameter          | Value                                                                                               |
 | -------------------- | ----------------------------------------------------------------------------------------------------- |
@@ -373,10 +373,10 @@ The `config/config.yaml` file contains the editable pipeline parameters, thread 
 | *fastp: cut_tail* | *If true, trim low quality bases from the 3′ end until a base meets or exceeds the cut_mean_quality threshold. If false,disabled.* |
 | *fastp: cut_front* | *If true, trim low quality bases from the 5′ end until a base meets or exceeds the cut_mean_quality threshold. If false,disabled.* |
 | *fastp: cut_mean_quality* | *A positive integer specifying the minimum average quality score threshold for sliding window trimming.* |
-| *fastp: cut_window_size* | *A positive interger specifing the sliding window size in bp when using cut_mean_quality.* |
-| *fastp: qualified_quality_phred* | *A positive interger specifing the minimum Phed score that a base needs to be considered qualified*. |
+| *fastp: cut_window_size* | *A positive integer specifying the sliding window size in bp when using cut_mean_quality.* |
+| *fastp: qualified_quality_phred* | *A positive integer specifying the minimum Phred score that a base needs to be considered qualified*. |
 | *fastp: detect_adapter_for_pe* | *If true, auto adapter detection. If false,disabled.* |
-| *fastp: length_required* | *Reads shorter then this positive interger will be discarded.* |
+| *fastp: length_required* | *Reads shorter then this positive integer will be discarded.* |
 | *kraken2: conf_threshold* | *Interval between 0 and 1. Higher values require more of a read’s k-mers to match the same taxon before it is classified, increasing precision but reducing sensitivity.*              |
 | *bracken: readlen* | *The read length of your data in bp.*              |
 | *rna_spades: memory* | *Memory limit set in mb.* |
@@ -401,7 +401,7 @@ The `config/config.yaml` file contains the editable pipeline parameters, thread 
   SortMeRNA requires a ribosomal (r)RNA database in the `rRNA_DB` directory. Update the `config.yaml` file with the filename of the database used. You can download the database from [SortMeRNA releases](https://github.com/sortmerna/sortmerna/releases/tag/v4.3.3). The file `smr_v4.3_default_db.fasta` was used for pipeline testing.
 
 - **Kraken2**  
-  Kraken2 requires a Kraken2-formatted GTDB. The GTDB release tested with this pipeline was 220. Pre-built Kraken2-formatted GTDB are avalible from [Kraken 2, KrakenUniq and Bracken indexes](https://benlangmead.github.io/aws-indexes/k2), and nstructions for building custom Kraken2-formatted GTDBs are available on the [Kraken2 GitHub repository](https://github.com/DerrickWood/kraken2).  
+  Kraken2 requires a Kraken2-formatted GTDB. The GTDB release tested with this pipeline was 220. Pre-built Kraken2-formatted GTDB are available from [Kraken 2, KrakenUniq and Bracken indexes](https://benlangmead.github.io/aws-indexes/k2), and instructions for building custom Kraken2-formatted GTDBs are available on the [Kraken2 GitHub repository](https://github.com/DerrickWood/kraken2).  
 
 - **RGI BWT/CARD**  RGI BWT requires the CARD (Comprehensive Antibiotic Resistance Database) database. The version tested in this pipeline was 4.0.1. The database can be located on a common drive or in your working directory.  
   Instructions for installing the CARD database are available on [CARD RGI GitHub repository](https://github.com/arpcard/rgi/blob/master/docs/rgi_bwt.rst).  
@@ -614,7 +614,7 @@ This is the script you use to submit the Snakemake pipeline to SLURM.
 ```bash
 #!/bin/bash
 #SBATCH --job-name=run_snakemake.sh
-#SBATCH --output=run_snakemaket_%j.out 
+#SBATCH --output=run_snakemake_%j.out 
 #SBATCH --error=run_snakemake_%j.err 
 #SBATCH --cluster=gpsc8 
 #SBATCH --partition=standard
@@ -659,7 +659,7 @@ export PATH="$PWD/bin:$PATH"
 
 ## OUTPUT
 
-**All output file paths are set in the `config/config.ymal` file and need to be edited prior to running the pipeline.**
+**All output file paths are set in the `config/config.yaml` file and need to be edited prior to running the pipeline.**
 
 The following table includes the key outputs of the metatranscriptomics pipeline. The [Snakemake](#snakemake-rules) section provides greater detail on all file outputs.
 
