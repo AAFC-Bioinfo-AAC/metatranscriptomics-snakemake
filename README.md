@@ -30,7 +30,7 @@ The pipeline consists of **four main stages**:
 
   💡 *If metagenomic sequencing data are available for the same samples, trimmed and host/PhiX-filtered metagenomic reads should be used in the co-assembly stage.*
 
-Some future Enhancements planned for this pipeline include:
+Some **future enhancements** planned for this pipeline include:
 
 - Integration of *CoverM* for mapping metatranscriptomic reads to assembled metagenomes.
 - Addition of a *CAZyme analysis module* for functional annotation of carbohydrate-active enzymes.
