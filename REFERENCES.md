@@ -1,6 +1,9 @@
-# Citations
+# References
 
-Detailed citations of the resources used.
+> This file lists the scholarly works and software used in this repository.  
+> For how to cite *this repository*, see the badge/DOI in the README or the `CITATION.cff`.
+
+---
 
 ## Pipeline tools
 
