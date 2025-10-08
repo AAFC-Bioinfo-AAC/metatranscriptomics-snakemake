@@ -19,9 +19,21 @@
 
 ## À propos
 
-Le pipeline **Metatranscriptomics Snakemake** utilise comme entrée des fichiers FASTQ appariés issus d’un séquençage métatranscriptomique shotgun Illumina. Le pipeline se divise en quatre grandes étapes : le traitement des lectures d’échantillons, l’analyse des lectures triées, l’assemblage individuel des échantillons et la co-assemblage. Le **traitement des échantillons** comprend l’utilisation de *fastp*, *Bowtie2* et *SortMeRNA* pour effectuer le filtrage de qualité, éliminer la contamination par l’hôte et PhiX, ainsi que pour la déplétion de l’ARN ribosomique (ARNr). Les **lectures nettoyées** servent ensuite à l’**analyse des lectures triées**, qui comprend la classification taxonomique avec *Kraken2* utilisant la base de données GTDB et le profilage des gènes antimicrobiens avec *RGI* utilisant la base *CARD*. Les **échantillons individuels** sont assemblés en transcrits d’ARN messager (ARNm) présumés à l’aide de *RNA SPAdes*. La qualité de l’assemblage est évaluée avec *rnaQUAST*. L’étape de **co-assemblage** prépare les données pour l’analyse de l’expression génique. Toutes les lectures nettoyées sont co-assemblées avec *MEGAHIT*, et le co-assemblage obtenu est indexé avec *Bowtie2*. Les lectures nettoyées des échantillons sont ensuite réalignées sur le co-assemblage, et *SAMtools* est utilisé pour générer des statistiques d’assemblage, des résumés d’alignement et la profondeur de séquençage à travers le co-assemblage. Avec *Prodigal*, les régions codantes protéiques et nucléotidiques du co-assemblage sont prédites. *FeatureCounts* quantifie ces régions codantes prédites et génère un tableau pour l’analyse de l’expression génique. Si un séquençage métagénomique a également été effectué pour ces échantillons, les lectures métagénomiques nettoyées (après retrait des séquences PhiX et de l’hôte) doivent être utilisées pour l’étape de co-assemblage.
+Le **pipeline Metatranscriptomics Snakemake** est un flux de travail modulaire et reproductible conçu pour traiter, assembler et analyser des **données métatranscriptomiques shotgun à lectures appariées Illumina**. Il automatise l’ensemble de l’analyse — du traitement des lectures brutes à la quantification de l’expression génique — en utilisant des outils de bioinformatique largement reconnus et intégrés via **Snakemake**.  Ce pipeline génère des assemblages de haute qualité, des profils taxonomiques et de gènes antimicrobiens, ainsi que des tableaux quantitatifs d’expression génique adaptés aux analyses statistiques et fonctionnelles en aval.
 
-Les améliorations futures prévues pour ce pipeline incluent l’intégration de *CoverM* afin de mapper les lectures métatranscriptomiques sur les métagénomes assemblés, ainsi que l’ajout d’un *module d’analyse des CAZymes* pour l’annotation fonctionnelle des enzymes actives sur les glucides.
+Le pipeline comprend **quatre étapes principales** :
+
+- **Traitement des lectures d’échantillons** — Filtrage de qualité, suppression de la contamination par l’hôte et PhiX, et déplétion de l’ARN ribosomique (ARNr) à l’aide de *fastp*, *Bowtie2* et *SortMeRNA*.
+- **Analyse des lectures courtes** — Classification taxonomique avec *Kraken2* (en utilisant *GTDB*) et profilage de la résistance antimicrobienne avec *RGI* (en utilisant *CARD*).
+- **Assemblage individuel des échantillons** — Assemblage des transcrits avec *RNA SPAdes* et évaluation de la qualité via *rnaQUAST*.
+- **Co-assemblage et quantification de l’expression** — Co-assemblage global avec *MEGAHIT*, suivi de l’alignement des lectures (*Bowtie2*), de l’évaluation de la couverture (*SAMtools*), de la prédiction des gènes (*Prodigal*) et de la quantification des régions codantes (*FeatureCounts*).
+
+  💡 *Si des données de séquençage métagénomique sont disponibles pour les mêmes échantillons, les lectures métagénomiques nettoyées (après suppression des séquences PhiX et de l’hôte) doivent être utilisées à l’étape de co-assemblage.*
+
+Des **améliorations futures** sont prévues pour ce pipeline, notamment :
+
+- L’intégration de *CoverM* pour le mappage des lectures métatranscriptomiques sur les métagénomes assemblés.
+- L’ajout d’un *module d’analyse des CAZymes* pour l’annotation fonctionnelle des enzymes actives sur les glucides.
 
 ---
 
@@ -33,7 +45,7 @@ Pour les détails techniques, y compris les instructions d’installation et d�
 
 ## Remerciements
 
-- **Crédits** : Ce projet a été réalisé au Centre de recherche et de développement de Lacombe, Agriculture et Agroalimentaire Canada, par **Katherine James-Gzyl**, avec l’aide de **Devin Holman** et d’**Arun Kommadath**.
+- **Crédits** : Ce projet a été réalisé au *Centre de recherche et de développement de Lacombe, Agriculture et Agroalimentaire Canada (AAC)*, par **Katherine James-Gzyl**, avec l’aide de **Devin Holman** et d’**Arun Kommadath**.
 
 - **Citation** : Pour citer ce projet, cliquez sur le bouton **`Cite this repository`** dans la barre latérale de droite.
 
