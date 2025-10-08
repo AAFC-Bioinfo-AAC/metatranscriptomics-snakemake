@@ -1,5 +1,5 @@
 <!-- omit in toc -->
-# METATRANSCRIPTOMICS SNAKEMAKE PIPELINE USER GUIDE
+# METATRANSCRIPTOMICS SNAKEMAKE PIPELINE
 
 [![FR](https://img.shields.io/badge/lang-FR-yellow.svg)](README_FR.md)
 [![EN](https://img.shields.io/badge/lang-EN-blue.svg)](README.md)
@@ -26,7 +26,7 @@ The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illu
 
 ### Future Additions
 
-Contemplated future additions to this pipeline include the tool CoverM to map the metatransriptomic reads to the assembled metagenomes, and a CAZyme analysis module.
+Contemplated future additions to this pipeline include the tool CoverM to map the metatranscriptomic reads to the assembled metagenomes, and a CAZyme analysis module.
 
 ---
 
@@ -59,3 +59,5 @@ For technical details, including installation and usage instructions, please see
 See the [LICENSE](LICENSE) file for details. Visit [LicenseHub](https://licensehub.org) or [tl;drLegal](https://www.tldrlegal.com/) to view a plain-language summary of this license.
 
 **Copyright ©** His Majesty the King in Right of Canada, as represented by the Minister of Agriculture and Agri-Food, 2025.
+
+---
