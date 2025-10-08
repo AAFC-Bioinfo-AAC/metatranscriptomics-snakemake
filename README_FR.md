@@ -1,5 +1,5 @@
 <!-- omit in toc -->
-# PORK-VISION
+# METATRANSCRIPTOMICS SNAKEMAKE PIPELINE
 
 [![FR](https://img.shields.io/badge/lang-FR-yellow.svg)](README_FR.md)
 [![EN](https://img.shields.io/badge/lang-EN-blue.svg)](README.md)
