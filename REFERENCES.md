@@ -2,7 +2,7 @@
 
 Detailed citations of the resources used.
 
-### Pipeline tools
+## Pipeline tools
 
 - [Snakemake](https://snakemake.github.io/)  
     >@article{koster2012snakemake, \
@@ -16,13 +16,12 @@ Detailed citations of the resources used.
     >publisher={Oxford University Press} \
     >}
 
-
-### Software packaging/containerisation tools
+## Software packaging/containerisation tools
 
 - [Anaconda](https://anaconda.org/)
   > Anaconda Software Distribution. Computer software. Vers. 23.11.0. Anaconda, Dec. 2023. Web.
 
-### Software
+## Software
 
 - [fastp](https://github.com/OpenGene/fastp)  
     >@article{chen2018fastp, \
