@@ -39,7 +39,7 @@
     - [Warnings](#warnings)
     - [Current issues](#current-issues)
     - [Resource usage](#resource-usage)
-- [OUTPUT](#output)
+- [Output](#output)
 
 ---
 
@@ -657,11 +657,11 @@ export PATH="$PWD/bin:$PATH"
   
 ---
 
-## OUTPUT
+## Output
 
 **All output file paths are set in the `config/config.yaml` file and need to be edited prior to running the pipeline.**
 
-The following table includes the key outputs of the metatranscriptomics pipeline. The [Snakemake](#snakemake-rules) section provides greater detail on all file outputs.
+The following table includes the key outputs of the metatranscriptomics pipeline. The [Snakemake rules](#snakemake-rules) section provides greater detail on all file outputs.
 
 | Output Type         | Description                                                       | Filename                                       |
 | -------------------- | ----------------------------------------------------------|------------------------------------------- |
