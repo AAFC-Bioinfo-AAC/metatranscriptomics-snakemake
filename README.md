@@ -10,7 +10,6 @@
 ## Table of Contents
 
 - [About](#about)
-  - [Future Additions](#future-additions)
 - [Documentation](#documentation)
 - [Acknowledgements](#acknowledgements)
 - [Security](#security)
@@ -22,11 +21,7 @@
 
 The Metatranscriptomics Snakemake Pipeline uses paired-end FASTQ files from Illumina shotgun metatranscriptomic sequencing as input. The pipeline can be broken down into four main stages: sample read processing, sort read analysis, individual sample assembly, and co-assembly. Sample processing consists of fastp, Bowtie2, and SortMeRNA to perform quality filtering, remove host and PhiX contamination, and ribosomal (r)RNA depletion. These cleaned reads are used for the sort read analysis consisting of taxonomic classification with Kraken2 using GTDB and antimicrobial gene profiling with RGI using CARD. Individual samples are assembled into presumptive messenger (m)RNA transcripts using RNA SPAdes. Assembly quality is evaluated with rnaQUAST. The co-assembly stage prepares the data for gene expression analysis. All cleaned reads are co-assembled with MEGAHIT, and the resulting co-assembly is indexed with Bowtie2. The cleaned sample reads are then mapped back to the co-assembly, and SAMtools is used generate assembly statistics, mapping summaries, and sequencing depth across the co-assembly. With Prodigal the protein and nucleotide coding regions of the co-assembly are predicted. FeatureCounts quantifies the predicted coding regions and generates a table for gene expression analysis. If metagenomic sequencing was done for these samples then the trimmed and host/PhiX removed metagenomic reads should be used for the co-assembly step.
 
----
-
-### Future Additions
-
-Contemplated future additions to this pipeline include the tool CoverM to map the metatranscriptomic reads to the assembled metagenomes, and a CAZyme analysis module.
+Planned future enhancements to this pipeline include integrating CoverM to map metatranscriptomic reads onto the assembled metagenomes, as well as adding a CAZyme analysis module for functional annotation of carbohydrate-active enzymes.
 
 ---
 
