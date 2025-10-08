@@ -138,7 +138,7 @@ Contemplated future additions to this pipeline include the tool CoverM to map th
 
 ### Snakemake rules
 
-The pipeline is modularized, with each module located in the `metatranscriptomics-snakemake/workflow/rules` directory. The modules are `preprocessing.smk`, `sortmerna.smk`, `taxonomy.smk`,`amr_short_reads.smk`, and `coassembly_annotation.smk`. 
+The pipeline is modularized, with each module located in the `metatranscriptomics-snakemake/workflow/rules` directory. The modules are `preprocessing.smk`, `sortmerna.smk`, `taxonomy.smk`,`amr_short_reads.smk`, and `coassembly_annotation.smk`.
 
 ---
 
@@ -174,7 +174,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 - **Inputs:**
   - Sorted BAM file: `sample.bam`
 - **Outputs:**
-  - Clean read pairs: `sample_trimmed_clean_R1.fastq.gz`/`sample_trimmed_clean_R2.fastq.gz` 
+  - Clean read pairs: `sample_trimmed_clean_R1.fastq.gz`/`sample_trimmed_clean_R2.fastq.gz`
   
 ---
 
@@ -184,7 +184,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 
 - **Purpose:** Align the clean read pairs to an rRNA database and outputs the rRNA-depleted reads
 - **Inputs:**
-  - Clean read pairs: `sample_trimmed_clean_R1.fastq.gz`/`sample_trimmed_clean_R2.fastq.gz` 
+  - Clean read pairs: `sample_trimmed_clean_R1.fastq.gz`/`sample_trimmed_clean_R2.fastq.gz`
 - **Outputs:**
   - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
 - **Notes:**
@@ -202,7 +202,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 - **Outputs:**
   - Kraken and report for each sample: `sample.kraken` and `sample.report.txt`
 - **Notes:**
-  - Must use **Large compute node** with at least 600 GB. 
+  - Must use **Large compute node** with at least 600 GB.
 
 **`rule bracken` *Abundance Estimation***
 
@@ -251,7 +251,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 **`rule rgi_reload_database` *Load CARD DB***
 
 - **Purpose:** Checks if the CARD Database has been loaded from a common directory or user specific directory
-- **Inputs:** 
+- **Inputs:**
   - `card_reference.fasta`
   - `card.json`
 - **Outputs:**
@@ -267,11 +267,11 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 - **Inputs:**
   - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
 - **Outputs:**
-  - `sample_paired.allele_mapping_data.txt` 
-  - `sample_paired.artifacts_mapping_stats.txt` 
-  - `sample_paired.gene_mapping_data.txt` 
+  - `sample_paired.allele_mapping_data.txt`
+  - `sample_paired.artifacts_mapping_stats.txt`
+  - `sample_paired.gene_mapping_data.txt`
   - `sample_paired.overall_mapping_stats.txt`  
-  - `sample_paired.reference_mapping_stats.txt` 
+  - `sample_paired.reference_mapping_stats.txt`
 
 - **Notes:**
   - Uses default RGI BWT parameters.
@@ -298,7 +298,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   - Presumptive transcripts: `sample.fasta`
   - Busco lineage: `bacteria_odb12` and `archaea_odb12`
 - **Outputs:**
-  - QUAST report in `sample_bacteria` and `sample_archaea` directories 
+  - QUAST report in `sample_bacteria` and `sample_archaea` directories
 
 - **Notes:**
   - The software is not intended for metatranscriptomics. Use caution when interpreting the results. For instance the BUSCO completeness cannot be interpreted as the percentage of assembly quality but instead it is a representation of the core functions from the bacteria_odb12 and archaea_odb12 lineages.
@@ -344,7 +344,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 **Outputs:**
   - Alignment statistics: `sample.flagstat.txt`
   - Sequencing depth: `sample.coverage.txt.gz`
-  - Mapping statiscics: `sample.idxstats.txt.gz` 
+  - Mapping statiscics: `sample.idxstats.txt.gz`
 
 **`rule prodigal_genes` *Gene prediction***
 
@@ -394,9 +394,9 @@ The `config/config.yaml` file contains the editable pipeline parameters, thread 
 | *fastp: cut_front* | *If true, trim low quality bases from the 5′ end until a base meets or exceeds the cut_mean_quality threshold. If false,disabled.* |
 | *fastp: cut_mean_quality* | *A positive integer specifying the minimum average quality score threshold for sliding window trimming.* |
 | *fastp: cut_window_size* | *A positive interger specifing the sliding window size in bp when using cut_mean_quality.* |
-| *fastp: qualified_quality_phred* | *A positive interger specifing the minimum Phed score that a base needs to be considered qualified*. | 
-| *fastp: detect_adapter_for_pe* | *If true, auto adapter detection. If false,disabled.* | 
-| *fastp: length_required* | *Reads shorter then this positive interger will be discarded.* | 
+| *fastp: qualified_quality_phred* | *A positive interger specifing the minimum Phed score that a base needs to be considered qualified*. |
+| *fastp: detect_adapter_for_pe* | *If true, auto adapter detection. If false,disabled.* |
+| *fastp: length_required* | *Reads shorter then this positive interger will be discarded.* |
 | *kraken2: conf_threshold* | *Interval between 0 and 1. Higher values require more of a read’s k-mers to match the same taxon before it is classified, increasing precision but reducing sensitivity.*              |
 | *bracken: readlen* | *The read length of your data in bp.*              |
 | *rna_spades: memory* | *Memory limit set in mb.* |
