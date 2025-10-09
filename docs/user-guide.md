@@ -355,7 +355,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 
 The raw input data must be in the form of paired-end FASTQ files generated from metatranscriptomics experiments.
 
-A set of sub-sampled raw FASTQ files are provided for testing (`data/test_LLC82Sep06GR_{r1,r2}*.fastq.gz`), which can be used for all steps dealing with un-assembled data but will fail for the RNA SPAdes step.
+A set of sub-sampled raw FASTQ files are provided for testing (`data/test_LLC82Sep06GR_{r1,r2}*.fastq.gz`). These files can be used for all workflow stages that operate on unassembled data (e.g., quality control, filtering, mapping, and annotation) but will fail at `RNA-SPAdes` due to insufficient coverage.
 
 ---
 
