@@ -365,17 +365,17 @@ The `config/config.yaml` file contains the editable pipeline parameters, thread 
 
 | Parameter          | Value                                                                                               |
 | -------------------- | ----------------------------------------------------------------------------------------------------- |
-| *samplesheet.csv* | *The samplesheet is described here: [Sample list](#33-sample-list)* |
-| *fastp: cut_tail* | *If true, trim low quality bases from the 3′ end until a base meets or exceeds the cut_mean_quality threshold. If false,disabled.* |
-| *fastp: cut_front* | *If true, trim low quality bases from the 5′ end until a base meets or exceeds the cut_mean_quality threshold. If false,disabled.* |
-| *fastp: cut_mean_quality* | *A positive integer specifying the minimum average quality score threshold for sliding window trimming.* |
-| *fastp: cut_window_size* | *A positive integer specifying the sliding window size in bp when using cut_mean_quality.* |
-| *fastp: qualified_quality_phred* | *A positive integer specifying the minimum Phred score that a base needs to be considered qualified*. |
-| *fastp: detect_adapter_for_pe* | *If true, auto adapter detection. If false,disabled.* |
-| *fastp: length_required* | *Reads shorter then this positive integer will be discarded.* |
-| *kraken2: conf_threshold* | *Interval between 0 and 1. Higher values require more of a read’s k-mers to match the same taxon before it is classified, increasing precision but reducing sensitivity.*              |
-| *bracken: readlen* | *The read length of your data in bp.*              |
-| *rna_spades: memory* | *Memory limit set in mb.* |
+| samplesheet.csv | The samplesheet is described here: [Sample list](#33-sample-list) |
+| fastp: *cut_tail* | If true, trim low quality bases from the 3′ end until a base meets or exceeds the *cut_mean_quality* threshold. If false,disabled. |
+| fastp: *cut_front* | If true, trim low quality bases from the 5′ end until a base meets or exceeds the *cut_mean_quality* threshold. If false,disabled. |
+| fastp: *cut_mean_quality* | A positive integer specifying the minimum average quality score threshold for sliding window trimming. |
+| fastp: *cut_window_size* | A positive integer specifying the sliding window size in bp when using *cut_mean_quality*. |
+| fastp: *qualified_quality_phred* | A positive integer specifying the minimum Phred score that a base needs to be considered qualified. |
+| fastp: *detect_adapter_for_pe* | If true, auto adapter detection. If false,disabled. |
+| fastp: *length_required* | Reads shorter then this positive integer will be discarded. |
+| kraken2: *conf_threshold* | Interval between 0 and 1. Higher values require more of a read’s k-mers to match the same taxon before it is classified, increasing precision but reducing sensitivity.              |
+| bracken: *readlen* | The read length of your data in bp.              |
+| rna_spades: *memory* | Memory limit set in mb. |
 
 ---
 
