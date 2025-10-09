@@ -26,12 +26,12 @@ metatranscriptomics_pipeline/
 
 ## Main profile
 
-- Controls how Snakemake schedules jobs on SLURM
-- Must invoke with ` --profile /absolute/path/to/the/my_pipeline/profiles/slurm`
+- Defines how Snakemake submits and schedules jobs on SLURM.
+- Invoke Snakemake with the profile using the full path: `--profile /absolute/path/to/my_pipeline/profiles/slurm`
 
-### Example Profile
+### Example
 
-`profiles/slurm/config.yaml`
+Configuration file location: `profiles/slurm/config.yaml`
 
 ```bash
 ### How Snakemake assigns resources to rules ###
