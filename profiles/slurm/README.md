@@ -1,7 +1,8 @@
 # Snakemake Profile for running on SLURM
 
-## Directory layout 
-```
+## Directory layout
+
+```text
 metatranscriptomics_pipeline/
 ├── Workflow/
 │   └── Snakemake
@@ -24,12 +25,16 @@ metatranscriptomics_pipeline/
 ```
 
 ## Main profile
-- Controls how Snakemake schedules jobs on SLURM
-- Must invoke with ` --profile /absolute/path/to/the/my_pipeline/profiles/slurm`
-### Example Profile
-`profiles/slurm/config.yaml`
+
+- Defines how Snakemake submits and schedules jobs on SLURM.
+- Invoke Snakemake with the profile using the full path: `--profile /absolute/path/to/my_pipeline/profiles/slurm`
+
+### Example
+
+Configuration file location: `profiles/slurm/config.yaml`
+
 ```bash
-###How Snakemake assign resources to rules ###
+### How Snakemake assigns resources to rules ###
 cores: 60 # total number of cores Snakemake can request at any time
 jobs: 10 # max amount of jobs Snakemake runs at once
 latency-wait: 60 # gives time for containers to start, and for other I/O delays
@@ -53,7 +58,8 @@ default-resources:
   - cpus=1
 
 ### Env modules ###
-# use-envmodules: false # use-envmodules: true only if: Your system disables Conda/containers and expects you to use module load bioinfo-tool for each step or you have a properly configured profile and know which modules are needed for every rule.
+# use-envmodules: false 
+# use-envmodules: true only if: Your system disables Conda/containers and expects you to use module load bioinfo-tool for each step or you have a properly configured profile and know which modules are needed for every rule.
 
 ### Conda ###
 use-conda: true
@@ -63,7 +69,7 @@ conda-frontend: mamba   # if you have mamba installed
 # Affects how Snakemake defines resource limits
 # Note that cores and threads are always considered local 
 # set-resource-scopes:
-    cores: local 
+cores: local 
 
 ### Containerization if using containers like Docker ###
 # use-singularity: true 
@@ -200,3 +206,4 @@ set-resources:
     runtime: 10
     slurm_partition: standard
     slurm_account: aafc_aac
+```
