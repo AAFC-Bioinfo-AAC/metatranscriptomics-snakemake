@@ -475,7 +475,7 @@ rerun-triggers: [input, params, software-env]
 
 ### Env Vars ###
 envvars:
-  TMPDIR: "/gpfs/fs7/aafc/scratch/$USER/tmpdir"
+  TMPDIR: "/gpfs/fs7/aafc/scratch/${USER}/tmpdir"
 
 default-resources:
   - slurm_account=aafc_aac
@@ -547,7 +547,7 @@ touch .env
 
 ```bash
  PROJECT_ROOT = path/to/project/root
- TMPDIR = path/to/temp/on/cluster **Issue with $USER. I had to use my actual username in the .env file**
+ TMPDIR = path/to/temp/on/cluster
  RGI_CARD = path/to/card.json and card_reference.fasta
  ```
 
@@ -634,7 +634,7 @@ export PATH="$PWD/bin:$PATH"
 
 ### Notes
 
-- temp folder is set to `/gpfs/fs7/aafc/scratch/$USER/tmpdir` for running on the GPSC.
+- temp folder is set to `/gpfs/fs7/aafc/scratch/${USER}/tmpdir` for running on the GPSC.
   
 #### Warnings
 
@@ -644,7 +644,7 @@ export PATH="$PWD/bin:$PATH"
 
 #### Current issues
 
-- In the .env file /gpfs/fs7/aafc/scratch/$USER/ was not solving to user so as a temporary fix I put in my user name.
+None.
 
 #### Resource usage
 
