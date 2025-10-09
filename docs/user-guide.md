@@ -659,19 +659,19 @@ None.
 
 The following table includes the key outputs of the metatranscriptomics pipeline. The [Snakemake rules](#snakemake-rules) section provides greater detail on all file outputs.
 
-| Output Type         | Description                                                       | Filename                                       |
-| -------------------- | ----------------------------------------------------------|------------------------------------------- |
-| *Processed sample reads* | *Processed reads with Host reads and rRNA removed.* |sample_rRNAdep_R1.fastq.gz/sample_rRNAdep_R2.fastq.gz|
-| *Assembled transcripts* | *Individual sample assemblies* | *sample.fasta*|
-| *Transcripts from Co-assembly* | *Co-assembly of all samples* | *final.contigs.fa* |
-| *Report* | *Kraken taxonomy summary for each sample* |  *sample.report.txt* |
-| *Report* | *Bracken report for the raw, and relative abundance at each taxonomic level*| *Bracken_species_raw_abundance.csv, Bracken_species_relative_abundance.csv,Bracken_genus_raw_abundance.csv, Bracken_genus_relative_abundance.csv, Bracken_phylum_raw_abundance.csv, Bracken_genus_relative_abundance.csv*|
-|*Report* | *Antimicrobial resistance gene profiling using RGI and the CARD.* | *sample_paired.allele_mapping_data.txt, sample_paired.artifacts_mapping_stats.txt, sample_paired.gene_mapping_data.txt, sample_paired.overall_mapping_stats.txt, sample_paired.reference_mapping_stats.txt*|
-|*Report*| *rnaQUAST quality control report for individual sample assemblies using the BUSCO bacteria and archaea lineages*| *Reports are found in sample_bacteria/ and sample_archaea/ directories which contain the short_report files with .pdf, .tsv, and .txt extensions*|
-|*Report*| *Alignment statistics of the sample reads to the co-assembly* | *sample.flagstat.txt*|
-|*Report*| *Per-base sequencing depth across the co-assembly* | *sample.coverage.txt.gz*|
-|*Report*| *Sequence level mapping statistics with the sample contig name*| *sample.idxstats.txt.gz*|
-|*Annotation files*| *Annotation tables for gene prediction of the co-assembly with protein sequences and nucleotide sequences*| *coassembly.faa, coassembly.fna, coassembly.gff, coassembly.saf*|
-|*Report*| *Feature count table for each sample* |*sample_counts.txt*|
+| Output Type         | Description                       | Filename                                   |
+| ------------------- | --------------------------------- |------------------------------------------- |
+| Processed sample reads | Processed reads with Host reads and rRNA removed. | sample_rRNAdep_R1.fastq.gz / sample_rRNAdep_R2.fastq.gz|
+| Assembled transcripts | Individual sample assemblies | sample.fasta|
+| Transcripts from Co-assembly | Co-assembly of all samples | final.contigs.fa |
+| Report | Kraken taxonomy summary for each sample |  sample.report.txt |
+| Report | Bracken report for the raw, and relative abundance at each taxonomic level| Bracken_species_raw_abundance.csv, Bracken_species_relative_abundance.csv,Bracken_genus_raw_abundance.csv, Bracken_genus_relative_abundance.csv, Bracken_phylum_raw_abundance.csv, Bracken_genus_relative_abundance.csv|
+|Report | Antimicrobial resistance gene profiling using RGI and the CARD. | sample_paired.allele_mapping_data.txt, sample_paired.artifacts_mapping_stats.txt, sample_paired.gene_mapping_data.txt, sample_paired.overall_mapping_stats.txt, sample_paired.reference_mapping_stats.txt|
+|Report| rnaQUAST quality control report for individual sample assemblies using the BUSCO bacteria and archaea lineages| Reports are found in `sample_bacteria/` and `sample_archaea/` directories which contain the short_report files with .pdf, .tsv, and .txt extensions|
+|Report| Alignment statistics of the sample reads to the co-assembly | sample.flagstat.txt|
+|Report| Per-base sequencing depth across the co-assembly | sample.coverage.txt.gz|
+|Report| Sequence level mapping statistics with the sample contig name| sample.idxstats.txt.gz|
+|Annotation files| Annotation tables for gene prediction of the co-assembly with protein sequences and nucleotide sequences| coassembly.faa, coassembly.fna, coassembly.gff, coassembly.saf|
+|Report| Feature count table for each sample |sample_counts.txt|
 
 ---
