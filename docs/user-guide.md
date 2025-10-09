@@ -355,11 +355,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 
 The raw input data must be in the form of paired-end FASTQ files generated from metatranscriptomics experiments.
 
-- Each sample must include both forward (R1) and reverse (R2) read files.
-
-**Example:**
-
-- **Dataset 1 Filename**: Sequencing reads (FASTQ) from beef cattle rumen samples are provided for three samples: `LLC42Nov10C`, `LLC42Sep06CR`, and `LLC82Sep06GR`. There is also a sub-sampled test file, `test_LLC82Sep06GR`, which can be used for all steps dealing with un-assembled data but will fail for the RNA SPAdes step.
+A set of sub-sampled raw FASTQ files are provided for testing (`data/test_LLC82Sep06GR_{r1,r2}*.fastq.gz`), which can be used for all steps dealing with un-assembled data but will fail for the RNA SPAdes step.
 
 ---
 
