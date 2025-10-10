@@ -2,7 +2,7 @@
     Filename: sample_assembly.smk
     Author: Katherine James-Gzyl
     Date created: 2025/08/13
-    Snakemake version: 9.6.0
+    Snakemake version: 9.9.0
 '''
 rule rna_spades:
     input:
