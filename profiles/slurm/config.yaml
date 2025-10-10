@@ -13,7 +13,7 @@ rerun-triggers: [input, params, software-env]
 
 ### Env Vars ###
 envvars:
-  TMPDIR: "/gpfs/fs7/aafc/scratch/$USER/tmpdir"
+  TMPDIR: "/gpfs/fs7/aafc/scratch/${USER}/tmpdir"
 
 default-resources:
   - slurm_account=aafc_aac
