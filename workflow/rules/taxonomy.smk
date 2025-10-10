@@ -2,7 +2,7 @@
     Filename: taxonomy.smk
     Author: Katherine James-Gzyl
     Date created: 2025/07/16
-    Snakemake version: 9.6.0
+    Snakemake version: 9.9.0
 '''
 rule kraken2:
     wildcard_constraints:

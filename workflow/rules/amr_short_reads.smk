@@ -2,7 +2,7 @@
     Filename: amr_short_reads.smk
     Author: Katherine James-Gzyl
     Date created: 2025/07/16
-    Snakemake version: 9.6.0
+    Snakemake version: 9.9.0
 '''
 rule rgi_reload_database:
     input:
