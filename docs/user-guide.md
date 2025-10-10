@@ -111,7 +111,7 @@ config:
         %% prodigal_genes rule
         FA --> PG{Prodigal<br>Genes}
         PG --> PROD_OUTS1((Predicted protein<br>and nucleotide<br>sequences))
-        PG --> PROD_OUTS2((Gene annotation file<br>Simplified Annotation Format))
+        PG --> PROD_OUTS2(("Gene annotation<br>file (.saf)"))
 
         %% featurecounts rule (per-sample)
         PROD_OUTS2 --> FC{featureCounts}
@@ -121,7 +121,7 @@ config:
 
     subgraph ASSEMBLY [SAMPLE ASSEMBLY]
         G --> H{rnaSPAdes}
-        H --> I((Sample<br>Transcripts))
+        H --> I((Sample Transcripts))
     end
 
     subgraph QC_REPORTS [DOWNSTREAM ANALYSIS<br>REPORTS AND FILES]
