@@ -18,8 +18,6 @@ if not PROJECT_ROOT:
     raise ValueError("PROJECT_ROOT not set in .env")
 
 ## Compose all other important paths, always relative to PROJECT_ROOT
-#DATA_DIR = os.path.join(PROJECT_ROOT, "data")
-#WORKSPACE_DIR = os.path.join(PROJECT_ROOT, "workspace")
 CONFIG_DIR = os.path.join(PIPELINE_DIR, "config")
 
 # -------------------------------------------------------------------
@@ -177,6 +175,6 @@ rule all:
         expand(f"{ASSEMBLY_MAPPING}/{{sample}}.coverage.txt.gz", sample=SAMPLES),
         expand(f"{ASSEMBLY_MAPPING}/{{sample}}.idxstats.txt.gz", sample=SAMPLES),
         expand(f"{FEATURECOUNTS_DIR}/{{sample}}_counts.txt", sample=SAMPLES),
-        
+
         # Required logs or done markers
         f"{LOG_DIR}/rgi_reload_db.done"
