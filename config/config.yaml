@@ -1,10 +1,13 @@
-### Samples ##
-# The samplesheet.csv need to be in the same directory as this config file.
-# The first column of the samplesheet contains the sample names. The second and third columns contain the raw fastq files for each sample.
+# -------------------------------------------------------------------
+# Sample list
+# -------------------------------------------------------------------
+# Follow instructions in the user guide to create your own samplesheet.csv file
 samplesheet: "samplesheet.csv"
 
-### File paths for input and output ###
-# Files relative to PROJECT_ROOT
+# -------------------------------------------------------------------
+# Directories paths relative to PROJECT_ROOT in .env file
+# -------------------------------------------------------------------
+
 log_files: "code/metatranscriptomics-snakemake/workflow/logs"
 reads_dir: "data/raw/metatranscriptomics_test/01_raw"
 reads_trimmed: "data/raw/metatranscriptomics_test/02_trimmed"
@@ -22,9 +25,11 @@ prodigal_dir: "workspace/metatranscriptomics-snakemake/12_prodigal"
 featurecounts_dir: "workspace/metatranscriptomics-snakemake/13_featurecounts"
 
 
-### File paths for resources  ###
+# Bowtie2 index. Make sure to build your own index
 bowtie2_index: "code/metatranscriptomics-snakemake/resources/bowtie2_index/Cow_phiX"
-sortmerna_DB: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/resources/rRNA_DB/smr_v4.3_default_db.fasta"
+
+#SortMeRNA database
+sortmerna_DB: "code/metatranscriptomics-snakemake/resources/rRNA_DB/smr_v4.3_default_db.fasta"
 
 ### File paths for databases on common drives###
 gtbd_DB: "/gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220"
@@ -33,9 +38,13 @@ busco_lineages:
   archaea: "/gpfs/fs7/aafc/common/reference/busco/busco_downloads/lineages/archaea_odb12"
 
 ### File path for CARD database if the user set it up. This is a fallback if there is no common database
-card_latest: "/gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/localDB"
+card_latest: "code/metatranscriptomics-snakemake/localDB"
 
-### Parameters for rules ###
+# -------------------------------------------------------------------
+# Parameters and threads 
+# See the user documentation parameters section
+# -------------------------------------------------------------------
+
 ## preprocessing.smk
 fastp:
   threads: 2

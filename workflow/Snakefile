@@ -53,7 +53,7 @@ env_rgi_card = os.getenv("RGI_CARD", "").strip()
 if env_rgi_card:
     RGI_CARD = env_rgi_card
 elif "card_latest" in config:
-    cfg_card = config["card_latest"]
+    cfg_card = os.path.join(PROJECT_ROOT, config["card_latest"])
     RGI_CARD = os.path.join(PROJECT_ROOT, cfg_card) if not os.path.isabs(cfg_card) else cfg_card
 else:
     raise ValueError("You must set RGI_CARD in .env or card_latest in config.yaml!")
@@ -66,13 +66,13 @@ validate_card_db(RGI_CARD)
 # -------------------------------------------------------------------
 # Config-derived paths
 # -------------------------------------------------------------------
+
+#Resolve with respect to PROJECT_ROOT
 def relpath(cfg_key):
     """Resolve a config path relative to PROJECT_ROOT."""
     return os.path.join(PROJECT_ROOT, config[cfg_key])
 
-
 READS_DIR = relpath("reads_dir")
-TRIMMED_DIR = os.path.join(TMPDIR, config["reads_trimmed"])
 HOST_DEP_DIR = relpath("reads_host_dep")
 RRNA_DEP_DIR = relpath("reads_rRNA_dep")
 KRAKEN_OUTPUT_DIR = relpath("kraken_short_reads_dir")
@@ -81,22 +81,31 @@ CARD_RGI_OUTPUT_DIR = relpath("amr_screening_dir")
 ASSEMBLIES_DIR = relpath("assemblies_dir")
 RNAQUAST_DIR = relpath("rnaquast_dir")
 LOG_DIR = relpath("log_files")
-
-
-BOWTIE_INDEX      = relpath("bowtie2_index")
-BOWTIE_INDEX_FILES= [f"{BOWTIE_INDEX}.{i}.bt2" for i in (1,2,3,4)] + \
-                    [f"{BOWTIE_INDEX}.rev.{i}.bt2" for i in (1,2)]
-
-RRNA_DB = config["sortmerna_DB"]
-TAXONOMY_DB = config["gtbd_DB"]
-BUSCO_LINEAGES = config["busco_lineages"]
-LINEAGES = list(BUSCO_LINEAGES.keys())
-
 MEGAHIT_DIR = relpath("co-assembly_dir")
 COASSEMBLY_INDEX = relpath("coassembly_index")
 ASSEMBLY_MAPPING = relpath("sorted_bam_dir")
 PRODIGAL_DIR = relpath("prodigal_dir")
 FEATURECOUNTS_DIR = relpath("featurecounts_dir")
+
+BOWTIE_INDEX      = relpath("bowtie2_index")
+BOWTIE_INDEX_FILES= [f"{BOWTIE_INDEX}.{i}.bt2" for i in (1,2,3,4)] + \
+                    [f"{BOWTIE_INDEX}.rev.{i}.bt2" for i in (1,2)]
+
+RRNA_DB = relpath("sortmerna_DB")
+
+#Resolve with respect to TMPDIR
+TRIMMED_DIR = os.path.join(TMPDIR, config["reads_trimmed"])
+
+#Resolve with respect to GPSC common reference. Add in function that is commented out
+#def common_path(cfg_key):
+   # """Resolve a config path relative to COMMON_ROOT."""
+    #return os.path.join(COMMON_ROOT, config[cfg_key])
+
+TAXONOMY_DB = config["gtbd_DB"]
+BUSCO_LINEAGES = config["busco_lineages"]
+LINEAGES = list(BUSCO_LINEAGES.keys())
+
+
 
 # -------------------------------------------------------------------
 # Sample handling
