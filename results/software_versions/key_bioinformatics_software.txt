@@ -1,0 +1,48 @@
+==========================================================
+      Key Bioinformatics Software (Exact Versions Used)
+==========================================================
+
+
+### Environment: 00abaab9a2682472a5e989733cda2b7e_
+prodigal                  2.6.3               h577a1d6_11    bioconda
+samtools                  1.22.1               h96c455f_0    bioconda
+
+### Environment: 0777b0d5fdfd732680e539ad49e834ae_
+bedtools                  2.31.1               h13024bc_3    bioconda
+bowtie2                   2.5.4                he96a11b_6    bioconda
+pigz                      2.8                  hadc24fc_1    conda-forge
+samtools                  1.22.1               h96c455f_0    bioconda
+
+### Environment: 13207ec72766a1951df8bf27c6a1c3eb_
+fastp                     0.26.0               heae3180_0    bioconda
+
+### Environment: 2b4288e9a1c99fc1fc4f90ade720f081_
+prodigal                  2.6.3               h577a1d6_11    bioconda
+
+### Environment: 395225a535969e46c6ed17e96f4012df_
+pigz                      2.8                  hadc24fc_1    conda-forge
+sortmerna                 4.3.6                h9ee0642_0    bioconda
+
+### Environment: 5120bda3c70124be3baecac96f5817d8_
+megahit                   1.2.9                haf24da9_8    bioconda
+
+### Environment: 57cde665598903a4ed1cc9cb6c9bb69b_
+subread                   2.1.1                h577a1d6_0    bioconda
+
+### Environment: 79840a48589848db85a1507c4e624e14_
+spades                    4.2.0                h8d6e82b_2    bioconda
+
+### Environment: 85d34e9cffc94c07d5cdba04951dc81a_
+kraken2                   2.1.5           pl5321h077b44d_0    bioconda
+
+### Environment: 8fb7e88b4c9496762611f9b122db65f6_
+bedtools                  2.31.1               h13024bc_3    bioconda
+pigz                      2.8                  hadc24fc_1    conda-forge
+samtools                  1.22.1               h96c455f_0    bioconda
+
+### Environment: c31f86d4fdf02c7842c220d2ec739bc6_
+bedtools                  2.31.1               h13024bc_3    bioconda
+bowtie2                   2.5.4                he96a11b_6    bioconda
+prodigal                  2.6.3               h577a1d6_11    bioconda
+rgi                       6.0.4              pyh05cac1d_1    bioconda
+samtools                  1.21                 h96c455f_1    bioconda
