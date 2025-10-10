@@ -48,47 +48,70 @@
 ### Workflow diagram
 
  ```mermaid
+ ---
+config:
+  theme: base
+  themeVariables:
+    darkMode: true
+    background: '#0c111b'
+    mainBkg: '#0c111b'
+    textColor: '#e5e7eb'
+    titleColor: '#f3f4f6'
+
+    primaryColor: '#1f2937'
+    primaryTextColor: '#e5e7eb'
+    primaryBorderColor: '#F8B229'
+
+    secondaryColor: '#111827'
+    secondaryBorderColor: '#2d3748'
+
+    tertiaryColor: '#0b1324'
+    tertiaryBorderColor: '#374151'
+
+    lineColor: '#F8B229'
+---
  flowchart TD
     %% Title
     %% Metatranscriptome Assembly and Analysis Pipeline
 
-    subgraph PREPROC [Pre-processing]
+    %% Make all edges thicker
+    linkStyle default stroke-width:1.5px,opacity:1;
+
+    subgraph PREPROC [PRE-PROCESSING]
         A[Paired Reads] -->|QC & trim| B{fastp}
-        B --> C[Trimmed Reads - temp]
-        B --> L((Fastp QC Report))
-        C -->|Host/PhiX removal| D{Bowtie2}
+        B --> C[Trimmed Reads<br>- temp]
+        B --> L((Fastp QC<br>Report))
+        C -->|Host/PhiX<br>removal| D{Bowtie2}
         D --> E[Non-host, Non-PhiX Reads]
     end
 
-    subgraph DEPLETION [rRNA Depletion]
+    subgraph DEPLETION [rRNA DEPLETION]
         E --> F{SortMeRNA}
         F --> G[rRNA-depleted Reads]
     end
 
-    subgraph COASSEMBLY [Co-Assembly]
+    subgraph COASSEMBLY [CO-ASSEMBLY]
         %% megahit_coassembly rule
-        G --> MH{MEGAHIT Co-assembly}
-        MH --> FA((Co-assembled Transcripts))
+        G --> MH{MEGAHIT<br>Co-assembly}
+        MH --> FA((Co-assembled<br>Transcripts))
 
         %% index_coassembly rule
         FA --> IB{Index Bowtie2}
-        IB --> IB1((Coassembly index))
+        IB --> IB1((Coassembly<br>index))
 
         %% bowtie2_map_transcripts rule (per-sample mapping)
-        IB1 --> BT2{Bowtie2 Map Transcripts}
+        IB1 --> BT2{Bowtie2 Map<br>Transcripts}
         G --> BT2
         BT2 --> BAM((Sample BAMs))
 
         %% assembly_stats_depth rule (per-sample)
-        BAM --> STATS{Assembly Stats+Depth}
-        STATS --> STATSOUT((Stats/Depth/IdxStats))
+        BAM --> STATS{Assembly Stats<br>+ Depth}
+        STATS --> STATSOUT((Stats/Depth/<br>IdxStats))
 
         %% prodigal_genes rule
-        FA --> PG{Prodigal Genes}
-        PG --> PROD_OUTS1((Predicted protein sequences
-        Predicted nucleotide sequences))
-        PG --> PROD_OUTS2((Gene annotation file
-                        Simplified Annotation Format))
+        FA --> PG{Prodigal<br>Genes}
+        PG --> PROD_OUTS1((Predicted protein<br>and nucleotide<br>sequences))
+        PG --> PROD_OUTS2((Gene annotation file<br>Simplified Annotation Format))
 
         %% featurecounts rule (per-sample)
         PROD_OUTS2 --> FC{featureCounts}
@@ -96,24 +119,24 @@
         FC --> FCT((Sample Counts.txt))
     end
 
-    subgraph ASSEMBLY [Sample Assembly]
+    subgraph ASSEMBLY [SAMPLE ASSEMBLY]
         G --> H{rnaSPAdes}
-        H --> I((Sample Transcripts))
+        H --> I((Sample<br>Transcripts))
     end
 
-    subgraph QC_REPORTS [Reports and Files for Downstream Analysis]
+    subgraph QC_REPORTS [DOWNSTREAM ANALYSIS<br>REPORTS AND FILES]
         I --> S{rnaQUAST}
-        S --> U((Assembly QC Report))
+        S --> U((Assembly<br>QC Report))
         G --> M{Kraken2}
         M --> N{Bracken}
-        N --> O((Taxonomic Profile))
+        N --> O((Taxonomic<br>Profile))
         G --> W{RGI}
-        W --> Q((AMR Profile))
+        W --> Q((AMR<br>Profile))
     end
 
     %% TEMP FILE STYLING
-    style C fill:#f2f2f2,stroke-dasharray: 5 5
-    style L fill:#f2f2f2,stroke-dasharray: 5 5
+    style C fill:#1f2937,stroke:#22d3ee,stroke-dasharray: 5 5,color:#e5e7eb
+    style L fill:#1f2937,stroke:#22d3ee,stroke-dasharray: 5 5,color:#e5e7eb
 ```
 
 ### Snakemake rules
