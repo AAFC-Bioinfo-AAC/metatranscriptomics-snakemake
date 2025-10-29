@@ -6,8 +6,8 @@ envs/.snakemake/
 
 logs/
 idx/
-resources/bowtie2_index/
-resources/rRNA_DB/
+resources/bowtie2_index/*bt2
+resources/rRNA_DB/*fasta
 *.out
 *.err
 localDB/

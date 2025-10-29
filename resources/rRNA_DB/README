@@ -1,0 +1,4 @@
+# smr_v4.3_default_db.fasta
+Release	: 4.3.4
+Source	: https://github.com/biocore/sortmerna/releases/download/v4.3.4/database.tar.gz 
+Refer	: https://github.com/sortmerna/sortmerna?tab=readme-ov-file#databases

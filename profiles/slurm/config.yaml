@@ -19,6 +19,7 @@ default-resources:
   - slurm_account=aafc_aac
   - slurm_partition=standard
   - slurm_cluster=gpsc8
+  - slurm_qos=low    #If jobs are held in queue for long.
   - runtime=60       # minutes
   - mem_mb=4000
   - cpus=1

@@ -1,45 +1,50 @@
 <!-- omit in toc -->
+
 # METATRANSCRIPTOMICS SNAKEMAKE PIPELINE - USER GUIDE
 
 ---
 
 <!-- omit in toc -->
+
 ## Table of Contents
 
-- [Overview](#overview)
-  - [Workflow diagram](#workflow-diagram)
-  - [Snakemake rules](#snakemake-rules)
-  - [Module `preprocessing.smk`](#module-preprocessingsmk)
-  - [Module  `sortmerna.smk`](#module--sortmernasmk)
-  - [Module  `taxonomy.smk`](#module--taxonomysmk)
-  - [Module  `amr_short_reads.smk`](#module--amr_short_readssmk)
-  - [Module  `sample_assembly.smk`](#module--sample_assemblysmk)
-  - [Module  `coassembly_annotation.smk`](#module--coassembly_annotationsmk)
-- [Data](#data)
-- [Parameters](#parameters)
-- [Usage](#usage)
-  - [Pre-requisites](#pre-requisites)
-    - [Software](#software)
-    - [Databases](#databases)
-  - [Setup Instructions](#setup-instructions)
-    - [1. Installation](#1-installation)
-    - [2. SLURM Profile](#2-slurm-profile)
-      - [2.1. SLURM Profile Directory Structure](#21-slurm-profile-directory-structure)
-      - [2.2. Profile Configuration](#22-profile-configuration)
-    - [3. Configuration](#3-configuration)
-      - [3.1. config/config.yaml](#31-configconfigyaml)
-      - [3.2. Environment file](#32-environment-file)
-      - [3.3. Sample list](#33-sample-list)
-      - [3.4. Scripts called in rules](#34-scripts-called-in-rules)
-    - [4. Running the pipeline](#4-running-the-pipeline)
-      - [4.1. Conda environments](#41-conda-environments)
-      - [4.2. SLURM launcher](#42-slurm-launcher)
-      - [4.3. Submit launcher to SLURM](#43-submit-launcher-to-slurm)
-  - [Notes](#notes)
-    - [Warnings](#warnings)
-    - [Current issues](#current-issues)
-    - [Resource usage](#resource-usage)
-- [Output](#output)
+- [METATRANSCRIPTOMICS SNAKEMAKE PIPELINE - USER GUIDE](#metatranscriptomics-snakemake-pipeline---user-guide)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+    - [Workflow diagram](#workflow-diagram)
+    - [Snakemake rules](#snakemake-rules)
+    - [Module `preprocessing.smk`](#module-preprocessingsmk)
+    - [Module  `sortmerna.smk`](#module--sortmernasmk)
+    - [Module  `taxonomy.smk`](#module--taxonomysmk)
+    - [Module  `amr_short_reads.smk`](#module--amr_short_readssmk)
+    - [Module  `sample_assembly.smk`](#module--sample_assemblysmk)
+    - [Module  `coassembly_annotation.smk`](#module--coassembly_annotationsmk)
+    - [Module  `env_versions`](#module--env_versions)
+  - [Data](#data)
+  - [Parameters](#parameters)
+  - [Usage](#usage)
+    - [Pre-requisites](#pre-requisites)
+      - [Software](#software)
+      - [Databases](#databases)
+    - [Setup Instructions](#setup-instructions)
+      - [1. Installation](#1-installation)
+      - [2. SLURM Profile](#2-slurm-profile)
+        - [2.1. SLURM Profile Directory Structure](#21-slurm-profile-directory-structure)
+        - [2.2. Profile Configuration](#22-profile-configuration)
+      - [3. Configuration](#3-configuration)
+        - [3.1. config/config.yaml](#31-configconfigyaml)
+        - [3.2. Environment file](#32-environment-file)
+        - [3.3. Sample list](#33-sample-list)
+        - [3.4. Scripts called in rules](#34-scripts-called-in-rules)
+      - [4. Running the pipeline](#4-running-the-pipeline)
+        - [4.1. Conda environments](#41-conda-environments)
+        - [4.2. SLURM launcher](#42-slurm-launcher)
+        - [4.3. Submit launcher to SLURM](#43-submit-launcher-to-slurm)
+    - [Notes](#notes)
+      - [Warnings](#warnings)
+      - [Current issues](#current-issues)
+      - [Resource usage](#resource-usage)
+  - [Output](#output)
 
 ---
 
@@ -113,11 +118,11 @@ config:
         PG --> PROD_OUTS1((Predicted protein<br>and nucleotide<br>sequences))
         PG --> PROD_OUTS2(("Gene annotation<br>file (.saf)"))
 
-        %% featurecounts rule (per-sample)
-        PROD_OUTS2 --> FC{featureCounts}
-        BAM --> FC
-        FC --> FCT((Sample Counts.txt))
-    end
+       %% featurecounts rule (per-sample)
+       PROD_OUTS2 --> FC{featureCounts}
+       BAM --> FC
+       FC --> FCT((Sample Counts.txt))
+   end
 
     subgraph ASSEMBLY [SAMPLE ASSEMBLY]
         G --> H{rnaSPAdes}
@@ -141,7 +146,7 @@ config:
 
 ### Snakemake rules
 
-The pipeline is modularized, with each module located in the `metatranscriptomics-snakemake/workflow/rules` directory. The modules are `preprocessing.smk`, `sortmerna.smk`, `taxonomy.smk`,`amr_short_reads.smk`, and `coassembly_annotation.smk`.
+The pipeline is modularized, with each module located in the `metatranscriptomics-snakemake/workflow/rules` directory. The modules are `preprocessing.smk`, `sortmerna.smk`, `taxonomy.smk`,`amr_short_reads.smk`, `coassembly_annotation.smk`, and env_versions.smk.
 
 ---
 
@@ -152,9 +157,10 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 - **Purpose:** Performs adapter trimming, quality trimming, and filtering of paired-end reads.
 - **Inputs:** `samplesheet.csv` defines sample IDs and corresponding read pairs.
 - **Outputs:**
+
   - Trimmed paired reads: `sample_r1.fastq.gz`, `sample_r2.fastq.gz`
-  
 - **Notes:**
+
   - Parameters are defined in **`config/config.yaml`** for `fastp`.
   - These files are marked as temporary in the rule: `sample_u1.fastq.gz`, `sample_r2.fastq.gz`,`sample.fastp.html`, and `sample.fastp.json`. If these are required the temporary() flag on the output files in the rule can be removed.
 
@@ -162,12 +168,14 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 
 - **Purpose:** Aligns trimmed reads to a user created reference (Host/PhiX) that has been indexed by Bowtie2 index.
 - **Inputs:**
+
   - Trimmed paired reads: `*_r1.fastq.gz`, `*_r2.fastq.gz`
   - Bowtie2 index files with the suffix `.bt2`
 - **Outputs:**
-  - Sorted BAM file: `sample.bam`
 
+  - Sorted BAM file: `sample.bam`
 - **Notes:**
+
   - Uses **default parameters** from `Bowtie2`.
   - This file is marked as temporary in the rule: `sample.bam`. If it is required the temporary() flag on the output file in the rule can be removed.
 
@@ -178,7 +186,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   - Sorted BAM file: `sample.bam`
 - **Outputs:**
   - Clean read pairs: `sample_trimmed_clean_R1.fastq.gz`/`sample_trimmed_clean_R2.fastq.gz`
-  
+
 ---
 
 ### Module  `sortmerna.smk`
@@ -211,7 +219,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 
 - **Purpose:** Refines Kraken classification to provide abundance estimates at the species, genus and phylum level for each sample.
 - **Inputs:** Kraken report: `sample.report.txt`
-- **Outputs:**  
+- **Outputs:**
   - Bracken reports at:
     - Species level: `sample_bracken.species.report.txt`
     - Genus level: `sample_bracken.genus.report.txt`
@@ -222,12 +230,12 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 
 **`rule combine_bracken_outputs` *Merging Abundance Tables***
 
-- **Inputs:**  
+- **Inputs:**
   - Bracken reports at:
     - Species level: `sample_bracken.species.report.txt`
     - Genus level: `sample_bracken.genus.report.txt`
     - Phylum level: `sample_bracken.phylum.report.txt`
-- **Outputs:**  
+- **Outputs:**
   - Combined abundance tables for:
     - Species level: `merged_abundance_species.txt`
     - Genus level: `merged_abundance_genus.txt`
@@ -246,7 +254,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
     - Species level: `Bracken_species_raw_abundance.csv` and `Bracken_species_relative_abundance.csv`
     - Genus level: `Bracken_genus_raw_abundance.csv` and `Bracken_genus_relative_abundance.csv`
     - Phylum level: `Bracken_phylum_raw_abundance.csv` and `Bracken_genus_relative_abundance.csv`
-  
+
 ---
 
 ### Module  `amr_short_reads.smk`
@@ -268,19 +276,21 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 
 - **Purpose:** performs antimicrobial resistance gene profiling on the cleaned reads using *k*-mer alignment (kma)
 - **Inputs:**
+
   - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
 - **Outputs:**
+
   - `sample_paired.allele_mapping_data.txt`
   - `sample_paired.artifacts_mapping_stats.txt`
   - `sample_paired.gene_mapping_data.txt`
-  - `sample_paired.overall_mapping_stats.txt`  
+  - `sample_paired.overall_mapping_stats.txt`
   - `sample_paired.reference_mapping_stats.txt`
-
 - **Notes:**
+
   - Uses default RGI BWT parameters.
   - For large sample files the large memory node may be required.
   - These files are marked as temporary in the rule: `sample_paired.allele_mapping_data.json`, `sample_paired.sorted.length_100.bam`, and `sample_paired.sorted.length_100.bam.bai`. If these are required the temporary() flag on the output files in the rule can be removed.
-  
+
 ---
 
 ### Module  `sample_assembly.smk`
@@ -289,40 +299,47 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 
 - **Purpose:** The rRNA-depleted reads are assembled into presumptive mRNA transcripts
 - **Inputs:**
+
   - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
 - **Outputs**
+
   - Presumptive transcripts: `sample.fasta`
 - **Notes:**
+
   - Poor quality samples that result in no assembly hav an empty sample.fasta file
-  
+
   **`rule rnaquast_busco` *QC for transcripts***
 - **Purpose:** Reports the number of transcripts, transcripts over 500 bp, transcripts over 1000 bp and the BUSCO completeness.
 - **Inputs:**
+
   - Presumptive transcripts: `sample.fasta`
   - Busco lineage: `bacteria_odb12` and `archaea_odb12`
 - **Outputs:**
-  - QUAST report in `sample_bacteria` and `sample_archaea` directories
 
+  - QUAST report in `sample_bacteria` and `sample_archaea` directories
 - **Notes:**
+
   - The software is not intended for metatranscriptomics. Use caution when interpreting the results. For instance the BUSCO completeness cannot be interpreted as the percentage of assembly quality but instead it is a representation of the core functions from the bacteria_odb12 and archaea_odb12 lineages.
 
 ---
 
 ### Module  `coassembly_annotation.smk`
 
- **`megahit_coassembly` *Co-assembly of all samples***
+**`megahit_coassembly` *Co-assembly of all samples***
 
 - **Purpose:** rRNA-depleted reads are co-assembled with MEGAHIT
 - **Inputs:**
+
   - Cleaned sample reads from all samples: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
 - **Outputs:**
-  - Presumptive transcripts from the coassembly: `final.contigs.fa`
 
+  - Presumptive transcripts from the coassembly: `final.contigs.fa`
 - **Notes:**
+
   - If Metagenomic sequencing was done the co-assembly of those reads would be a better choice.
   - The Co-assembly is used as a index to produce sorted BAM files for each assembly. These sorted BAM files can then be used in featureCounts and downstream expression analysis.
 
- **`index_coassembly` *Create index***
+**`index_coassembly` *Create index***
 
 - **Purpose:** Bowtie2 is used to make an index that can be used to map the reads to the co-assembly
 - **Inputs:**
@@ -344,7 +361,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 - **Purpose:** `samtools flagstat` provides alignment statistics that include the total reads, reads that mapped to the co-assembly, properly paired reads and duplicates. The flagstat is used to check how each sample aligns to the co-assembly. `samtools depth` computes the per-base sequencing depth across the co-assembly to evaluate sequencing depth and uniformity of coverage. `samtools idxstats` provides sequences level mapping statistics with the sample contig name that is used to identify contigs that are over or under represented.
 - **Inputs:**
   - BAM file for each sample: `sample.coassembly.sorted.bam`
-**Outputs:**
+    **Outputs:**
   - Alignment statistics: `sample.flagstat.txt`
   - Sequencing depth: `sample.coverage.txt.gz`
   - Mapping statistics: `sample.idxstats.txt.gz`
@@ -353,14 +370,16 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 
 - **Purpose:** Predict the protein and nucleotide sequences in the co-assembly. Generate a simplified annotation format file that is used by `featurecounts`.
 - **Inputs:**
+
   - Presumptive transcripts from the coassembly: `final.contigs.fa`
 - **Outputs:**
+
   - Predicted protein sequences: `coassembly.faa`
   - Predicted nucleotide sequences: `coassembly.fna`
   - Feature formatted annotation file: `coassembly.gff`
   - Simplified annotation format file: `coassembly.saf`
-
 - **Notes:**
+
   - Go back and decided if this output should be designated temporary.
 
 **`rule featurecounts` *Count table***
@@ -371,6 +390,14 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   - BAM file for each sample: `sample.coassembly.sorted.bam`
 - **Outputs:**
   - Featurecounts table: `sample_counts.txt`
+
+### Module  `env_versions`
+
+**`software_report` *Print versions of all conda packages***
+
+**`filter_key_bioinformatics_versions` *Print versions of only the core bioinformatic conda packages***
+
+**`filter_key_bioinformatics_html` *Print versions of only the core bioinformatic conda packages in the html report***
 
 ---
 
@@ -386,19 +413,19 @@ A set of sub-sampled raw FASTQ files are provided for testing (`data/test_LLC82S
 
 The `config/config.yaml` file contains the editable pipeline parameters, thread allocation for rules with more than one core, and the relative file paths for input and output. The prefix of the absolute file path must go in `.env`. Most tools in the pipeline have default parameters. The tools with parameters different from default or that can be edited in the `config/config.yaml` file are listed below.
 
-| Parameter          | Value                                                                                               |
-| -------------------- | ----------------------------------------------------------------------------------------------------- |
-| samplesheet.csv | The samplesheet is described here: [Sample list](#33-sample-list) |
-| fastp: *cut_tail* | If true, trim low quality bases from the 3′ end until a base meets or exceeds the *cut_mean_quality* threshold. If false,disabled. |
-| fastp: *cut_front* | If true, trim low quality bases from the 5′ end until a base meets or exceeds the *cut_mean_quality* threshold. If false,disabled. |
-| fastp: *cut_mean_quality* | A positive integer specifying the minimum average quality score threshold for sliding window trimming. |
-| fastp: *cut_window_size* | A positive integer specifying the sliding window size in bp when using *cut_mean_quality*. |
-| fastp: *qualified_quality_phred* | A positive integer specifying the minimum Phred score that a base needs to be considered qualified. |
-| fastp: *detect_adapter_for_pe* | If true, auto adapter detection. If false,disabled. |
-| fastp: *length_required* | Reads shorter then this positive integer will be discarded. |
-| kraken2: *conf_threshold* | Interval between 0 and 1. Higher values require more of a read’s k-mers to match the same taxon before it is classified, increasing precision but reducing sensitivity.              |
-| bracken: *readlen* | The read length of your data in bp.              |
-| rna_spades: *memory* | Memory limit set in mb. |
+| Parameter                       | Value                                                                                                                                                                    |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| samplesheet.csv                 | The samplesheet is described here:[Sample list](#33-sample-list)                                                                                                         |
+| fastp:*cut_tail*                | If true, trim low quality bases from the 3′ end until a base meets or exceeds the*cut_mean_quality* threshold. If false,disabled.                                       |
+| fastp:*cut_front*               | If true, trim low quality bases from the 5′ end until a base meets or exceeds the*cut_mean_quality* threshold. If false,disabled.                                       |
+| fastp:*cut_mean_quality*        | A positive integer specifying the minimum average quality score threshold for sliding window trimming.                                                                   |
+| fastp:*cut_window_size*         | A positive integer specifying the sliding window size in bp when using*cut_mean_quality*.                                                                                |
+| fastp:*qualified_quality_phred* | A positive integer specifying the minimum Phred score that a base needs to be considered qualified.                                                                      |
+| fastp:*detect_adapter_for_pe*   | If true, auto adapter detection. If false,disabled.                                                                                                                      |
+| fastp:*length_required*         | Reads shorter then this positive integer will be discarded.                                                                                                              |
+| kraken2:*conf_threshold*        | Interval between 0 and 1. Higher values require more of a read’s k-mers to match the same taxon before it is classified, increasing precision but reducing sensitivity. |
+| bracken:*readlen*               | The read length of your data in bp.                                                                                                                                      |
+| rna_spades:*memory*             | Memory limit set in mb.                                                                                                                                                  |
 
 ---
 
@@ -413,17 +440,14 @@ The `config/config.yaml` file contains the editable pipeline parameters, thread 
 
 #### Databases
 
-- **Bowtie2**  
+- **Bowtie2**
   Bowtie2 uses an index of reference sequences to align reads. This index must be created before running the pipeline. The index files (with the `.bt2` extension) must be located in the directory specified in `config/config.yaml`. Make sure to update the prefix of these files in the `config.yaml` file. For instructions on creating the index please see the [Bowtie2 GitHub repository](https://github.com/BenLangmead/bowtie2).
-
-- **SortMeRNA**  
+- **SortMeRNA**
   SortMeRNA requires a ribosomal (r)RNA database in the `rRNA_DB` directory. Update the `config.yaml` file with the filename of the database used. You can download the database from [SortMeRNA releases](https://github.com/sortmerna/sortmerna/releases/tag/v4.3.3). The file `smr_v4.3_default_db.fasta` was used for pipeline testing.
-
-- **Kraken2**  
-  Kraken2 requires a Kraken2-formatted GTDB. The GTDB release tested with this pipeline was 220. Pre-built Kraken2-formatted GTDB are available from [Kraken 2, KrakenUniq and Bracken indexes](https://benlangmead.github.io/aws-indexes/k2), and instructions for building custom Kraken2-formatted GTDBs are available on the [Kraken2 GitHub repository](https://github.com/DerrickWood/kraken2).  
-
-- **RGI BWT/CARD**  RGI BWT requires the CARD (Comprehensive Antibiotic Resistance Database) database. The version tested in this pipeline was 4.0.1. The database can be located on a common drive or in your working directory.  
-  Instructions for installing the CARD database are available on [CARD RGI GitHub repository](https://github.com/arpcard/rgi/blob/master/docs/rgi_bwt.rst).  
+- **Kraken2**
+  Kraken2 requires a Kraken2-formatted GTDB. The GTDB release tested with this pipeline was 220. Pre-built Kraken2-formatted GTDB are available from [Kraken 2, KrakenUniq and Bracken indexes](https://benlangmead.github.io/aws-indexes/k2), and instructions for building custom Kraken2-formatted GTDBs are available on the [Kraken2 GitHub repository](https://github.com/DerrickWood/kraken2).
+- **RGI BWT/CARD**  RGI BWT requires the CARD (Comprehensive Antibiotic Resistance Database) database. The version tested in this pipeline was 4.0.1. The database can be located on a common drive or in your working directory.
+  Instructions for installing the CARD database are available on [CARD RGI GitHub repository](https://github.com/arpcard/rgi/blob/master/docs/rgi_bwt.rst).
   Steps copied from the RGI documentation:
 
   **Download CARD data:**
@@ -440,15 +464,14 @@ The `config/config.yaml` file contains the editable pipeline parameters, thread 
   ```
 
   **Note:** the files after loading and annotating card must be called `card.json` and `card_reference.fasta`
-
 - **BUSCO**
-rnaQUAST uses the BUSCO bacterial and archaeal lineages. The directory path to these lineages must be provided in `config/config.yaml`. The [BUSCO lineages](https://busco.ezlab.org/busco_userguide.html#lineage-datasets) are available on the webpage.
+  rnaQUAST uses the BUSCO bacterial and archaeal lineages. The directory path to these lineages must be provided in `config/config.yaml`. The [BUSCO lineages](https://busco.ezlab.org/busco_userguide.html#lineage-datasets) are available on the webpage.
 
 ### Setup Instructions
 
 #### 1. Installation
 
-Clone the repository into the directory where you want to run the metatranscriptomics Snakemake pipeline.  
+Clone the repository into the directory where you want to run the metatranscriptomics Snakemake pipeline.
 **Note:** This location must be on an HPC (High Performance Computing) cluster with access to a high-memory node (at least 600 GB RAM) and sufficient storage for all metatranscriptomics analyses.
 
 ```bash
@@ -473,7 +496,7 @@ metatranscriptomics_pipeline/
 |   └── samples.txt
 ├── run_snakemake.sh            ← your SLURM launcher
 ├── .env
-└── ...                         
+└── ...                       
 ```
 
 ##### 2.2. Profile Configuration
@@ -488,7 +511,7 @@ cores: 60
 jobs: 10 
 latency-wait: 60 
 rerun-incomplete: true
-retries: 2              
+retries: 2            
 max-jobs-per-second: 2 
 executor: slurm
 
@@ -547,13 +570,13 @@ The pipeline requires the following configuration files: `config.yaml`, `.env`, 
 
 The `config.yaml` file must be located in the `config` directory, which resides in the main Snakemake working directory. This file specifies crucial settings, including:
 
-- Path to the `samples.txt`  
-- Input and output directories  
+- Path to the `samples.txt`
+- Input and output directories
 - File paths to required databases
 - Parameters for each rule
 
-**Note:**  
-You must edit `config.yaml` **before** running the pipeline to ensure all paths are correctly set.  
+**Note:**
+You must edit `config.yaml` **before** running the pipeline to ensure all paths are correctly set.
 For best practice, use database paths that are in common locations to all users on the HPC.
 
 ##### 3.2. Environment file
@@ -572,11 +595,11 @@ touch .env
  PROJECT_ROOT = path/to/project/root
  TMPDIR = path/to/temp/on/cluster
  RGI_CARD = path/to/card.json and card_reference.fasta
- ```
+```
 
 ##### 3.3. Sample list
 
- `samplesheet.csv` Has the following column names: "sample","fastq_1","fastq_2". For the column 'sample" use the sampleID for the read pair, and for "fastq_1","fastq_2" have the names of the read1 and read2 files as they appear in the raw fastq files directory. The file location of the `samplesheet.csv` must be`config/samplesheet.csv`.
+`samplesheet.csv` Has the following column names: "sample","fastq_1","fastq_2". For the column 'sample" use the sampleID for the read pair, and for "fastq_1","fastq_2" have the names of the read1 and read2 files as they appear in the raw fastq files directory. The file location of the `samplesheet.csv` must be`config/samplesheet.csv`.
 
 **Example `samplesheet.csv`:**
 sample,fastq_1,fastq_2
@@ -624,7 +647,7 @@ This is the script you use to submit the Snakemake pipeline to SLURM.
 - Submits and manages jobs using the Snakemake `--profile` configuration `(profiles/slurm/)`.
 - Contains any additional Snakemake arguments (e.g.., `--unlock`, `--dry-run`, `--rerun-incomplete`)
 - For a snakemake report with runtime and software versions use --report path/to/metatranscriptomics_report.html after the pipeline has completed
-  
+
 ##### 4.3. Submit launcher to SLURM
 
 - **Before submitting job to SLURM run `export SLURM_CONF="/etc/slurm-llnl/gpsc8.science.gc.ca.conf"`**
@@ -653,12 +676,13 @@ export PATH="$PWD/bin:$PATH"
     --conda-prefix absolute/path/to/common/conda/metatranscriptomics-snakemake-conda \
     --printshellcmds \
     --keep-going 
-  ```
+```
 
 ### Notes
 
 - temp folder is set to `/gpfs/fs7/aafc/scratch/${USER}/tmpdir` for running on the GPSC.
-  
+- A Snakemake report can be generated from the head node with `snakemake --report path/to/report/report_name.html`
+
 #### Warnings
 
 - The conda environments will not be created if the conda configuration is `conda config --set channel_priority strict`.
@@ -673,7 +697,7 @@ None.
 
 - Kraken2: Large compute node with 600 GB. With 16 CUPs wall time was 7m 56s. With 2 CPUs wall time was 19m 13s.
 - Generate Snakemake report to track walltime
-  
+
 ---
 
 ## Output
@@ -682,19 +706,19 @@ None.
 
 The following table includes the key outputs of the metatranscriptomics pipeline. The [Snakemake rules](#snakemake-rules) section provides greater detail on all file outputs.
 
-| Output Type         | Description                       | Filename                                   |
-| ------------------- | --------------------------------- |------------------------------------------- |
-| Processed sample reads | Processed reads with Host reads and rRNA removed. | sample_rRNAdep_R1.fastq.gz / sample_rRNAdep_R2.fastq.gz|
-| Assembled transcripts | Individual sample assemblies | sample.fasta|
-| Transcripts from Co-assembly | Co-assembly of all samples | final.contigs.fa |
-| Report | Kraken taxonomy summary for each sample |  sample.report.txt |
-| Report | Bracken report for the raw, and relative abundance at each taxonomic level| Bracken_species_raw_abundance.csv, Bracken_species_relative_abundance.csv,Bracken_genus_raw_abundance.csv, Bracken_genus_relative_abundance.csv, Bracken_phylum_raw_abundance.csv, Bracken_genus_relative_abundance.csv|
-|Report | Antimicrobial resistance gene profiling using RGI and the CARD. | sample_paired.allele_mapping_data.txt, sample_paired.artifacts_mapping_stats.txt, sample_paired.gene_mapping_data.txt, sample_paired.overall_mapping_stats.txt, sample_paired.reference_mapping_stats.txt|
-|Report| rnaQUAST quality control report for individual sample assemblies using the BUSCO bacteria and archaea lineages| Reports are found in `sample_bacteria/` and `sample_archaea/` directories which contain the short_report files with .pdf, .tsv, and .txt extensions|
-|Report| Alignment statistics of the sample reads to the co-assembly | sample.flagstat.txt|
-|Report| Per-base sequencing depth across the co-assembly | sample.coverage.txt.gz|
-|Report| Sequence level mapping statistics with the sample contig name| sample.idxstats.txt.gz|
-|Annotation files| Annotation tables for gene prediction of the co-assembly with protein sequences and nucleotide sequences| coassembly.faa, coassembly.fna, coassembly.gff, coassembly.saf|
-|Report| Feature count table for each sample |sample_counts.txt|
+| Output Type                  | Description                                                                                                    | Filename                                                                                                                                                                                                                |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Processed sample reads       | Processed reads with Host reads and rRNA removed.                                                              | sample_rRNAdep_R1.fastq.gz / sample_rRNAdep_R2.fastq.gz                                                                                                                                                                 |
+| Assembled transcripts        | Individual sample assemblies                                                                                   | sample.fasta                                                                                                                                                                                                            |
+| Transcripts from Co-assembly | Co-assembly of all samples                                                                                     | final.contigs.fa                                                                                                                                                                                                        |
+| Report                       | Kraken taxonomy summary for each sample                                                                        | sample.report.txt                                                                                                                                                                                                       |
+| Report                       | Bracken report for the raw, and relative abundance at each taxonomic level                                     | Bracken_species_raw_abundance.csv, Bracken_species_relative_abundance.csv,Bracken_genus_raw_abundance.csv, Bracken_genus_relative_abundance.csv, Bracken_phylum_raw_abundance.csv, Bracken_genus_relative_abundance.csv |
+| Report                       | Antimicrobial resistance gene profiling using RGI and the CARD.                                                | sample_paired.allele_mapping_data.txt, sample_paired.artifacts_mapping_stats.txt, sample_paired.gene_mapping_data.txt, sample_paired.overall_mapping_stats.txt, sample_paired.reference_mapping_stats.txt               |
+| Report                       | rnaQUAST quality control report for individual sample assemblies using the BUSCO bacteria and archaea lineages | Reports are found in`sample_bacteria/` and `sample_archaea/` directories which contain the short_report files with .pdf, .tsv, and .txt extensions                                                                      |
+| Report                       | Alignment statistics of the sample reads to the co-assembly                                                    | sample.flagstat.txt                                                                                                                                                                                                     |
+| Report                       | Per-base sequencing depth across the co-assembly                                                               | sample.coverage.txt.gz                                                                                                                                                                                                  |
+| Report                       | Sequence level mapping statistics with the sample contig name                                                  | sample.idxstats.txt.gz                                                                                                                                                                                                  |
+| Annotation files             | Annotation tables for gene prediction of the co-assembly with protein sequences and nucleotide sequences       | coassembly.faa, coassembly.fna, coassembly.gff, coassembly.saf                                                                                                                                                          |
+| Report                       | Feature count table for each sample                                                                            | sample_counts.txt                                                                                                                                                                                                       |
 
 ---
