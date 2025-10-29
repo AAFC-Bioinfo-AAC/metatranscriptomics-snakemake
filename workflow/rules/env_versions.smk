@@ -1,5 +1,5 @@
 '''
-    Filename: coassembly_annotation.smk
+    Filename: env_versions.smk
     Author: Katherine James-Gzyl
     Date created: 2025/10/15
     Snakemake version: 9.9.0
