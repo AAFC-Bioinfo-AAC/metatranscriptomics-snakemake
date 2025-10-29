@@ -9,4 +9,8 @@ workflows:
     authors:
       - orcid: <String>
 
-# ERASE THIS LINE, see for instructions: https://dockstore.org/github-landing-page?entryType=WORKFLOW
+    publish: False 
+    # WARNING: DO NOT set publish to TRUE in an unpublished workflow. 
+    # The code security review team will manage this setting following your publication request.
+    # For .dockstore.yml Workflows Templates, refer: https://docs.dockstore.org/en/stable/assets/templates/workflows/workflows.html
+    

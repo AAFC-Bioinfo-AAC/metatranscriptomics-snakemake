@@ -8,41 +8,43 @@
 
 ## Table of Contents
 
-- [Overview](#overview)
-  - [Workflow diagram](#workflow-diagram)
-  - [Snakemake rules](#snakemake-rules)
-  - [Module `preprocessing.smk`](#module-preprocessingsmk)
-  - [Module  `sortmerna.smk`](#module--sortmernasmk)
-  - [Module  `taxonomy.smk`](#module--taxonomysmk)
-  - [Module  `amr_short_reads.smk`](#module--amr_short_readssmk)
-  - [Module  `sample_assembly.smk`](#module--sample_assemblysmk)
-  - [Module  `coassembly_annotation.smk`](#module--coassembly_annotationsmk)
-  - [Module  `env_versions`](#module--env_versions)
-- [Data](#data)
-- [Parameters](#parameters)
-- [Usage](#usage)
-  - [Pre-requisites](#pre-requisites)
-    - [Software](#software)
-    - [Databases](#databases)
-  - [Setup Instructions](#setup-instructions)
-    - [1. Installation](#1-installation)
-    - [2. SLURM Profile](#2-slurm-profile)
-      - [2.1. SLURM Profile Directory Structure](#21-slurm-profile-directory-structure)
-      - [2.2. Profile Configuration](#22-profile-configuration)
-    - [3. Configuration](#3-configuration)
-      - [3.1. config/config.yaml](#31-configconfigyaml)
-      - [3.2. Environment file](#32-environment-file)
-      - [3.3. Sample list](#33-sample-list)
-      - [3.4. Scripts called in rules](#34-scripts-called-in-rules)
-    - [4. Running the pipeline](#4-running-the-pipeline)
-      - [4.1. Conda environments](#41-conda-environments)
-      - [4.2. SLURM launcher](#42-slurm-launcher)
-      - [4.3. Submit launcher to SLURM](#43-submit-launcher-to-slurm)
-  - [Notes](#notes)
-    - [Warnings](#warnings)
-    - [Current issues](#current-issues)
-    - [Resource usage](#resource-usage)
-- [Output](#output)
+- [METATRANSCRIPTOMICS SNAKEMAKE PIPELINE - USER GUIDE](#metatranscriptomics-snakemake-pipeline---user-guide)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+    - [Workflow diagram](#workflow-diagram)
+    - [Snakemake rules](#snakemake-rules)
+    - [Module `preprocessing.smk`](#module-preprocessingsmk)
+    - [Module  `sortmerna.smk`](#module--sortmernasmk)
+    - [Module  `taxonomy.smk`](#module--taxonomysmk)
+    - [Module  `amr_short_reads.smk`](#module--amr_short_readssmk)
+    - [Module  `sample_assembly.smk`](#module--sample_assemblysmk)
+    - [Module  `coassembly_annotation.smk`](#module--coassembly_annotationsmk)
+    - [Module  `env_versions`](#module--env_versions)
+  - [Data](#data)
+  - [Parameters](#parameters)
+  - [Usage](#usage)
+    - [Pre-requisites](#pre-requisites)
+      - [Software](#software)
+      - [Databases](#databases)
+    - [Setup Instructions](#setup-instructions)
+      - [1. Installation](#1-installation)
+      - [2. SLURM Profile](#2-slurm-profile)
+        - [2.1. SLURM Profile Directory Structure](#21-slurm-profile-directory-structure)
+        - [2.2. Profile Configuration](#22-profile-configuration)
+      - [3. Configuration](#3-configuration)
+        - [3.1. config/config.yaml](#31-configconfigyaml)
+        - [3.2. Environment file](#32-environment-file)
+        - [3.3. Sample list](#33-sample-list)
+        - [3.4. Scripts called in rules](#34-scripts-called-in-rules)
+      - [4. Running the pipeline](#4-running-the-pipeline)
+        - [4.1. Conda environments](#41-conda-environments)
+        - [4.2. SLURM launcher](#42-slurm-launcher)
+        - [4.3. Submit launcher to SLURM](#43-submit-launcher-to-slurm)
+    - [Notes](#notes)
+      - [Warnings](#warnings)
+      - [Current issues](#current-issues)
+      - [Resource usage](#resource-usage)
+  - [Output](#output)
 
 ---
 
@@ -50,48 +52,71 @@
 
 ### Workflow diagram
 
-```mermaid
-flowchart TD
-   %% Title
-   %% Metatranscriptome Assembly and Analysis Pipeline
+ ```mermaid
+ ---
+config:
+  theme: base
+  themeVariables:
+    darkMode: true
+    background: '#0c111b'
+    mainBkg: '#0c111b'
+    textColor: '#e5e7eb'
+    titleColor: '#f3f4f6'
 
-   subgraph PREPROC [Pre-processing]
-       A[Paired Reads] -->|QC & trim| B{fastp}
-       B --> C[Trimmed Reads - temp]
-       B --> L((Fastp QC Report))
-       C -->|Host/PhiX removal| D{Bowtie2}
-       D --> E[Non-host, Non-PhiX Reads]
-   end
+    primaryColor: '#1f2937'
+    primaryTextColor: '#e5e7eb'
+    primaryBorderColor: '#F8B229'
 
-   subgraph DEPLETION [rRNA Depletion]
-       E --> F{SortMeRNA}
-       F --> G[rRNA-depleted Reads]
-   end
+    secondaryColor: '#111827'
+    secondaryBorderColor: '#2d3748'
 
-   subgraph COASSEMBLY [Co-Assembly]
-       %% megahit_coassembly rule
-       G --> MH{MEGAHIT Co-assembly}
-       MH --> FA((Co-assembled Transcripts))
+    tertiaryColor: '#0b1324'
+    tertiaryBorderColor: '#374151'
 
-       %% index_coassembly rule
-       FA --> IB{Index Bowtie2}
-       IB --> IB1((Coassembly index))
+    lineColor: '#F8B229'
+---
+ flowchart TD
+    %% Title
+    %% Metatranscriptome Assembly and Analysis Pipeline
 
-       %% bowtie2_map_transcripts rule (per-sample mapping)
-       IB1 --> BT2{Bowtie2 Map Transcripts}
-       G --> BT2
-       BT2 --> BAM((Sample BAMs))
+    %% Make all edges thicker
+    linkStyle default stroke-width:1.5px,opacity:1;
 
-       %% assembly_stats_depth rule (per-sample)
-       BAM --> STATS{Assembly Stats+Depth}
-       STATS --> STATSOUT((Stats/Depth/IdxStats))
+    subgraph PREPROC [PRE-PROCESSING]
+        A[Paired Reads] -->|QC & trim| B{fastp}
+        B --> C[Trimmed Reads<br>- temp]
+        B --> L((Fastp QC<br>Report))
+        C -->|Host/PhiX<br>removal| D{Bowtie2}
+        D --> E[Non-host, Non-PhiX Reads]
+    end
 
-       %% prodigal_genes rule
-       FA --> PG{Prodigal Genes}
-       PG --> PROD_OUTS1((Predicted protein sequences
-       Predicted nucleotide sequences))
-       PG --> PROD_OUTS2((Gene annotation file
-                       Simplified Annotation Format))
+    subgraph DEPLETION [rRNA DEPLETION]
+        E --> F{SortMeRNA}
+        F --> G[rRNA-depleted Reads]
+    end
+
+    subgraph COASSEMBLY [CO-ASSEMBLY]
+        %% megahit_coassembly rule
+        G --> MH{MEGAHIT<br>Co-assembly}
+        MH --> FA((Co-assembled<br>Transcripts))
+
+        %% index_coassembly rule
+        FA --> IB{Index Bowtie2}
+        IB --> IB1((Coassembly<br>index))
+
+        %% bowtie2_map_transcripts rule (per-sample mapping)
+        IB1 --> BT2{Bowtie2 Map<br>Transcripts}
+        G --> BT2
+        BT2 --> BAM((Sample BAMs))
+
+        %% assembly_stats_depth rule (per-sample)
+        BAM --> STATS{Assembly Stats<br>+ Depth}
+        STATS --> STATSOUT((Stats/Depth/<br>IdxStats))
+
+        %% prodigal_genes rule
+        FA --> PG{Prodigal<br>Genes}
+        PG --> PROD_OUTS1((Predicted protein<br>and nucleotide<br>sequences))
+        PG --> PROD_OUTS2(("Gene annotation<br>file (.saf)"))
 
        %% featurecounts rule (per-sample)
        PROD_OUTS2 --> FC{featureCounts}
@@ -99,24 +124,24 @@ flowchart TD
        FC --> FCT((Sample Counts.txt))
    end
 
-   subgraph ASSEMBLY [Sample Assembly]
-       G --> H{rnaSPAdes}
-       H --> I((Sample Transcripts))
-   end
+    subgraph ASSEMBLY [SAMPLE ASSEMBLY]
+        G --> H{rnaSPAdes}
+        H --> I((Sample Transcripts))
+    end
 
-   subgraph QC_REPORTS [Reports and Files for Downstream Analysis]
-       I --> S{rnaQUAST}
-       S --> U((Assembly QC Report))
-       G --> M{Kraken2}
-       M --> N{Bracken}
-       N --> O((Taxonomic Profile))
-       G --> W{RGI}
-       W --> Q((AMR Profile))
-   end
+    subgraph QC_REPORTS [DOWNSTREAM ANALYSIS<br>REPORTS AND FILES]
+        I --> S{rnaQUAST}
+        S --> U((Assembly<br>QC Report))
+        G --> M{Kraken2}
+        M --> N{Bracken}
+        N --> O((Taxonomic<br>Profile))
+        G --> W{RGI}
+        W --> Q((AMR<br>Profile))
+    end
 
-   %% TEMP FILE STYLING
-   style C fill:#f2f2f2,stroke-dasharray: 5 5
-   style L fill:#f2f2f2,stroke-dasharray: 5 5
+    %% TEMP FILE STYLING
+    style C fill:#1f2937,stroke:#22d3ee,stroke-dasharray: 5 5,color:#e5e7eb
+    style L fill:#1f2937,stroke:#22d3ee,stroke-dasharray: 5 5,color:#e5e7eb
 ```
 
 ### Snakemake rules
@@ -387,7 +412,6 @@ A set of sub-sampled raw FASTQ files are provided for testing (`data/test_LLC82S
 ## Parameters
 
 The `config/config.yaml` file contains the editable pipeline parameters, thread allocation for rules with more than one core, and the relative file paths for input and output. The prefix of the absolute file path must go in `.env`. Most tools in the pipeline have default parameters. The tools with parameters different from default or that can be edited in the `config/config.yaml` file are listed below.
-
 
 | Parameter                       | Value                                                                                                                                                                    |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -681,7 +705,6 @@ None.
 **All output file paths are set in the `config/config.yaml` file and need to be edited prior to running the pipeline.**
 
 The following table includes the key outputs of the metatranscriptomics pipeline. The [Snakemake rules](#snakemake-rules) section provides greater detail on all file outputs.
-
 
 | Output Type                  | Description                                                                                                    | Filename                                                                                                                                                                                                                |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

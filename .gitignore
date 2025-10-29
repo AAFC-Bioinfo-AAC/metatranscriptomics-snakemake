@@ -19,3 +19,7 @@ workflow/local-wrappers/*
 metatranscriptomic-conda-env/
 metatranscriptomic-conda-env/*
 metatranscriptomic-conda-env/08eaaece24f566e85b6bdd01a025bafc_.env_setup_done
+
+# Environments
+.env
+*.env
