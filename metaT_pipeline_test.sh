@@ -1,16 +1,16 @@
 #!/bin/bash
-#SBATCH --job-name=metaT_full_test
-#SBATCH --output=metaT_full_test_%j.out 
-#SBATCH --error=metaT_full_test_%j.err 
+#SBATCH --job-name=final_test_run
+#SBATCH --output=%x_%A_%a.out
+#SBATCH --error=%x_%A_%a.err
 #SBATCH --cluster=gpsc8 
 #SBATCH --partition=standard
 #SBATCH --account=aafc_aac
 #SBATCH --mem=2000
-#SBATCH --time=8:00:00
+#SBATCH --time=72:00:00
 
 source /gpfs/fs7/aafc/common/miniforge/miniforge3/etc/profile.d/conda.sh
 
-conda activate snakemake-9.6.0
+conda activate snakemake-9.9.0
 export PATH="$PWD/bin:$PATH"
 
   snakemake \
