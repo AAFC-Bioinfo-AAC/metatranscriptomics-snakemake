@@ -1,3 +1,10 @@
+'''
+    Filename: coassembly_annotation.smk
+    Author: Katherine James-Gzyl
+    Date created: 2025/10/15
+    Snakemake version: 9.9.0
+'''
+
 rule software_report:
     output:
         summary = f"{SOFTWARE_VERSIONS}/software_versions_summary.txt"
