@@ -2,7 +2,7 @@ cff-version: 1.2.0
 
 message: "If you use this software, please cite it as below."
 
-title: METATRANSCRIPTOMICS SNAKEMAKE PIPELINE
+title: Metatranscriptomics Snakemake Pipeline
 type: software
 version: "1.0.0"
 date-released: "2025-10-xx" # Update to actual release date
@@ -14,7 +14,7 @@ identifiers:
     value: # Insert Zenodo DOI
 
 authors:
-  - family-names: Jame-Gzyl
+  - family-names: James-Gzyl
     given-names: Katherine
     affiliation: "Agriculture and Agri-Food Canada (AAFC)"
     orcid: https://orcid.org/0000-0002-5912-8493
