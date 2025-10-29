@@ -41,21 +41,38 @@ rule filter_key_bioinformatics_versions:
     input:
         f"{SOFTWARE_VERSIONS}/software_versions_summary.txt"
     output:
-        summary = f"{SOFTWARE_VERSIONS}/key_bioinformatics_software.txt"
+        f"{SOFTWARE_VERSIONS}/key_bioinformatics_software.txt"
     shell:
         r"""
         mkdir -p {SOFTWARE_VERSIONS}
 
-        echo "==========================================================" > {output.summary}
-        echo "      Key Bioinformatics Software (Exact Versions Used)" >> {output.summary}
-        echo "==========================================================" >> {output.summary}
-        echo "" >> {output.summary}
+        echo "==========================================================" > {output}
+        echo "      Key Bioinformatics Software (Exact Versions Used)" >> {output}
+        echo "==========================================================" >> {output}
+        echo "" >> {output}
 
         KEY_TOOLS="bedtools|bowtie2|fastp|featureCounts|kraken2|megahit|pigz|prodigal|rgi|rnaQUAST|samtools|sortmerna|spades|subread"
 
-
         awk '
-          /^### Environment:/ {{env=$0; print "\n" env >> "{output.summary}"; next}}
-          $1 ~ /^('"$KEY_TOOLS"')$/ {{print $0 >> "{output.summary}"}}
+          /^### Environment:/ {{env=$0; print "\n" env >> "{output}"; next}}
+          $1 ~ /^('"$KEY_TOOLS"')$/ {{print $0 >> "{output}"}}
         ' {input}
         """
+rule filter_key_bioinformatics_html:
+    input:
+        f"{SOFTWARE_VERSIONS}/key_bioinformatics_software.txt"
+    output:
+        report(
+            f"{SOFTWARE_VERSIONS}/key_bioinformatics_software.html"
+        )
+    shell:
+        r"""
+        mkdir -p {SOFTWARE_VERSIONS}
+        echo "<html><body><pre>" > {output}
+        cat {input} >> {output}
+        echo "</pre></body></html>" >> {output}
+        """
+
+
+
+
