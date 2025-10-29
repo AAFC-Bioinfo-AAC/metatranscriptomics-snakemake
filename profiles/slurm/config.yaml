@@ -35,148 +35,125 @@ conda-frontend: mamba
 set-resource-scopes:
   cores: local 
 
+# Reusable Slurm Blocks (anchors)
+# Standard partition/account/cluster used by most rules
+_slurm_std: &slurm_std
+  slurm_partition: standard
+  slurm_account: aafc_aac
+  slurm_cluster: gpsc8
+
+# Large memory partition/account/cluster used by some rules
+_slurm_large: &slurm_large
+  slurm_partition: large
+  slurm_account: aafc_aac__large
+  slurm_cluster: gpsc8
+
 ## Per rule resources
 set-resources:
   fastp_pe:
+    <<: *slurm_std
     cpus: 2
     mem_mb: 4000
     runtime: 40
-    slurm_partition: standard
-    slurm_account: aafc_aac
-    slurm_cluster: gpsc8
 
   bowtie2_align:
+    <<: *slurm_std
     cpus: 24
     mem_mb: 48000
     runtime: 30
-    slurm_partition: standard
-    slurm_account: aafc_aac
-    slurm_cluster: gpsc8
 
   extract_unmapped_fastq:
+    <<: *slurm_std
     cpus: 8
     mem_mb: 64000
     runtime: 30
-    slurm_partition: standard
-    slurm_account: aafc_aac
-    slurm_cluster: gpsc8
 
   sortmerna_pe:
+    <<: *slurm_std
     cpus: 24
     mem_mb: 32000
     runtime: 360
-    slurm_partition: standard
-    slurm_account: aafc_aac
-    slurm_cluster: gpsc8
 
   kraken2:
+    <<: *slurm_large
     cpus: 2
     mem_mb: 600000
-    runtime: 30 
-    slurm_partition: large
-    slurm_account: aafc_aac__large
-    slurm_cluster: gpsc8
+    runtime: 30
 
   bracken:
+    <<: *slurm_std
     cpus: 2
     mem_mb: 4000
     runtime: 10
-    slurm_partition: standard
-    slurm_account: aafc_aac
-    slurm_cluster: gpsc8
 
   combine_bracken_outputs:
+    <<: *slurm_std
     cpus: 1
     mem_mb: 2000
     runtime: 20
-    slurm_partition: standard
-    slurm_account: aafc_aac
-    slurm_cluster: gpsc8
-   
+
   bracken_extract:
+    <<: *slurm_std
     cpus: 1
     mem_mb: 2000
     runtime: 10
-    slurm_partition: standard
-    slurm_account: aafc_aac
-    slurm_cluster: gpsc8
 
   rgi_reload_database:
+    <<: *slurm_std
     cpus: 1
     mem_mb: 2000
     runtime: 30
-    slurm_partition: standard
-    slurm_account: aafc_aac
-    slurm_cluster: gpsc8
 
   rgi_bwt:
+    <<: *slurm_std
     cpus: 8
     mem_mb: 64000
     runtime: 60
-    slurm_partition: standard
-    slurm_account: aafc_aac
-    slurm_cluster: gpsc8
 
-  rna_spades:             
+  rna_spades:
+    <<: *slurm_std
     cpus: 24
     mem_mb: 64000
     runtime: 240
-    slurm_partition: standard
-    slurm_account: aafc_aac
-    slurm_cluster: gpsc8
 
   rnaquast_busco:
+    <<: *slurm_std
     cpus: 4
     mem_mb: 16000
     runtime: 10
-    slurm_partition: standard
-    slurm_account: aafc_aac
-    slurm_cluster: gpsc8
 
   megahit_coassembly:
+    <<: *slurm_std
     cpus: 24
     mem_mb: 256000
     runtime: 240
-    slurm_partition: standard
-    slurm_account: aafc_aac
-    slurm_cluster: gpsc8
 
   index_coassembly:
+    <<: *slurm_std
     cpus: 8
     mem_mb: 16000
     runtime: 120
-    slurm_partition: standard
-    slurm_account: aafc_aac
-    slurm_cluster: gpsc8
 
   bowtie2_map_transcripts:
+    <<: *slurm_std
     cpus: 16
     mem_mb: 32000
     runtime: 30
-    slurm_partition: standard
-    slurm_account: aafc_aac
-    slurm_cluster: gpsc8
 
   assembly_stats_depth:
+    <<: *slurm_std
     cpus: 2
     mem_mb: 2000
     runtime: 30
-    slurm_partition: standard
-    slurm_account: aafc_aac
-    slurm_cluster: gpsc8
 
   prodigal_genes:
+    <<: *slurm_std
     cpus: 1
     mem_mb: 2000
     runtime: 60
-    slurm_partition: standard
-    slurm_account: aafc_aac
-    slurm_cluster: gpsc8
 
   featurecounts:
+    <<: *slurm_std
     cpus: 4
     mem_mb: 8000
     runtime: 10
-    slurm_partition: standard
-    slurm_account: aafc_aac
-    slurm_cluster: gpsc8
