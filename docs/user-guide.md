@@ -15,6 +15,7 @@
   - [Module  `amr_short_reads.smk`](#module--amr_short_readssmk)
   - [Module  `sample_assembly.smk`](#module--sample_assemblysmk)
   - [Module  `coassembly_annotation.smk`](#module--coassembly_annotationsmk)
+  - [Module  `env_versions`](#module--env_versions)
 - [Data](#data)
 - [Parameters](#parameters)
 - [Usage](#usage)
@@ -118,7 +119,7 @@
 
 ### Snakemake rules
 
-The pipeline is modularized, with each module located in the `metatranscriptomics-snakemake/workflow/rules` directory. The modules are `preprocessing.smk`, `sortmerna.smk`, `taxonomy.smk`,`amr_short_reads.smk`, and `coassembly_annotation.smk`.
+The pipeline is modularized, with each module located in the `metatranscriptomics-snakemake/workflow/rules` directory. The modules are `preprocessing.smk`, `sortmerna.smk`, `taxonomy.smk`,`amr_short_reads.smk`, `coassembly_annotation.smk`, and env_versions.smk.
 
 ---
 
@@ -348,6 +349,14 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
   - BAM file for each sample: `sample.coassembly.sorted.bam`
 - **Outputs:**
   - Featurecounts table: `sample_counts.txt`
+
+### Module  `env_versions`
+
+ **`software_report` *Print versions of all conda packages***
+
+ **`filter_key_bioinformatics_versions` *Print versions of only the core bioinformatic conda packages***
+
+**`ilter_key_bioinformatics_html` *Print versions of only the core bioinformatic conda packages in the html report***
 
 ---
 
@@ -635,6 +644,7 @@ export PATH="$PWD/bin:$PATH"
 ### Notes
 
 - temp folder is set to `/gpfs/fs7/aafc/scratch/${USER}/tmpdir` for running on the GPSC.
+- A Snakemake report can be generated from the head node with `snakemake --report path/to/report/report_name.html`
   
 #### Warnings
 
