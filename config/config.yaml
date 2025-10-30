@@ -40,10 +40,10 @@ bowtie2_index: "code/metatranscriptomics-snakemake/resources/bowtie2_index/Cow_p
 sortmerna_DB: "code/metatranscriptomics-snakemake/resources/rRNA_DB/smr_v4.3_default_db.fasta"
 
 ### File paths for databases on common drives###
-gtbd_DB: "/gpfs/fs7/aafc/common/reference/kraken2_gtdb/release220"
+gtbd_DB: "abs/path/to/db/reference/kraken2_gtdb/release220"
 busco_lineages:
-  bacteria: "/gpfs/fs7/aafc/common/reference/busco/busco_downloads/lineages/bacteria_odb12"
-  archaea: "/gpfs/fs7/aafc/common/reference/busco/busco_downloads/lineages/archaea_odb12"
+  bacteria: "abs/path/to/db/reference/busco/busco_downloads/lineages/bacteria_odb12"
+  archaea: "abs/path/to/db/reference/busco/busco_downloads/lineages/archaea_odb12"
 
 ### File path for CARD database if the user set it up. This is a fallback if there is no common database
 card_latest: "code/metatranscriptomics-snakemake/localDB"
@@ -71,6 +71,8 @@ extract_unmapped_fastq:
 sortmerna_pe:
   threads: 12
 ## amr_short_reads.smk
+rgi_reload_database:
+  threads: 1
 rgi_bwt:
   threads: 8
 ## taxonomy.smk
@@ -80,6 +82,10 @@ kraken2:
 bracken:
   threads: 2
   readlen: 150
+combine_bracken_outputs:
+  threads: 1
+bracken_extract:
+  threads: 1
 ## sample_assembly.smk
 rna_spades:
   threads: 24
@@ -95,5 +101,7 @@ bowtie2_map_transcripts:
   threads: 16
 assembly_stats_depth:
   threads: 2
+prodigal_genes:
+  threads: 1
 featurecounts:
   threads: 4

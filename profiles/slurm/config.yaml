@@ -22,7 +22,6 @@ default-resources:
   - slurm_qos=low    #If jobs are held in queue for long.
   - runtime=60       # minutes
   - mem_mb=4000
-  - cpus=1
 
 ### Env modules ###
 # use-envmodules: false 
@@ -52,108 +51,90 @@ _slurm_large: &slurm_large
 set-resources:
   fastp_pe:
     <<: *slurm_std
-    cpus: 2
     mem_mb: 4000
     runtime: 40
 
   bowtie2_align:
     <<: *slurm_std
-    cpus: 24
     mem_mb: 48000
     runtime: 30
 
   extract_unmapped_fastq:
     <<: *slurm_std
-    cpus: 8
     mem_mb: 64000
     runtime: 30
 
   sortmerna_pe:
     <<: *slurm_std
-    cpus: 24
     mem_mb: 32000
     runtime: 360
 
   kraken2:
     <<: *slurm_large
-    cpus: 2
     mem_mb: 600000
     runtime: 30
 
   bracken:
     <<: *slurm_std
-    cpus: 2
     mem_mb: 4000
     runtime: 10
 
   combine_bracken_outputs:
     <<: *slurm_std
-    cpus: 1
     mem_mb: 2000
     runtime: 20
 
   bracken_extract:
     <<: *slurm_std
-    cpus: 1
     mem_mb: 2000
     runtime: 10
 
   rgi_reload_database:
     <<: *slurm_std
-    cpus: 1
     mem_mb: 2000
     runtime: 30
 
   rgi_bwt:
     <<: *slurm_std
-    cpus: 8
     mem_mb: 64000
     runtime: 60
 
   rna_spades:
     <<: *slurm_std
-    cpus: 24
     mem_mb: 64000
     runtime: 240
 
   rnaquast_busco:
     <<: *slurm_std
-    cpus: 4
     mem_mb: 16000
     runtime: 10
 
   megahit_coassembly:
     <<: *slurm_std
-    cpus: 24
     mem_mb: 256000
     runtime: 240
 
   index_coassembly:
     <<: *slurm_std
-    cpus: 8
     mem_mb: 16000
     runtime: 120
 
   bowtie2_map_transcripts:
     <<: *slurm_std
-    cpus: 16
     mem_mb: 32000
     runtime: 30
 
   assembly_stats_depth:
     <<: *slurm_std
-    cpus: 2
     mem_mb: 2000
     runtime: 30
 
   prodigal_genes:
     <<: *slurm_std
-    cpus: 1
     mem_mb: 2000
     runtime: 60
 
   featurecounts:
     <<: *slurm_std
-    cpus: 4
     mem_mb: 8000
     runtime: 10

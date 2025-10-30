@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=final_test_run
+#SBATCH --job-name=profile_config_test
 #SBATCH --output=%x_%A_%a.out
 #SBATCH --error=%x_%A_%a.err
 #SBATCH --cluster=gpsc8 
@@ -15,7 +15,7 @@ export PATH="$PWD/bin:$PATH"
 
   snakemake \
     --profile /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/profiles/slurm \
-    --configfile /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/config/config.yaml \
+    --configfile /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/config/config_GPSC.yaml \
     --conda-prefix /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/metatranscriptomic-conda-env \
     --printshellcmds \
     --latency-wait 120 \
