@@ -8,7 +8,7 @@
 #SBATCH --mem=<MEMORY_MB>         # e.g., 2000
 #SBATCH --time=<HH:MM:SS>         # Must be long enough for completion of workflow 
 
-source path/to/source/conda/common/miniforge/miniforge3/etc/profile.d/conda.sh
+source abs/path/to/source/conda/common/miniforge/miniforge3/etc/profile.d/conda.sh
 
 conda activate snakemake-9.9.0
 export PATH="$PWD/bin:$PATH"
