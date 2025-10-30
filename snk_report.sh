@@ -14,4 +14,4 @@ conda activate snakemake-9.9.0
 export PATH="$PWD/bin:$PATH"
 
 #Can just run this from the head node.
-snakemake --report path/to/where/you/whant/the/report/metatranscriptomics_report.html
+snakemake --report path/to/where/you/want/the/report/metatranscriptomics_report.html
