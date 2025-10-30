@@ -525,14 +525,15 @@ rerun-triggers: [input, params, software-env]
 
 ### Env Vars ###
 envvars:
-  TMPDIR: "abs/path/to/scratch/${USER}/tmpdir"
+  TMPDIR: "/path/to/scratch/${USER}/tmpdir"
 
 default-resources:
-  - slurm_account=ACCOUNT_NAME #set to your cluster
-  - slurm_partition=standard
-  - slurm_cluster=CLUSTER_NAME #set to your cluster
-  - runtime=60       # minutes
-  - mem_mb=4000
+  - slurm_account=<ACCOUNT_NAME>
+  - slurm_partition=<PARTITION_NAME>
+  - slurm_cluster=<CLUSTER_NAME>
+  - slurm_qos=<QOS_LEVEL>      # e.g., 'low' if jobs are held in queue for long
+  - runtime=<RUNTIME_MINUTES>  # e.g., 60
+  - mem_mb=<MEMORY_MB>         # e.g., 4000
 
 ### Env modules ###
 # use-envmodules: false 
@@ -548,15 +549,15 @@ set-resource-scopes:
 # Reusable Slurm Blocks (anchors)
 # Standard partition/account/cluster used by most rules
 _slurm_std: &slurm_std
-  slurm_partition: standard
-  slurm_account: ACCOUNT_standard
-  slurm_cluster: CLUSTER
+  slurm_partition: <PARTITION_NAME>
+  slurm_account: <ACCOUNT_NAME_standard> # e.g., standard, large memory 
+  slurm_cluster: <CLUSTER_NAME>
 
 # Large memory partition/account/cluster used by some rules
 _slurm_large: &slurm_large
-  slurm_partition: large
-  slurm_account: ACCOUNT__large
-  slurm_cluster: CLUSTER
+  slurm_partition: <PARTITION_NAME>
+  slurm_account: <ACCOUNT_NAME_large> # e.g., standard, large memory 
+  slurm_cluster: <CLUSTER_NAME>
 
 ## Per rule resources
 set-resources:
@@ -668,12 +669,11 @@ This is the script you use to submit the Snakemake pipeline to SLURM.
 #SBATCH --job-name=run_snakemake.sh
 #SBATCH --output=run_snakemake_%j.out 
 #SBATCH --error=run_snakemake_%j.err 
-#SBATCH --cluster=CLUSTER
-#SBATCH --partition=standard
-#SBATCH --account=ACCOUNT
-#SBATCH --mem=2000
-#SBATCH --time=8:00:00
-#SBATCH --qos=low #If jobs are stuck in queue
+#SBATCH --cluster=<CLUSTER_NAME>
+#SBATCH --partition=<PARTITION_NAME>
+#SBATCH --account=<ACCOUNT_NAME>
+#SBATCH --mem=<MEMORY_MB>         # e.g., 2000
+#SBATCH --time=<HH:MM:SS>         # Must be long enough for completion of workflow 
 
 source path/to/source/conda/common/miniforge/miniforge3/etc/profile.d/conda.sh
 
