@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=profile_config_test
+#SBATCH --job-name=SnakeFile_change_test
 #SBATCH --output=%x_%A_%a.out
 #SBATCH --error=%x_%A_%a.err
 #SBATCH --cluster=gpsc8 

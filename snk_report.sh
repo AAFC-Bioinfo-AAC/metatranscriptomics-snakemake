@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=full_test_run_report
-#SBATCH --output=%x_%A_%a.out
-#SBATCH --error=%x_%A_%a.err
-#SBATCH --cluster=gpsc8
-#SBATCH --partition=standard
-#SBATCH --account=aafc_aac
-#SBATCH --mem=2000
-#SBATCH --time=00:30:00
+#SBATCH --job-name=run_snakemake.sh
+#SBATCH --output=run_snakemake_%j.out 
+#SBATCH --error=run_snakemake_%j.err 
+#SBATCH --cluster=<CLUSTER_NAME>
+#SBATCH --partition=<PARTITION_NAME>
+#SBATCH --account=<ACCOUNT_NAME>
+#SBATCH --mem=<MEMORY_MB>         # e.g., 2000
+#SBATCH --time=<HH:MM:SS>         # Must be long enough for completion of workflow 
 
 source path/to/source/conda/common/miniforge/miniforge3/etc/profile.d/conda.sh
 
