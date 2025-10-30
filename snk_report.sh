@@ -8,10 +8,10 @@
 #SBATCH --mem=2000
 #SBATCH --time=00:30:00
 
-source /gpfs/fs7/aafc/common/miniforge/miniforge3/etc/profile.d/conda.sh
+source path/to/source/conda/common/miniforge/miniforge3/etc/profile.d/conda.sh
 
 conda activate snakemake-9.9.0
 export PATH="$PWD/bin:$PATH"
 
 #Can just run this from the head node.
-snakemake --report /gpfs/fs7/aafc/projects/J-003165_abcc_rcba/code/metatranscriptomics-snakemake/results/metatranscriptomics_report.html
+snakemake --report path/to/where/you/whant/the/report/metatranscriptomics_report.html
