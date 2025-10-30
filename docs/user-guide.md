@@ -146,7 +146,7 @@ config:
 
 ### Snakemake rules
 
-The pipeline is modularized, with each module located in the `metatranscriptomics-snakemake/workflow/rules` directory. The modules are `preprocessing.smk`, `sortmerna.smk`, `taxonomy.smk`,`amr_short_reads.smk`, `coassembly_annotation.smk`, and env_versions.smk.
+The pipeline is modularized, with each module located in the `metatranscriptomics-snakemake/workflow/rules` directory. The modules are `preprocessing.smk`, `sortmerna.smk`, `taxonomy.smk`,`amr_short_reads.smk`, `coassembly_annotation.smk`, and `env_versions.smk`.
 
 ---
 
@@ -521,16 +521,14 @@ rerun-triggers: [input, params, software-env]
 
 ### Env Vars ###
 envvars:
-  TMPDIR: "/gpfs/fs7/aafc/scratch/${USER}/tmpdir"
+  TMPDIR: "abs/path/to/scratch/${USER}/tmpdir"
 
 default-resources:
-  - slurm_account=aafc_aac
+  - slurm_account=ACCOUNT_NAME #set to your cluster
   - slurm_partition=standard
-  - slurm_cluster=gpsc8
+  - slurm_cluster=CLUSTER_NAME #set to your cluster
   - runtime=60       # minutes
   - mem_mb=4000
-  - cpus=1
-  - qos=low #If jobs are stuck in queue
 
 ### Env modules ###
 # use-envmodules: false 
@@ -543,23 +541,30 @@ conda-frontend: mamba
 set-resource-scopes:
   cores: local 
 
+# Reusable Slurm Blocks (anchors)
+# Standard partition/account/cluster used by most rules
+_slurm_std: &slurm_std
+  slurm_partition: standard
+  slurm_account: ACCOUNT_standard
+  slurm_cluster: CLUSTER
+
+# Large memory partition/account/cluster used by some rules
+_slurm_large: &slurm_large
+  slurm_partition: large
+  slurm_account: ACCOUNT__large
+  slurm_cluster: CLUSTER
+
 ## Per rule resources
 set-resources:
   fastp_pe:
-    cpus: 2
+    <<: *slurm_std
     mem_mb: 4000
     runtime: 40
-    slurm_partition: standard
-    slurm_account: aafc_aac
-    slurm_cluster: gpsc8
 
-  bowtie2_align:
-    cpus: 24
-    mem_mb: 48000
+  kraken2:
+    <<: *slurm_large
+    mem_mb: 600000
     runtime: 30
-    slurm_partition: standard
-    slurm_account: aafc_aac
-    slurm_cluster: gpsc8
 ```
 
 #### 3. Configuration
@@ -573,7 +578,8 @@ The `config.yaml` file must be located in the `config` directory, which resides 
 - Path to the `samples.txt`
 - Input and output directories
 - File paths to required databases
-- Parameters for each rule
+- Threads for each rule
+- Parameters for software see the [Parameters](#parameters) section.
 
 **Note:**
 You must edit `config.yaml` **before** running the pipeline to ensure all paths are correctly set.
@@ -650,22 +656,22 @@ This is the script you use to submit the Snakemake pipeline to SLURM.
 
 ##### 4.3. Submit launcher to SLURM
 
-- **Before submitting job to SLURM run `export SLURM_CONF="/etc/slurm-llnl/gpsc8.science.gc.ca.conf"`**
-- Submit on GPSC bash terminal with `sbatch name_of_your_script.sh`
+- Submit to SLURM compute node with bash terminal with `sbatch name_of_your_script.sh`
+- Example below needs to be edited with the headers for the HPC you are using.
 
 ```bash
 #!/bin/bash
 #SBATCH --job-name=run_snakemake.sh
 #SBATCH --output=run_snakemake_%j.out 
 #SBATCH --error=run_snakemake_%j.err 
-#SBATCH --cluster=gpsc8 
+#SBATCH --cluster=CLUSTER
 #SBATCH --partition=standard
-#SBATCH --account=aafc_aac
+#SBATCH --account=ACCOUNT
 #SBATCH --mem=2000
 #SBATCH --time=8:00:00
 #SBATCH --qos=low #If jobs are stuck in queue
 
-source /gpfs/fs7/aafc/common/miniforge/miniforge3/etc/profile.d/conda.sh
+source path/to/source/conda/common/miniforge/miniforge3/etc/profile.d/conda.sh
 
 conda activate snakemake_env
 export PATH="$PWD/bin:$PATH"
@@ -680,7 +686,8 @@ export PATH="$PWD/bin:$PATH"
 
 ### Notes
 
-- temp folder is set to `/gpfs/fs7/aafc/scratch/${USER}/tmpdir` for running on the GPSC.
+- The `profile/slurm/config.yaml` has been configured for our SLURM cluster. This will need to be configured for the cluster you are using.
+- temp folder is set to `path/to/scratch/${USER}/tmpdir` 
 - A Snakemake report can be generated from the head node with `snakemake --report path/to/report/report_name.html`
 
 #### Warnings
