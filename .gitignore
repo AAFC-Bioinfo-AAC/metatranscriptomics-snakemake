@@ -23,3 +23,7 @@ metatranscriptomic-conda-env/08eaaece24f566e85b6bdd01a025bafc_.env_setup_done
 # Environments
 .env
 *.env
+# Contains full file paths
+config/config_GPSC.yaml
+metaT_pipeline_test.sh
+profiles/slurm/config.yaml
