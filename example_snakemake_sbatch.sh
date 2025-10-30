@@ -1,5 +1,4 @@
 #!/bin/bash
-#!/bin/bash
 #SBATCH --job-name=run_snakemake.sh
 #SBATCH --output=run_snakemake_%j.out 
 #SBATCH --error=run_snakemake_%j.err 
