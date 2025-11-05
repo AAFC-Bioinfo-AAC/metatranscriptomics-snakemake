@@ -1,50 +1,46 @@
 <!-- omit in toc -->
-
 # METATRANSCRIPTOMICS SNAKEMAKE PIPELINE - USER GUIDE
 
 ---
 
 <!-- omit in toc -->
-
 ## Table of Contents
 
-- [METATRANSCRIPTOMICS SNAKEMAKE PIPELINE - USER GUIDE](#metatranscriptomics-snakemake-pipeline---user-guide)
-  - [Table of Contents](#table-of-contents)
-  - [Overview](#overview)
-    - [Workflow diagram](#workflow-diagram)
-    - [Snakemake rules](#snakemake-rules)
-    - [Module `preprocessing.smk`](#module-preprocessingsmk)
-    - [Module  `sortmerna.smk`](#module--sortmernasmk)
-    - [Module  `taxonomy.smk`](#module--taxonomysmk)
-    - [Module  `amr_short_reads.smk`](#module--amr_short_readssmk)
-    - [Module  `sample_assembly.smk`](#module--sample_assemblysmk)
-    - [Module  `coassembly_annotation.smk`](#module--coassembly_annotationsmk)
-    - [Module  `env_versions`](#module--env_versions)
-  - [Data](#data)
-  - [Parameters](#parameters)
-  - [Usage](#usage)
-    - [Pre-requisites](#pre-requisites)
-      - [Software](#software)
-      - [Databases](#databases)
-    - [Setup Instructions](#setup-instructions)
-      - [1. Installation](#1-installation)
-      - [2. SLURM Profile](#2-slurm-profile)
-        - [2.1. SLURM Profile Directory Structure](#21-slurm-profile-directory-structure)
-        - [2.2. Profile Configuration](#22-profile-configuration)
-      - [3. Configuration](#3-configuration)
-        - [3.1. config/config.yaml](#31-configconfigyaml)
-        - [3.2. Environment file](#32-environment-file)
-        - [3.3. Sample list](#33-sample-list)
-        - [3.4. Scripts called in rules](#34-scripts-called-in-rules)
-      - [4. Running the pipeline](#4-running-the-pipeline)
-        - [4.1. Conda environments](#41-conda-environments)
-        - [4.2. SLURM launcher](#42-slurm-launcher)
-        - [4.3. Submit launcher to SLURM](#43-submit-launcher-to-slurm)
-    - [Notes](#notes)
-      - [Warnings](#warnings)
-      - [Current issues](#current-issues)
-      - [Resource usage](#resource-usage)
-  - [Output](#output)
+- [Overview](#overview)
+  - [Workflow diagram](#workflow-diagram)
+  - [Snakemake rules](#snakemake-rules)
+  - [Module `preprocessing.smk`](#module-preprocessingsmk)
+  - [Module  `sortmerna.smk`](#module--sortmernasmk)
+  - [Module  `taxonomy.smk`](#module--taxonomysmk)
+  - [Module  `amr_short_reads.smk`](#module--amr_short_readssmk)
+  - [Module  `sample_assembly.smk`](#module--sample_assemblysmk)
+  - [Module  `coassembly_annotation.smk`](#module--coassembly_annotationsmk)
+  - [Module  `env_versions`](#module--env_versions)
+- [Data](#data)
+- [Parameters](#parameters)
+- [Usage](#usage)
+  - [Pre-requisites](#pre-requisites)
+    - [Software](#software)
+    - [Databases](#databases)
+  - [Setup Instructions](#setup-instructions)
+    - [1. Installation](#1-installation)
+    - [2. SLURM Profile](#2-slurm-profile)
+      - [2.1. SLURM Profile Directory Structure](#21-slurm-profile-directory-structure)
+      - [2.2. Profile Configuration](#22-profile-configuration)
+    - [3. Configuration](#3-configuration)
+      - [3.1. config/config.yaml](#31-configconfigyaml)
+      - [3.2. Environment file](#32-environment-file)
+      - [3.3. Sample list](#33-sample-list)
+      - [3.4. Scripts called in rules](#34-scripts-called-in-rules)
+    - [4. Running the pipeline](#4-running-the-pipeline)
+      - [4.1. Conda environments](#41-conda-environments)
+      - [4.2. SLURM launcher](#42-slurm-launcher)
+      - [4.3. Submit launcher to SLURM](#43-submit-launcher-to-slurm)
+  - [Notes](#notes)
+    - [Warnings](#warnings)
+    - [Current issues](#current-issues)
+    - [Resource usage](#resource-usage)
+- [Output](#output)
 
 ---
 
@@ -691,7 +687,7 @@ export PATH="$PWD/bin:$PATH"
 ### Notes
 
 - The `profile/slurm/config.yaml` has been configured for our SLURM cluster. This will need to be configured for the cluster you are using.
-- temp folder is set to `path/to/scratch/${USER}/tmpdir` 
+- temp folder is set to `path/to/scratch/${USER}/tmpdir`
 - A Snakemake report can be generated from the head node with `snakemake --report path/to/report/report_name.html`
 
 #### Warnings
