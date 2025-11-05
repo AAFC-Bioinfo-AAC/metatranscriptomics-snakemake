@@ -10,12 +10,12 @@
   - [Workflow diagram](#workflow-diagram)
   - [Snakemake rules](#snakemake-rules)
   - [Module `preprocessing.smk`](#module-preprocessingsmk)
-  - [Module  `sortmerna.smk`](#module--sortmernasmk)
-  - [Module  `taxonomy.smk`](#module--taxonomysmk)
-  - [Module  `amr_short_reads.smk`](#module--amr_short_readssmk)
-  - [Module  `sample_assembly.smk`](#module--sample_assemblysmk)
-  - [Module  `coassembly_annotation.smk`](#module--coassembly_annotationsmk)
-  - [Module  `env_versions`](#module--env_versions)
+  - [Module `sortmerna.smk`](#module-sortmernasmk)
+  - [Module `taxonomy.smk`](#module-taxonomysmk)
+  - [Module `amr_short_reads.smk`](#module-amr_short_readssmk)
+  - [Module `sample_assembly.smk`](#module-sample_assemblysmk)
+  - [Module `coassembly_annotation.smk`](#module-coassembly_annotationsmk)
+  - [Module `env_versions`](#module-env_versions)
 - [Data](#data)
 - [Parameters](#parameters)
 - [Usage](#usage)
@@ -185,7 +185,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 
 ---
 
-### Module  `sortmerna.smk`
+### Module `sortmerna.smk`
 
 **`rule sortmerna` *rRNA Removal***
 
@@ -199,7 +199,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 
 ---
 
-### Module  `taxonomy.smk`
+### Module `taxonomy.smk`
 
 **`rule kraken2` *Assign Taxonomy***
 
@@ -253,7 +253,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 
 ---
 
-### Module  `amr_short_reads.smk`
+### Module `amr_short_reads.smk`
 
 **`rule rgi_reload_database` *Load CARD DB***
 
@@ -289,7 +289,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 
 ---
 
-### Module  `sample_assembly.smk`
+### Module `sample_assembly.smk`
 
 **`rule rna_spades` *Assemble transcripts***
 
@@ -319,7 +319,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 
 ---
 
-### Module  `coassembly_annotation.smk`
+### Module `coassembly_annotation.smk`
 
 **`megahit_coassembly` *Co-assembly of all samples***
 
@@ -387,7 +387,7 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 - **Outputs:**
   - Featurecounts table: `sample_counts.txt`
 
-### Module  `env_versions`
+### Module `env_versions`
 
 **`software_report` *Print versions of all conda packages***
 
