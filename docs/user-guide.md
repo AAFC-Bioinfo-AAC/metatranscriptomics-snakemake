@@ -617,7 +617,7 @@ test_LLC82Sep06GR,test_LLC82Sep06GR_r1.fastq.gz,test_LLC82Sep06GR_r2.fastq.gz
 
 The scripts called in the Snakemake pipeline are located in workflow/scripts.
 
-- Module [taxonomy.smk](#module--taxonomysmk) uses the `extract_bracken_columns.py` script in `rule combine_bracken_outputs`.
+- Module [taxonomy.smk](#module-taxonomysmk) uses the `extract_bracken_columns.py` script in `rule combine_bracken_outputs`.
 
 #### 4. Running the pipeline
 
