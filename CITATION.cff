@@ -5,13 +5,25 @@ message: "If you use this software, please cite it as below."
 title: Metatranscriptomics Snakemake Pipeline
 type: software
 version: "1.0.0"
-date-released: "2025-10-xx" # Update to actual release date
+date-released: "2025-11-xx" # Update to actual release date
 repository-code: "https://github.com/AAFC-Bioinfo-AAC/metatranscriptomics-snakemake"
 license: GPL-3.0
 
 identifiers:
   - type: doi
     value: # Insert Zenodo DOI
+
+abstract: >-
+  A reproducible, modular Snakemake workflow designed to process, assemble, 
+  and analyze Illumina paired-end shotgun metatranscriptomic data.
+
+keywords:
+  - reproducibility
+  - metatranscriptomics
+  - bioinformatics
+  - pipeline
+  - Snakemake
+  - AAFC
 
 authors:
   - family-names: James-Gzyl
