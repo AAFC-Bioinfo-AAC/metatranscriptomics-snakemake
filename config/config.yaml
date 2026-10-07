@@ -5,6 +5,13 @@
 # Follow instructions in the user guide to create your own samplesheet.csv file
 samplesheet: "samplesheet.csv"
 
+# Set here or export PROJECT_ROOT; all relative data paths use this root.
+# project_root: "/absolute/path/to/project"
+
+# Optional matched metagenomic assembly. If set, bypass RNA MEGAHIT coassembly
+# and predict/map/count genes against this shared reference instead.
+reference_assembly: null
+
 # -------------------------------------------------------------------
 # Conda environment prefix relative to PROJECT_ROOT in .env file
 # -------------------------------------------------------------------
@@ -31,6 +38,14 @@ coassembly_index: "workspace/metatranscriptomics-snakemake/10_coassembly_index"
 sorted_bam_dir: "workspace/metatranscriptomics-snakemake/11_sorted_assemblies"
 prodigal_dir: "workspace/metatranscriptomics-snakemake/12_prodigal"
 featurecounts_dir: "workspace/metatranscriptomics-snakemake/13_featurecounts"
+dbcan_output_dir: "workspace/metatranscriptomics-snakemake/14_dbcan"
+
+# Required for the default workflow; prepare the database outside the workflow.
+dbcan_DB_path: null
+cazyme:
+  threads: 8
+  min_tools: 2  # Accept genes supported by at least 2 of 3 methods; also permits 3.
+  database_release: "unspecified"  # Record the database release used; files are SHA-256 hashed.
 
 
 # Bowtie2 index. Make sure to build your own index
@@ -71,7 +86,7 @@ extract_unmapped_fastq:
 sortmerna_pe:
   threads: 12
 ## amr_short_reads.smk
-rgi_reload_database:
+rgi_validate_database:
   threads: 1
 rgi_bwt:
   threads: 8
@@ -80,8 +95,11 @@ kraken2:
   threads: 2
   conf_threshold: "0.5"
 bracken:
-  threads: 2
   readlen: 150
+  # Minimum Kraken-assigned reads per taxon, not CPU counts (-t in Bracken).
+  threshold_species: 10
+  threshold_genus: 10
+  threshold_phylum: 10
 combine_bracken_outputs:
   threads: 1
 bracken_extract:
@@ -89,7 +107,8 @@ bracken_extract:
 ## sample_assembly.smk
 rna_spades:
   threads: 24
-  memory: "64000"
+  # SPAdes -m is in GB; keep below the job's 64000 MB memory allocation.
+  memory_gb: 60
 rnaquast_busco:
   threads: 4
 ## coassembly_annotation.smk
@@ -105,3 +124,5 @@ prodigal_genes:
   threads: 1
 featurecounts:
   threads: 4
+  # Match the library preparation: 0=unstranded, 1=forward, 2=reverse.
+  strandedness: 0
