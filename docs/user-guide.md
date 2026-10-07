@@ -129,7 +129,28 @@ The pipeline is modularized, with each module located in the `metatranscriptomic
 
 #### Module `preprocessing.smk`
 
-**`rule fastp_pe` *Quality Control & Trimming***
+This module performs read-quality control, trimming and removal of reads originating from the host or PhiX control.
+
+**Default configuration settings**
+
+The following values are supplied in `config/config.yaml`. These workflow settings may differ from the default settings used by the individual software packages.
+
+| Configuration setting | Default | Description |
+|---|---:|---|
+| `fastp: threads` | `2` | Number of threads used by *fastp*. |
+| `fastp: cut_tail` | `true` | Enables sliding-window quality trimming from the 3′ end. |
+| `fastp: cut_front` | `true` | Enables sliding-window quality trimming from the 5′ end. |
+| `fastp: cut_mean_quality` | `20` | Minimum mean Phred quality required within the trimming window. |
+| `fastp: cut_window_size` | `4` | Number of bases included in the sliding quality window. |
+| `fastp: qualified_quality_phred` | `15` | Minimum Phred score used to define a qualified base. |
+| `fastp: detect_adapter_for_pe` | `true` | Enables automatic adapter detection for paired-end reads. |
+| `fastp: length_required` | `100` | Minimum read length retained after trimming. |
+| `bowtie2_align: threads` | `12` | Total number of threads allocated among *Bowtie2* and *SAMtools*. |
+| `extract_unmapped_fastq: threads` | `8` | Total number of threads allocated among *SAMtools*, *BEDTools*, and two *pigz* compressors. |
+
+Quality-filtering parameters should be selected according to the sequencing platform, read length and study objectives.
+
+**Rule: `fastp_pe` Quality Control & Trimming**
 
 - **Purpose:** Performs adapter trimming, quality trimming, and filtering of paired-end reads.
 - **Inputs:** `samplesheet.csv` defines sample IDs and corresponding read pairs.
