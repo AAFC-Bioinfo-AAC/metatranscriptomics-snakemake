@@ -1,64 +1,26 @@
-configfile: "config/config.yaml"
-
-from dotenv import load_dotenv
-import csv, os, sys
-
 # -------------------------------------------------------------------
 # Environment and project paths
 # -------------------------------------------------------------------
-PIPELINE_DIR = os.getcwd()
+PIPELINE_DIR = os.path.dirname(os.path.abspath(workflow.basedir))
+configfile: f"{PIPELINE_DIR}/config/config.yaml"
 ENV_FILE = os.path.join(PIPELINE_DIR, '.env')
 
 # Load the .env file
-load_dotenv(ENV_FILE, override=True)
+load_dotenv(ENV_FILE, override=False)
 
 ## PROJECT ROOT FROM .env###
-PROJECT_ROOT = os.getenv("PROJECT_ROOT")
+PROJECT_ROOT = config.get("project_root") or os.getenv("PROJECT_ROOT")
 if not PROJECT_ROOT:
-    raise ValueError("PROJECT_ROOT not set in .env")
+    raise ValueError("Set project_root in config.yaml or PROJECT_ROOT in .env/the environment.")
+PROJECT_ROOT = os.path.abspath(os.path.expandvars(os.path.expanduser(PROJECT_ROOT)))
 
 ## Compose all other important paths, always relative to PROJECT_ROOT
 CONFIG_DIR = os.path.join(PIPELINE_DIR, "config")
 
-# -------------------------------------------------------------------
-# TMPDIR setup
-# -------------------------------------------------------------------
-
-TMPDIR = os.getenv("TMPDIR")
-if not TMPDIR:
-    raise ValueError("Environment variable TMPDIR is not set.")
-os.makedirs(TMPDIR, exist_ok=True)
-
-# -------------------------------------------------------------------
-# CARD DB setup
-# -------------------------------------------------------------------
-
-def validate_card_db(path):
-    """Ensure CARD DB has required files."""
-    def has_fasta(p):
-        return (
-            os.path.exists(os.path.join(p, "card_reference.fasta")) or
-            any(name.endswith(".fasta") for name in os.listdir(p))
-        )
-    if not (os.path.exists(os.path.join(path, "card.json")) and has_fasta(path)):
-        sys.exit(
-            f"\nERROR: CARD DB not properly prepared at {path} "
-            "(missing card.json or .fasta). See pipeline README.\n"
-        )
-
-env_rgi_card = os.getenv("RGI_CARD", "").strip()
-if env_rgi_card:
-    RGI_CARD = env_rgi_card
-elif "card_latest" in config:
-    cfg_card = os.path.join(PROJECT_ROOT, config["card_latest"])
-    RGI_CARD = os.path.join(PROJECT_ROOT, cfg_card) if not os.path.isabs(cfg_card) else cfg_card
-else:
-    raise ValueError("You must set RGI_CARD in .env or card_latest in config.yaml!")
-
-if not os.path.exists(RGI_CARD):
-    sys.exit(f"\nERROR: RGI_CARD path not found: {RGI_CARD}\n")
-
-validate_card_db(RGI_CARD)
+# TMPDIR is job-local working storage, not a location for DAG outputs.
+# Rules create their own temporary directories at execution time.
+# CARD paths are resolved lazily in amr_short_reads.smk so preprocessing
+# and taxonomy targets do not require an AMR database.
 
 # -------------------------------------------------------------------
 # Config-derived paths
@@ -67,7 +29,8 @@ validate_card_db(RGI_CARD)
 #Resolve with respect to PROJECT_ROOT
 def relpath(cfg_key):
     """Resolve a config path relative to PROJECT_ROOT."""
-    return os.path.join(PROJECT_ROOT, config[cfg_key])
+    path = os.path.expandvars(os.path.expanduser(os.fspath(config[cfg_key])))
+    return os.path.abspath(os.path.join(PROJECT_ROOT, path))
 CONDA_PREFIX = relpath("conda_prefix")
 LOG_DIR = relpath("log_files")
 SOFTWARE_VERSIONS = relpath("software_versions")
@@ -91,17 +54,38 @@ BOWTIE_INDEX_FILES= [f"{BOWTIE_INDEX}.{i}.bt2" for i in (1,2,3,4)] + \
 
 RRNA_DB = relpath("sortmerna_DB")
 
-#Resolve with respect to TMPDIR
-TRIMMED_DIR = os.path.join(TMPDIR, config["reads_trimmed"])
+# Temporary outputs passed between cluster jobs must be on shared storage.
+TRIMMED_DIR = relpath("reads_trimmed")
 
-#Resolve with respect to GPSC common reference. Add in function that is commented out
-#def common_path(cfg_key):
-   # """Resolve a config path relative to COMMON_ROOT."""
-    #return os.path.join(COMMON_ROOT, config[cfg_key])
-
-TAXONOMY_DB = config["gtbd_DB"]
-BUSCO_LINEAGES = config["busco_lineages"]
+TAXONOMY_DB = relpath("gtbd_DB")
+BUSCO_LINEAGES = {
+    name: os.path.abspath(os.path.join(PROJECT_ROOT, os.path.expandvars(os.path.expanduser(path))))
+    for name, path in config["busco_lineages"].items()
+}
 LINEAGES = list(BUSCO_LINEAGES.keys())
+
+# Reuse a matched metagenomic assembly when supplied; otherwise assemble RNA.
+reference_assembly = config.get("reference_assembly")
+COASSEMBLY_FASTA = relpath("reference_assembly") if reference_assembly else f"{MEGAHIT_DIR}/final.contigs.fa"
+COASSEMBLY_INDEX_FILES = [f"{COASSEMBLY_INDEX}/coassembly.{part}.bt2" for part in ("1", "2", "3", "4", "rev.1", "rev.2")]
+
+for name, settings in config.items():
+    if isinstance(settings, dict) and "threads" in settings:
+        value = settings["threads"]
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError(f"{name}.threads must be a positive integer.")
+strand = config.get("featurecounts", {}).get("strandedness", 0)
+if isinstance(strand, bool) or strand not in (0, 1, 2):
+    raise ValueError("featurecounts.strandedness must be 0, 1, or 2.")
+memory = config.get("rna_spades", {}).get("memory_gb", 60)
+if "memory" in config.get("rna_spades", {}):
+    raise ValueError("Replace legacy rna_spades.memory (previously documented as MB) with memory_gb in GB.")
+if isinstance(memory, bool) or not isinstance(memory, int) or memory < 1:
+    raise ValueError("rna_spades.memory_gb must be a positive integer.")
+for key in ("readlen", "threshold_species", "threshold_genus", "threshold_phylum"):
+    value = config.get("bracken", {}).get(key, 150 if key == "readlen" else 10)
+    if isinstance(value, bool) or not isinstance(value, int) or value < (1 if key == "readlen" else 0):
+        raise ValueError(f"bracken.{key} must be an integer {'greater than zero' if key == 'readlen' else 'at least zero'}.")
 
 # -------------------------------------------------------------------
 # Sample handling
@@ -113,11 +97,26 @@ def load_samples(samplesheet):
     samples = {}
     with open(samplesheet, newline="") as csvfile:
         reader = csv.DictReader(csvfile)
-        for row in reader:
-            samples[row["sample"]] = {
-                "fastq_1": os.path.join(READS_DIR, row["fastq_1"]),
-                "fastq_2": os.path.join(READS_DIR, row["fastq_2"]),
+        required = {"sample", "fastq_1", "fastq_2"}
+        if not required.issubset(reader.fieldnames or []):
+            raise ValueError(f"{samplesheet}: required columns are sample, fastq_1, fastq_2.")
+        for line, row in enumerate(reader, start=2):
+            values = {key: (row.get(key) or "").strip() for key in required}
+            sample = values["sample"]
+            if not all(values.values()):
+                raise ValueError(f"{samplesheet}:{line}: sample and both read filenames must be nonempty.")
+            if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", sample):
+                raise ValueError(f"{samplesheet}:{line}: invalid sample ID {sample!r}.")
+            if sample in samples:
+                raise ValueError(f"{samplesheet}:{line}: duplicate sample ID {sample!r}.")
+            if values["fastq_1"] == values["fastq_2"]:
+                raise ValueError(f"{samplesheet}:{line}: read 1 and read 2 must be different files.")
+            samples[sample] = {
+                "fastq_1": os.path.join(READS_DIR, values["fastq_1"]),
+                "fastq_2": os.path.join(READS_DIR, values["fastq_2"]),
             }
+    if not samples:
+        raise ValueError(f"{samplesheet}: no samples found.")
     return samples
 
 SAMPLES = load_samples(SAMPLESHEET_PATH)
@@ -130,6 +129,7 @@ include: "rules/taxonomy.smk"
 include: "rules/amr_short_reads.smk"
 include: "rules/sample_assembly.smk"
 include: "rules/coassembly_annotation.smk"
+include: "rules/db_can.smk"
 include: "rules/env_versions.smk"
 
 # -------------------------------------------------------------------
@@ -137,6 +137,7 @@ include: "rules/env_versions.smk"
 # -------------------------------------------------------------------
 
 rule all:
+    default_target: True
     input:
         #Reads depleted of host, PhiX and rRNA
         expand(f"{RRNA_DEP_DIR}/{{sample}}_rRNAdep_R1.fastq.gz", sample=SAMPLES),
@@ -170,7 +171,7 @@ rule all:
         expand(f"{RNAQUAST_DIR}/{{sample}}_{{lineage}}", sample=SAMPLES, lineage=LINEAGES),
 
         # MEGAHIT Coassembly and annotation
-        f"{MEGAHIT_DIR}/final.contigs.fa",
+        COASSEMBLY_FASTA,
         f"{PRODIGAL_DIR}/coassembly.faa",
         f"{PRODIGAL_DIR}/coassembly.fna",
         f"{PRODIGAL_DIR}/coassembly.gff",
@@ -181,14 +182,28 @@ rule all:
         expand(f"{ASSEMBLY_MAPPING}/{{sample}}.coverage.txt.gz", sample=SAMPLES),
         expand(f"{ASSEMBLY_MAPPING}/{{sample}}.idxstats.txt.gz", sample=SAMPLES),
         expand(f"{FEATURECOUNTS_DIR}/{{sample}}_counts.txt", sample=SAMPLES),
+        expand(f"{FEATURECOUNTS_DIR}/{{sample}}_counts.txt.summary", sample=SAMPLES),
+        expand(f"{LOG_DIR}/fastp/{{sample}}.fastp.html", sample=SAMPLES),
+        expand(f"{LOG_DIR}/fastp/{{sample}}.fastp.json", sample=SAMPLES),
 
         # Required logs or done markers
-        f"{LOG_DIR}/rgi_reload_db.done",
+        f"{LOG_DIR}/rgi_card_db.validated",
 
         # Software versions report
         f"{SOFTWARE_VERSIONS}/software_versions_summary.txt",
         f"{SOFTWARE_VERSIONS}/key_bioinformatics_software.txt",
-        f"{SOFTWARE_VERSIONS}/key_bioinformatics_software.html"
+        f"{SOFTWARE_VERSIONS}/key_bioinformatics_software.html",
+        # Optional CAZyme annotations and combined RNA count matrices.
+        CAZYME_TARGETS if CAZYME_ENABLED else []
+
+
+
+
+
+
+
+
+
 
 
 
