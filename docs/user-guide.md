@@ -49,96 +49,76 @@
 
 ### Workflow diagram
 
- ```mermaid
- ---
-config:
-  theme: base
-  themeVariables:
-    darkMode: true
-    background: '#0c111b'
-    mainBkg: '#0c111b'
-    textColor: '#e5e7eb'
-    titleColor: '#f3f4f6'
-
-    primaryColor: '#1f2937'
-    primaryTextColor: '#e5e7eb'
-    primaryBorderColor: '#F8B229'
-
-    secondaryColor: '#111827'
-    secondaryBorderColor: '#2d3748'
-
-    tertiaryColor: '#0b1324'
-    tertiaryBorderColor: '#374151'
-
-    lineColor: '#F8B229'
----
- flowchart TD
-    %% Title
-    %% Metatranscriptome Assembly and Analysis Pipeline
-
-    %% Make all edges thicker
-    linkStyle default stroke-width:1.5px,opacity:1;
-
-    subgraph PREPROC [PRE-PROCESSING]
-        A[Paired Reads] -->|QC & trim| B{fastp}
-        B --> C[Trimmed Reads<br>- temp]
-        B --> L((Fastp QC<br>Report))
-        C -->|Host/PhiX<br>removal| D{Bowtie2}
-        D --> E[Non-host, Non-PhiX Reads]
+```mermaid
+flowchart TD
+    subgraph PREPROC["READ PROCESSING"]
+        A["Paired-end RNA reads"] --> B{"fastp"}
+        B --> C["Trimmed paired reads"]
+        B --> L["Retained HTML/JSON reports"]
+        C --> D{"Bowtie2 host/PhiX alignment"}
+        D --> HBAM["Sorted BAM"]
+        HBAM --> EXTRACT{"SAMtools and BEDTools"}
+        EXTRACT --> E["Pairs with both mates unmapped"]
+        E --> F{"SortMeRNA"}
+        F --> G["rRNA-filtered paired reads"]
     end
 
-    subgraph DEPLETION [rRNA DEPLETION]
-        E --> F{SortMeRNA}
-        F --> G[rRNA-depleted Reads]
+    subgraph SHORTREAD["SHORT-READ ANALYSIS"]
+        G --> K{"Kraken2"}
+        K --> BR{"Bracken"}
+        BR --> TAX["RNA taxonomic profiles"]
+        G --> RGI{"RGI BWT"}
+        RGI --> ARG["ARG-associated RNA profiles"]
     end
 
-    subgraph COASSEMBLY [CO-ASSEMBLY]
-        %% megahit_coassembly rule
-        G --> MH{MEGAHIT<br>Co-assembly}
-        MH --> FA((Co-assembled<br>Transcripts))
-
-        %% index_coassembly rule
-        FA --> IB{Index Bowtie2}
-        IB --> IB1((Coassembly<br>index))
-
-        %% bowtie2_map_transcripts rule (per-sample mapping)
-        IB1 --> BT2{Bowtie2 Map<br>Transcripts}
-        G --> BT2
-        BT2 --> BAM((Sample BAMs))
-
-        %% assembly_stats_depth rule (per-sample)
-        BAM --> STATS{Assembly Stats<br>+ Depth}
-        STATS --> STATSOUT((Stats/Depth/<br>IdxStats))
-
-        %% prodigal_genes rule
-        FA --> PG{Prodigal<br>Genes}
-        PG --> PROD_OUTS1((Predicted protein<br>and nucleotide<br>sequences))
-        PG --> PROD_OUTS2(("Gene annotation<br>file (.saf)"))
-
-       %% featurecounts rule (per-sample)
-       PROD_OUTS2 --> FC{featureCounts}
-       BAM --> FC
-       FC --> FCT((Sample Counts.txt))
-   end
-
-    subgraph ASSEMBLY [SAMPLE ASSEMBLY]
-        G --> H{rnaSPAdes}
-        H --> I((Sample Transcripts))
+    subgraph ASSEMBLY["INDIVIDUAL SAMPLE ASSEMBLY"]
+        G --> SP{"rnaSPAdes"}
+        SP --> TRANS["Sample transcript assemblies"]
+        TRANS --> RQ{"rnaQUAST with BUSCO"}
+        RQ --> QC["Assembly evaluation reports"]
     end
 
-    subgraph QC_REPORTS [DOWNSTREAM ANALYSIS<br>REPORTS AND FILES]
-        I --> S{rnaQUAST}
-        S --> U((Assembly<br>QC Report))
-        G --> M{Kraken2}
-        M --> N{Bracken}
-        N --> O((Taxonomic<br>Profile))
-        G --> W{RGI}
-        W --> Q((AMR<br>Profile))
+    subgraph SHARED["SHARED REFERENCE AND GENE QUANTIFICATION"]
+        G -->|No external reference| MH{"MEGAHIT"}
+        MH --> REF["Shared reference FASTA"]
+        DNA["Matched metagenomic assembly"] -->|reference_assembly set| REF
+
+        REF --> INDEX{"Bowtie2-build"}
+        INDEX --> IDX["Reference index"]
+        IDX --> MAP{"Bowtie2 RNA mapping"}
+        G --> MAP
+        MAP --> BAM["Sorted and indexed sample BAMs"]
+
+        BAM --> STATS{"SAMtools"}
+        STATS --> STATSOUT["Mapping and depth statistics"]
+
+        REF --> PG{"Prodigal"}
+        PG --> PROTEINS["Proteins and CDS sequences"]
+        PG --> ANNOT["GFF and SAF annotations"]
+
+        ANNOT -->|SAF| FC{"featureCounts"}
+        BAM --> FC
+        FC --> COUNTS["Raw paired-fragment counts"]
     end
 
-    %% TEMP FILE STYLING
-    style C fill:#1f2937,stroke:#22d3ee,stroke-dasharray: 5 5,color:#e5e7eb
-    style L fill:#1f2937,stroke:#22d3ee,stroke-dasharray: 5 5,color:#e5e7eb
+    subgraph CAZYME["CAZYME ANNOTATION AND RNA COUNTS"]
+        PROTEINS -->|Proteins| PREP{"Match protein and gene IDs"}
+        ANNOT -->|GFF| PREP
+        PREP --> CAZINPUT["Protein FASTA and ID map"]
+
+        CAZINPUT -->|Protein FASTA| DBCAN{"run_dbcan CAZyme_annotation"}
+        DBCAN --> CAZANNOT["CAZyme annotations"]
+
+        CAZANNOT --> SUMMARY{"Filter annotations and summarize counts"}
+        CAZINPUT -->|ID map| SUMMARY
+        COUNTS --> SUMMARY
+        SUMMARY --> MATRICES["CAZyme gene and family count matrices"]
+    end
+
+    classDef default fill:#1f2937,stroke:#F8B229,color:#e5e7eb;
+    classDef temporary fill:#1f2937,stroke:#22d3ee,stroke-dasharray:5 5,color:#e5e7eb;
+    class C,HBAM temporary;
+    linkStyle default stroke:#F8B229,stroke-width:1.5px;
 ```
 
 ### Snakemake rules
