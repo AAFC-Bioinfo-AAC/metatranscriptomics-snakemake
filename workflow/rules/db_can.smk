@@ -1,12 +1,9 @@
-"""Optional shared-reference CAZyme annotation and RNA fragment count tables."""
+"""Shared-reference CAZyme annotation and RNA fragment count tables."""
 import hashlib
 
 CAZYME_SETTINGS = config.get("cazyme", {})
 if not isinstance(CAZYME_SETTINGS, dict):
     raise ValueError("cazyme must be a YAML mapping.")
-CAZYME_ENABLED = CAZYME_SETTINGS.get("enabled", False)
-if not isinstance(CAZYME_ENABLED, bool):
-    raise ValueError("cazyme.enabled must be a YAML boolean (true or false).")
 CAZYME_MIN_TOOLS = CAZYME_SETTINGS.get("min_tools", 2)
 if isinstance(CAZYME_MIN_TOOLS, bool) or not isinstance(CAZYME_MIN_TOOLS, int) or CAZYME_MIN_TOOLS not in (2, 3):
     raise ValueError("cazyme.min_tools must be 2 or 3.")
