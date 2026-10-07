@@ -19,23 +19,24 @@
 
 ## About
 
-The **Metatranscriptomics Snakemake Pipeline** is a modular workflow designed to process, assemble, and analyze **Illumina paired-end shotgun metatranscriptomic data**. It coordinates analysis—from raw read processing to gene-level quantification using bioinformatics tools integrated through **Snakemake**. The workflow produces transcript assemblies, taxonomic profiles of RNA reads, antimicrobial resistance-associated transcript profiles, and raw gene-count tables for downstream analyses.
+The **Metatranscriptomics Snakemake Pipeline** is a modular workflow designed to process, assemble, and analyze **Illumina paired-end shotgun metatranscriptomic data**. It coordinates analysis from raw read processing to gene-level quantification and CAZyme annotation using bioinformatics tools integrated through **Snakemake**. The workflow produces transcript assemblies, taxonomic profiles of RNA reads, antimicrobial resistance-associated transcript profiles, CAZyme annotations, and raw gene-count tables and CAZy-family count matrices for downstream analyses.
 
-The pipeline consists of **four main stages**:
+The pipeline consists of **five main stages**:
 
 - **Sample read processing** — Quality filtering, removal of host and PhiX reads, and computational rRNA filtering using *fastp*, *Bowtie2*, and *SortMeRNA*.
-- **Short-read analysis** — Taxonomic classification of filtered RNA reads with *Kraken2* using a GTDB-based database, and read-based profiling of antimicrobial resistanc-associated transcripts with *RGI* using CARD.
+- **Short-read analysis** — Taxonomic classification of filtered RNA reads with *Kraken2* using a GTDB-based database, and read-based profiling of antimicrobial resistance-associated transcripts with *RGI* using CARD.
 - **Individual sample assembly** — Transcript assembly with *rnaSPAdes* and assembly evaluation with *rnaQUAST*.
-- **Co-assembly and gene quantification** — Co-assembly of filtered reads across samples with *MEGAHIT*, gene prediction with *Prodigal*, mapping of filtered metatranscriptomic reads with*Bowtie2*, mapping and sequencing-depth statistics with *SAMtools*, and gene-level counting with *FeatureCounts*.
+- **Co-assembly and gene quantification** — Co-assembly of filtered reads across samples with *MEGAHIT*, prediction of prokaryotic coding sequences with *Prodigal*, mapping of filtered metatranscriptomic reads with *Bowtie2*, mapping and sequencing-depth statistics with *SAMtools*, and gene-level counting with *FeatureCounts*.
+- **CAZyme annotation and transcript quantification** — Annotation of predicted proteins from the shared reference using *dbCAN*, followed by generation of raw RNA count matrices for CAZyme genes and CAZy families from the FeatureCounts results.
 
-  💡 When matched metagenomic data are available, a suitable assembly generated from cleaned metagenomic reads can provide a common reference for mapping and quantifying metatranscriptomic reads.
+  💡 When matched metagenomic data are available, a suitable assembly generated from cleaned metagenomic reads can provide a common reference for mapping and quantifying metatranscriptomic reads and annotating CAZymes. Setting reference_assembly to this assembly’s FASTA path bypasses RNA co-assembly for the shared reference.
 
-  Taxonomic profiles derived from RNA reads reflect the representation of classified transcripts rather than directly measuring microbial cell abundance. Gene-count tables require appropriate downstream processing and statistical analysis to     assess differential expression.
+  Taxonomic profiles derived from RNA reads reflect the representation of classified transcripts rather than directly measuring microbial cell abundance. Gene-count tables require appropriate downstream processing and statistical analysis to     assess differential expression. Family counts can overlap because genes assigned to multiple CAZy families contribute their counts to each assigned family.
 
 Some **future enhancements** planned for this workflow include:
 
 - Integration of *CoverM* for mapping metatranscriptomic reads to metagenomic references and summarizing coverage.
-- Addition of a *CAZyme analysis module* for annotation of carbohydrate-active enzymes.
+- KEGG annotation module to assign KEGG Orthology (KO) identifiers to predicted proteins and support functional analyses using KEGG pathways and modules.
 
 ---
 
