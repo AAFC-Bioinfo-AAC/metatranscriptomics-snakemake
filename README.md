@@ -19,21 +19,23 @@
 
 ## About
 
-The **Metatranscriptomics Snakemake Pipeline** is a reproducible, modular workflow designed to process, assemble, and analyze **Illumina paired-end shotgun metatranscriptomic data**. It automates the full analysis—from raw read processing to gene expression quantification—using widely adopted bioinformatics tools integrated through **Snakemake**. The pipeline produces high-quality assemblies, taxonomic and antimicrobial gene profiles, and quantitative gene expression tables suitable for downstream statistical and functional analyses.
+The **Metatranscriptomics Snakemake Pipeline** is a modular workflow designed to process, assemble, and analyze **Illumina paired-end shotgun metatranscriptomic data**. It coordinates analysis—from raw read processing to gene-level quantification using bioinformatics tools integrated through **Snakemake**. The workflow produces transcript assemblies, taxonomic profiles of RNA reads, antimicrobial resistance-associated transcript profiles, and raw gene-count tables for downstream analyses.
 
 The pipeline consists of **four main stages**:
 
-- **Sample Read Processing** — Quality filtering, removal of host and PhiX contamination, and ribosomal RNA (rRNA) depletion using *fastp*, *Bowtie2*, and *SortMeRNA*.
-- **Short-Read Analysis** — Taxonomic classification with *Kraken2* (using *GTDB*) and antimicrobial resistance profiling with *RGI* (using *CARD*).
-- **Individual Sample Assembly** — Transcript assembly with *RNA SPAdes* and quality assessment via *rnaQUAST*.
-- **Co-assembly and Expression Quantification** — Global co-assembly with *MEGAHIT*, followed by read mapping (*Bowtie2*), coverage assessment (*SAMtools*), gene prediction (*Prodigal*), and feature quantification (*FeatureCounts*).
+- **Sample read processing** — Quality filtering, removal of host and PhiX reads, and computational rRNA filtering using *fastp*, *Bowtie2*, and *SortMeRNA*.
+- **Short-read analysis** — Taxonomic classification of filtered RNA reads with *Kraken2* using a GTDB-based database, and read-based profiling of antimicrobial resistanc-associated transcripts with *RGI* using CARD.
+- **Individual sample assembly** — Transcript assembly with *rnaSPAdes* and assembly evaluation with *rnaQUAST*.
+- **Co-assembly and gene quantification** — Co-assembly of filtered reads across samples with *MEGAHIT*, gene prediction with *Prodigal*, mapping of filtered metatranscriptomic reads with*Bowtie2*, mapping and sequencing-depth statistics with *SAMtools*, and gene-level counting with *FeatureCounts*.
 
-  💡 *If metagenomic sequencing data are available for the same samples, trimmed and host/PhiX-filtered metagenomic reads should be used in the co-assembly stage.*
+  💡 When matched metagenomic data are available, a suitable assembly generated from cleaned metagenomic reads can provide a common reference for mapping and quantifying metatranscriptomic reads.
 
-Some **future enhancements** planned for this pipeline include:
+  Taxonomic profiles derived from RNA reads reflect the representation of classified transcripts rather than directly measuring microbial cell abundance. Gene-count tables require appropriate downstream processing and statistical analysis to     assess differential expression.
 
-- Integration of *CoverM* for mapping metatranscriptomic reads to assembled metagenomes.
-- Addition of a *CAZyme analysis module* for functional annotation of carbohydrate-active enzymes.
+Some **future enhancements** planned for this workflow include:
+
+- Integration of *CoverM* for mapping metatranscriptomic reads to metagenomic references and summarizing coverage.
+- Addition of a *CAZyme analysis module* for annotation of carbohydrate-active enzymes.
 
 ---
 
