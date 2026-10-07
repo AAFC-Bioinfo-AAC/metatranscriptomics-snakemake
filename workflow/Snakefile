@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+import csv, os, re
+
 # -------------------------------------------------------------------
 # Environment and project paths
 # -------------------------------------------------------------------
@@ -193,17 +196,8 @@ rule all:
         f"{SOFTWARE_VERSIONS}/software_versions_summary.txt",
         f"{SOFTWARE_VERSIONS}/key_bioinformatics_software.txt",
         f"{SOFTWARE_VERSIONS}/key_bioinformatics_software.html",
-        # Optional CAZyme annotations and combined RNA count matrices.
-        CAZYME_TARGETS if CAZYME_ENABLED else []
-
-
-
-
-
-
-
-
-
+        # CAZyme annotations and combined RNA count matrices.
+        CAZYME_TARGETS
 
 
 
