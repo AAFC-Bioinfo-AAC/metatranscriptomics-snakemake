@@ -152,39 +152,59 @@ Quality-filtering parameters should be selected according to the sequencing plat
 
 **Rule: `fastp_pe` Quality Control & Trimming**
 
-- **Purpose:** Performs adapter trimming, quality trimming, and filtering of paired-end reads.
-- **Inputs:** `samplesheet.csv` defines sample IDs and corresponding read pairs.
-- **Outputs:**
-
-  - Trimmed paired reads: `sample_r1.fastq.gz`, `sample_r2.fastq.gz`
-- **Notes:**
-
-  - Parameters are defined in **`config/config.yaml`** for `fastp`.
-  - These files are marked as temporary in the rule: `sample_u1.fastq.gz`, `sample_r2.fastq.gz`,`sample.fastp.html`, and `sample.fastp.json`. If these are required the temporary() flag on the output files in the rule can be removed.
-
-**`rule bowtie2_align` *Alignment to Host/PhiX***
-
-- **Purpose:** Aligns trimmed reads to a user created reference (Host/PhiX) that has been indexed by Bowtie2 index.
+- **Purpose:** Uses *fastp* to perform adapter detection, adapter trimming, quality trimming, quality filtering, and length filtering of paired-end reads.
 - **Inputs:**
-
-  - Trimmed paired reads: `*_r1.fastq.gz`, `*_r2.fastq.gz`
-  - Bowtie2 index files with the suffix `.bt2`
+- Paired-end fastq files specified for each sample in `samplesheet.csv`.
 - **Outputs:**
-
-  - Sorted BAM file: `sample.bam`
+  - Trimmed R1 reads: `sample_r1.fastq.gz`
+  - Trimmed R2 reads: `sample_r2.fastq.gz`
+  - Unpaired R1 reads: `sample_u1.fastq.gz`
+  - Unpaired R2 reads: `sample_u2.fastq.gz`
+  - HTML quality-control report: `sample.fastp.html`
+  - JSON quality-control report: `sample.fastp.json`
 - **Notes:**
+  - Only the paired trimmed reads are used by subsequent preprocessing rules.
+  - The four fastq outputs from this rule are marked with the Snakemake `temp()` function and are removed automatically when they are no longer required.
+  - The HTML and JSON quality-control reports are retained automatically in the `fastp` subdirectory beneath the configured log directory.
+  - To retain intermediate FASTQ files, remove `temp()` from the corresponding outputs in `workflow/rules/preprocessing.smk`.
+  - The processing log is written to `fastp/sample.fastp.log` beneath the configured log directory.
 
-  - Uses **default parameters** from `Bowtie2`.
-  - This file is marked as temporary in the rule: `sample.bam`. If it is required the temporary() flag on the output file in the rule can be removed.
 
-**`rule extract_unmapped_fastq` *Decontamination***
+**Rule: `bowtie2_align` — Host and PhiX alignment**
 
-- **Purpose:** extracts the reads that did not align into paired-end FASTQ files depleted of host and PhiX reads
+- **Purpose:** Aligns the trimmed paired reads against a user-supplied Bowtie2 index containing the relevant host genome sequence and PhiX reference sequence. The alignments are converted into a coordinate-sorted BAM file using *SAMtools*.
 - **Inputs:**
-  - Sorted BAM file: `sample.bam`
+  - Trimmed R1 reads: `sample_r1.fastq.gz`
+  - Trimmed R2 reads: `sample_r2.fastq.gz`
+  - Complete Bowtie2 index specified by `bowtie2_index` in `config/config.yaml`
 - **Outputs:**
-  - Clean read pairs: `sample_trimmed_clean_R1.fastq.gz`/`sample_trimmed_clean_R2.fastq.gz`
+  - Coordinate-sorted alignment file: `bam/sample.bam`
+- **Notes:**
+  - The workflow currently declares the six `.bt2` index files; `.bt2l` large indexes are not currently supported by its input declarations.
+  - Bowtie2 default alignment settings are used apart from the configured number of threads and the addition of a read-group ID and sample tag.
+  - Available threads are divided among *Bowtie2* and *SAMtools*. The rule requires at least three allocated threads.
+  - The BAM file is marked with `temp()` because it is an intermediate file used to recover host/PhiX-depleted paired reads.
+  - The BAM contains both mapped and unmapped records.
+  - The alignment log is written to `bowtie2/sample.log` beneath the configured log directory.
 
+**Rule: `extract_unmapped_fastq` — Host and PhiX read removal**
+
+- **Purpose:** Extracts paired reads for which neither mate aligned to the combined host and PhiX reference.
+- **Inputs:**
+  - Coordinate-sorted alignment file: `bam/sample.bam`
+- **Outputs:**
+  - Host/PhiX-depleted R1 reads: `sample_trimmed_clean_R1.fastq.gz`
+  - Host/PhiX-depleted R2 reads: `sample_trimmed_clean_R2.fastq.gz`
+- **Notes:**
+  - *SAMtools* retains read pairs for which both mates are unmapped and excludes secondary and supplementary alignments.
+  - Pairs with one mapped mate are excluded, even if the other mate is unmapped.
+  - The retained BAM records are sorted by read name before *BEDTools* converts them back into paired fastq files.
+  - The fastq files are compressed using *pigz*.
+  - Available threads are divided among *SAMtools*, *BEDTools* and two *pigz* compressors. The rule requires at least five allocated threads.
+  - Temporary sorting files are written beneath `TMPDIR` or `/tmp` if `TMPDIR` is unset, and removed when the rule finishes.
+  - The host/PhiX-depleted fastq files are retained as standard outputs; this rule does not use `protected()`.
+  - These host/PhiX-depleted paired reads are inputs to the SortMeRNA module. Its rRNA-filtered paired outputs are used for downstream taxonomic profiling, ARG profiling, assembly and RNA mapping.
+  - The extraction log is written to `bedtools/sample.log` beneath the configured log directory.
 ---
 
 #### Module `sortmerna.smk`
