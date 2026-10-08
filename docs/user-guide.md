@@ -242,33 +242,60 @@ The following value is supplied in `config/config.yaml`.
 
 #### Module `taxonomy.smk`
 
-**`rule kraken2` *Assign Taxonomy***
+This module uses *Kraken2* and *Bracken* to generate taxonomic profiles from rRNA-depleted RNA read pairs. 
 
-- **Purpose:** Assign taxonomy to the clean reads using a Kraken2-formatted GTDB
+**Default configuration settings**
+
+The following values are supplied in `config/config.yaml`. These workflow settings may differ from the defaults used by the individual software packages.
+
+| Configuration setting | Default | Description |
+|---|---:|---|
+| `kraken2: threads` | `2` | Number of threads used by Kraken2. |
+| `kraken2: conf_threshold` | `0.5` | Kraken2 classification confidence threshold. |
+| `bracken: readlen` | `150` | Read length, in bases, used to select the Bracken distribution file. |
+| `bracken: threshold_species` | `10` | Minimum Kraken-assigned count in a species clade before abundance re-estimation. |
+| `bracken: threshold_genus` | `10` | Minimum Kraken-assigned count in a genus clade before abundance re-estimation. |
+| `bracken: threshold_phylum` | `10` | Minimum Kraken-assigned count in a phylum clade before abundance re-estimation. |
+
+**Rule: `kraken2` — Taxonomic classification**
+
+-- **Purpose:** Assigns taxonomy to rRNA-depleted RNA read pairs using a Kraken2-formatted, GTDB-based reference database.
 - **Inputs:**
-  - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
+  - rRNA-depleted paired fastq files: `sample_rRNAdep_R1.fastq.gz` / `sample_rRNAdep_R2.fastq.gz`
+  - Database files: `hash.k2d`, `opts.k2d` and `taxo.k2d` in the directory specified by `gtbd_DB` in `config/config.yaml`.
 - **Outputs:**
-  - Kraken and report for each sample: `sample.kraken` and `sample.report.txt`
+  - Read-pair classification output: `sample.kraken`
+  - Sample taxonomic summary: `sample.report.txt`
 - **Notes:**
-  - Must use **Large compute node** with at least 600 GB.
+  - Memory requirements depend on the database size. The example SLURM profile requests `mem_mb: 600000`; adjust this allocation and the partition to suit the selected database and cluster.
+  - The rule uses `--paired`, so each read pair receives a single classification.
+  - The `--report-zero-counts` option includes database taxa with zero counts in the summary report.
+  - The processing log is written to `kraken2/sample.log` beneath the configured log directory.
 
-**`rule bracken` *Abundance Estimation***
+**Rule: `bracken` — Taxonomic count estimation**
 
-- **Purpose:** Refines Kraken classification to provide abundance estimates at the species, genus and phylum level for each sample.
-- **Inputs:** Kraken report: `sample.report.txt`
-- **Outputs:**
-  - Bracken reports at:
-    - Species level: `sample_bracken.species.report.txt`
-    - Genus level: `sample_bracken.genus.report.txt`
-    - Phylum level: `sample_bracken.phylum.report.txt`
-- **Notes:**
-  - Outputs are used as **intermediate files** for downstream rule: `combine_bracken_outputs`
-  - This rule is also making `sample.report_bracken_species.txt` at each level in the `kraken2` directory. At some point see if we can either place these into a directory called `reports` or have them cleaned up in the shell block.
-
-**`rule combine_bracken_outputs` *Merging Abundance Tables***
-
+- **Purpose:** Uses *Bracken* to re-estimate taxonomic read-pair counts at the species, genus and phylum ranks for each sample.
 - **Inputs:**
-  - Bracken reports at:
+  - Kraken report: `sample.report.txt`
+  - Bracken distribution file from the same database: `database150mers.kmer_distrib` with the default `bracken: readlen` setting.
+- **Outputs:**
+  - Bracken abundance tables at:
+    - Species level: `species/sample_bracken.species.report.txt`
+    - Genus level: `genus/sample_bracken.genus.report.txt`
+    - Phylum level: `phylum/sample_bracken.phylum.report.txt`
+- **Notes:**
+  - These tables are retained outputs and inputs to `combine_bracken_outputs`; they are not marked with `temp()`.
+  - The distribution file must match `bracken.readlen`. Select a read length appropriate for the processed reads and ensure the corresponding distribution file is available.
+  - Bracken’s `-t` option specifies a count threshold, not a thread count. This rule allocates one thread.
+  - Bracken also creates Kraken-style reports beside the input Kraken report. These are undeclared side outputs and are not automatically cleaned up by this rule.
+  - The processing log is written to `bracken/sample.log` beneath the configured log directory.
+
+
+**Rule: `combine_bracken_outputs` — Merging abundance tables**
+
+- **Purpose:** Combines per-sample Bracken abundance tables into one table for each taxonomic rank.
+- **Inputs:**
+  - Bracken abundance tables for all samples at:
     - Species level: `sample_bracken.species.report.txt`
     - Genus level: `sample_bracken.genus.report.txt`
     - Phylum level: `sample_bracken.phylum.report.txt`
@@ -277,20 +304,30 @@ The following value is supplied in `config/config.yaml`.
     - Species level: `merged_abundance_species.txt`
     - Genus level: `merged_abundance_genus.txt`
     - Phylum level: `merged_abundance_phylum.txt`
+- **Notes:**
+  - Uses `combine_bracken_outputs.py`, supplied with Bracken.
+  - Each table contains taxon names, taxonomy IDs, taxonomic ranks and per-sample estimated counts and fractions.
+  - Fractions are calculated by dividing each estimated count by the sum of reported estimated counts for that sample and rank. Unclassified reads are excluded from this denominator.
+  - The processing log is written to `bracken/combine_bracken_outputs.log` beneath the configured log directory.
 
-**`rule bracken_extract` *Relative Abundance Tables***
+**Rule: `bracken_extract` — Count and relative-abundance tables**
 
-- **Purpose:** generate tables for the raw and relative abundance for each taxonomic level for all samples
+- **Purpose:** Extracts the estimated-count and relative-abundance columns from the merged Bracken tables into separate CSV files for each taxonomic rank.
 - **Inputs:**
   - Combined abundance tables for:
     - Species level: `merged_abundance_species.txt`
     - Genus level: `merged_abundance_genus.txt`
     - Phylum level: `merged_abundance_phylum.txt`
 - **Outputs:**
-  - Combined relative and raw abundance tables for
+  - Combined relative and raw abundance tables for:
     - Species level: `Bracken_species_raw_abundance.csv` and `Bracken_species_relative_abundance.csv`
     - Genus level: `Bracken_genus_raw_abundance.csv` and `Bracken_genus_relative_abundance.csv`
-    - Phylum level: `Bracken_phylum_raw_abundance.csv` and `Bracken_genus_relative_abundance.csv`
+    - Phylum level: `Bracken_phylum_raw_abundance.csv` and `Bracken_phylum_relative_abundance.csv`
+- **Notes:**
+  - Uses `workflow/scripts/extract_bracken_columns.py`.
+  - The “raw abundance” files contain Bracken-estimated read-pair counts.
+  - Relative abundances are fractions between `0` and `1`. The extraction script copies these values from the merged tables without converting them to percentages.
+  - Taxon names, taxonomy IDs and taxonomic ranks are retained, and sample-column suffixes are removed to leave sample IDs.
 
 ---
 
