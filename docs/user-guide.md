@@ -619,29 +619,28 @@ This module records installed package versions from environments present beneath
 
 ## Data
 
-The raw input data must be in the form of paired-end FASTQ files generated from metatranscriptomics experiments.
+The raw input data must be paired-end fastq files generated from Illumina shotgun metatranscriptomics experiments.
 
-A set of sub-sampled raw FASTQ files are provided for testing (`data/test_LLC82Sep06GR_{r1,r2}*.fastq.gz`). These files can be used for all workflow stages that operate on un-assembled data (e.g., quality control, filtering, mapping, and annotation). For the `RNA-SPAdes` step, the test sample (or any poor/low coverage samples) will produce an empty fasta file to let Snakemake know that the file output has been created. For such samples, the next step in the pipeline (rnaQUAST) will be skipped.
+Two subsampled raw read files are provided for testing:
+
+- `data/test_LLC82Sep06GR_r1.fastq.gz`
+- `data/test_LLC82Sep06GR_r2.fastq.gz`
+
+The corresponding sample is listed in `config/samplesheet.csv`. Set `reads_dir` in `config/config.yaml` to the directory containing these files, or copy them into the configured input directory.
+
+These files provide small inputs for testing preprocessing and read-based taxonomic and antimicrobial resistance analyses, provided that the relevant databases are configured. Their reduced sequencing depth may be insufficient for the assembly-dependent stages.
+
+In the revised workflow, `rna_spades` fails if assembly is unsuccessful or produces no nonempty transcript fasta file. It does not create an empty placeholder or automatically skip rnaQUAST. Completing the default workflow requires successful assemblies and all required databases, including dbCAN.
 
 ---
 
 ## Parameters
 
-The `config/config.yaml` file contains the editable pipeline parameters, thread allocation for rules with more than one core, and the relative file paths for input and output. The prefix of the absolute file path must go in `.env`. Most tools in the pipeline have default parameters. The tools with parameters different from default or that can be edited in the `config/config.yaml` file are listed below.
+The `config/config.yaml` file contains editable pipeline parameters, thread allocations, database locations, and input and output paths.
 
-| Parameter                       | Value                                                                                                                                                                    |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| samplesheet.csv                 | The samplesheet is described here:[Sample list](#33-sample-list)                                                                                                         |
-| fastp:*cut_tail*                | If true, trim low quality bases from the 3′ end until a base meets or exceeds the*cut_mean_quality* threshold. If false,disabled.                                       |
-| fastp:*cut_front*               | If true, trim low quality bases from the 5′ end until a base meets or exceeds the*cut_mean_quality* threshold. If false,disabled.                                       |
-| fastp:*cut_mean_quality*        | A positive integer specifying the minimum average quality score threshold for sliding window trimming.                                                                   |
-| fastp:*cut_window_size*         | A positive integer specifying the sliding window size in bp when using*cut_mean_quality*.                                                                                |
-| fastp:*qualified_quality_phred* | A positive integer specifying the minimum Phred score that a base needs to be considered qualified.                                                                      |
-| fastp:*detect_adapter_for_pe*   | If true, auto adapter detection. If false,disabled.                                                                                                                      |
-| fastp:*length_required*         | Reads shorter then this positive integer will be discarded.                                                                                                              |
-| kraken2:*conf_threshold*        | Interval between 0 and 1. Higher values require more of a read’s k-mers to match the same taxon before it is classified, increasing precision but reducing sensitivity. |
-| bracken:*readlen*               | The read length of your data in bp.                                                                                                                                      |
-| rna_spades:*memory*             | Memory limit set in mb.                                                                                                                                                  |
+Parameters and supplied workflow defaults are described under the corresponding modules in [Snakemake rules](#snakemake-rules). These workflow settings may differ from the default settings used by the individual software packages.
+
+Job memory and other scheduler resources are configured separately in the SLURM profile or rule resources.
 
 ---
 
@@ -651,37 +650,113 @@ The `config/config.yaml` file contains the editable pipeline parameters, thread 
 
 #### Software
 
-- Snakemake version 9.6.0 *Most rules also tested with Snakemake version 9.9.0.*
-- Snakemake-executor-plugin-slurm version 1.6.1. *Earlier version resulted in SLURM communication issues*
+- Snakemake version `9.20.0` is currently used to run the pipeline. 
+- Snakemake-executor-plugin-slurm version `1.6.1`, when running through the SLURM executor. Earlier versions were reported to cause SLURM communication issues during pipeline testing.
+- Conda, for creating and using the environments specified in `workflow/envs`.
+- The `python-dotenv` package in the environment running Snakemake, for loading `.env`.
+
+Bioinformatics software dependencies are specified in the per-rule environment files and are created through Snakemake’s Conda integration. The CAZyme environment specifies `dbcan=5.2.8`; database preparation should use this version.
 
 #### Databases
 
 - **Bowtie2**
-  Bowtie2 uses an index of reference sequences to align reads. This index must be created before running the pipeline. The index files (with the `.bt2` extension) must be located in the directory specified in `config/config.yaml`. Make sure to update the prefix of these files in the `config.yaml` file. For instructions on creating the index please see the [Bowtie2 GitHub repository](https://github.com/BenLangmead/bowtie2).
-- **SortMeRNA**
-  SortMeRNA requires a ribosomal (r)RNA database in the `rRNA_DB` directory. Update the `config.yaml` file with the filename of the database used. You can download the database from [SortMeRNA releases](https://github.com/sortmerna/sortmerna/releases/tag/v4.3.3). The file `smr_v4.3_default_db.fasta` was used for pipeline testing.
-- **Kraken2**
-  Kraken2 requires a Kraken2-formatted GTDB. The GTDB release tested with this pipeline was 220. Pre-built Kraken2-formatted GTDB are available from [Kraken 2, KrakenUniq and Bracken indexes](https://benlangmead.github.io/aws-indexes/k2), and instructions for building custom Kraken2-formatted GTDBs are available on the [Kraken2 GitHub repository](https://github.com/DerrickWood/kraken2).
-- **RGI BWT/CARD**  RGI BWT requires the CARD (Comprehensive Antibiotic Resistance Database) database. The version tested in this pipeline was 4.0.1. The database can be located on a common drive or in your working directory.
-  Instructions for installing the CARD database are available on [CARD RGI GitHub repository](https://github.com/arpcard/rgi/blob/master/docs/rgi_bwt.rst).
-  Steps copied from the RGI documentation:
 
-  **Download CARD data:**
+  Bowtie2 requires a combined reference index containing the relevant host genome and PhiX sequences. Build this index before running preprocessing and set `bowtie2_index` in `config/config.yaml` to its basename, without an index-file suffix.
+
+  The current workflow explicitly requires all six `.bt2` files. It does not currently declare `.bt2l` files as inputs.
+
+  Instructions are available in the [Bowtie2 documentation](https://github.com/BenLangmead/bowtie2).
+
+- **SortMeRNA**
+
+  SortMeRNA requires a reference rRNA fasta file. Set `sortmerna_DB` in `config/config.yaml` to the file’s location; the directory name is not fixed.
+
+  The original pipeline was tested with `smr_v4.3_default_db.fasta`, distributed in the `database.tar.gz` archive linked from [SortMeRNA release v4.3.3](https://github.com/sortmerna/sortmerna/releases/tag/v4.3.3).
+
+- **Kraken2 and Bracken**
+
+  Kraken2 requires a Kraken2-formatted GTDB database. The original pipeline was tested with GTDB release `220`.
+
+  Set the database directory using the existing configuration key `gtbd_DB`. Bracken also requires a read-length-specific distribution built from the same Kraken2 database, such as `database150mers.kmer_distrib` when `bracken: readlen` is `150`.
+
+  Prebuilt databases are available from [Kraken2 and Bracken indexes](https://benlangmead.github.io/aws-indexes/k2). Check the release and included Bracken distributions before downloading; available packages may use a different GTDB release.
+
+- **RGI BWT/CARD**
+
+  RGI BWT requires a prepared CARD local database and its KMA index. The original pipeline was tested with CARD version `4.0.1`; this database version is separate from the workflow’s RGI software version, `6.0.4`.
+
+  Prepare the database before running the workflow. Set `card_latest` to the prepared `localDB` directory, or set `RGI_CARD` in `.env` or the shell environment. A nonempty `RGI_CARD` takes precedence over `card_latest`.
+
+  The revised workflow requires these nonempty files within the configured database directory:
+
+  - `card.json`
+  - `card_reference.fasta`
+  - `loaded_databases.json`
+  - `bwt/card_reference/kma.comp.b`
+  - `bwt/card_reference/kma.length.b`
+  - `bwt/card_reference/kma.name`
+  - `bwt/card_reference/kma.seq.b`
+
+  Activate an environment containing RGI `6.0.4` and KMA, then run the following in a dedicated preparation directory. The CARD version is read from `card.json` to select the generated annotation filename. The loading steps follow the [RGI BWT documentation](https://github.com/arpcard/rgi/blob/master/docs/rgi_bwt.rst).
 
   ```bash
-  wget https://card.mcmaster.ca/latest/data
-  tar -xvf data ./card.json
+  wget -O card-data.tar.bz2 https://card.mcmaster.ca/latest/data
+  tar -xjf card-data.tar.bz2 ./card.json
 
-  rgi load --card_json /path/to/card.json --local
+  rgi load --card_json card.json --local
+  rgi card_annotation -i card.json > card_annotation.log 2>&1
 
-  rgi card_annotation -i /path/to/card.json > card_annotation.log 2>&1
+  card_data_version=$(python -c \
+      'import json; print(json.load(open("card.json"))["_version"])')
 
-  rgi load -i /path/to/card.json --card_annotation card_database_v3.0.1.fasta --local
+  rgi load --card_json card.json \
+      --card_annotation "card_database_v${card_data_version}.fasta" \
+      --local
+
+  mkdir -p localDB/bwt/card_reference/kma
+
+  kma index \
+      -i localDB/card_reference.fasta \
+      -o localDB/bwt/card_reference/kma
+
+  rgi database --version --local
   ```
 
-  **Note:** the files after loading and annotating card must be called `card.json` and `card_reference.fasta`
+  The explicit KMA indexing step prepares the index required by the revised workflow before mapping begins. The download URL retrieves the latest CARD release, which may differ from `4.0.1`. Preserve the downloaded release and prepared database for reproducible analyses.
+
 - **BUSCO**
-  rnaQUAST uses the BUSCO bacterial and archaeal lineages. The directory path to these lineages must be provided in `config/config.yaml`. The [BUSCO lineages](https://busco.ezlab.org/busco_userguide.html#lineage-datasets) are available on the webpage.
+
+  rnaQUAST uses the configured bacterial and archaeal BUSCO lineage datasets. Provide the extracted dataset directories under `busco_lineages: bacteria` and `busco_lineages: archaea` in `config/config.yaml`, rather than paths to their download archives.
+
+  The supplied configuration names `bacteria_odb12` and `archaea_odb12`. Ensure that the datasets are compatible with the BUSCO version installed in the rnaQUAST environment. See the [BUSCO lineage documentation](https://busco.ezlab.org/busco_userguide.html#lineage-datasets).
+
+- **dbCAN — required CAZyme database**
+
+  The default workflow requires a prepared dbCAN database directory containing:
+
+  - `CAZy.dmnd`
+  - `dbCAN.hmm`
+  - `dbCAN-sub.hmm`
+  - `fam-substrate-mapping.tsv`
+
+  Create the preparation environment and download the CAZyme databases:
+
+  ```bash
+  conda create -n dbcan-5.2.8 \
+      -c conda-forge -c bioconda \
+      --strict-channel-priority \
+      python=3.12 dbcan=5.2.8
+
+  conda activate dbcan-5.2.8
+
+  run_dbcan database \
+      --db_dir /absolute/path/to/dbCAN \
+      --no-cgc
+  ```
+
+  Set `dbcan_DB_path` to this directory and record the database snapshot in `cazyme: database_release`. The default downloader uses a changing database snapshot, so retain the prepared files for subsequent runs. `--no-cgc` omits databases used for CAZyme gene-cluster analysis. See [Preparing dbCAN databases](https://run-dbcan.readthedocs.io/en/latest/user_guide/prepare_the_database.html).
+
+---
 
 ### Setup Instructions
 
