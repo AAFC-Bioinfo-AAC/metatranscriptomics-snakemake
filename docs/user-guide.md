@@ -333,37 +333,59 @@ The following values are supplied in `config/config.yaml`. These workflow settin
 
 #### Module `amr_short_reads.smk`
 
-**`rule rgi_reload_database` *Load CARD DB***
+This module maps rRNA-depleted RNA reads to CARD reference sequences using *RGI BWT* and *KMA* to profile antimicrobial resistance-associated transcripts.
 
-- **Purpose:** Checks if the CARD Database has been loaded from a common directory or user specific directory
+**Default configuration settings**
+
+The following value is supplied in `config/config.yaml`.
+
+| Configuration setting | Default | Description |
+|---|---:|---|
+| `rgi_bwt: threads` | `8` | Number of threads supplied to RGI BWT. |
+
+Set `RGI_CARD` in the environment or `.env` to the prepared CARD/RGI `localDB` directory. If `RGI_CARD` is unset, the workflow uses `card_latest` from `config/config.yaml`. Database loading and KMA index preparation must be completed before running this module.
+
+**Rule: `rgi_validate_database` — CARD database validation**
+
+- **Purpose:** Checks that the required files for a preloaded CARD database and its KMA index are present and nonempty, then queries the loaded CARD version using `rgi database --version --local`.
 - **Inputs:**
   - `card_reference.fasta`
   - `card.json`
+  - `loaded_databases.json`
+  - KMA index files beneath `bwt/card_reference/`: `kma.comp.b`, `kma.length.b`, `kma.name` and `kma.seq.b`
 - **Outputs:**
-  - Done marker `rgi_reload_db.done` to prevent the rule from re-running every time the pipeline is called.
+  - Validation marker: `rgi_card_db.validated` beneath the configured log directory.
+- **Notes:**
+  - The marker records successful validation and allows Snakemake to track this dependency. Validation can run again when its inputs or tracked rule settings change.
+  - The prepared database is accessed through a `localDB` symlink inside a private temporary working directory.
+  - The validation log is written to `rgi/rgi_validate_database.log` beneath the configured log directory.
 
-**`symlink_rgi_card` *Symlink CARD to the working directory***
+Database linking is handled within the validation and mapping rules; there is no separate `symlink_rgi_card` rule in the revised module.
 
-- **Purpose:** Prevent the re-loading of the CARD DB
+**Rule: `rgi_bwt` — AMR-associated transcript profiling**
 
-**`rule rgi_bwt` *Antimicrobial Resistance Gene Profiling***
-
-- **Purpose:** performs antimicrobial resistance gene profiling on the cleaned reads using *k*-mer alignment (kma)
+- **Purpose:** Maps rRNA-depleted paired reads to CARD nucleotide reference sequences using *KMA* through *RGI BWT*.
 - **Inputs:**
-
-  - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
+  - rRNA-depleted paired fastq files: `sample_rRNAdep_R1.fastq.gz` / `sample_rRNAdep_R2.fastq.gz`
+  - Database validation marker: `rgi_card_db.validated`
 - **Outputs:**
-
   - `sample_paired.allele_mapping_data.txt`
   - `sample_paired.artifacts_mapping_stats.txt`
   - `sample_paired.gene_mapping_data.txt`
   - `sample_paired.overall_mapping_stats.txt`
   - `sample_paired.reference_mapping_stats.txt`
 - **Notes:**
+  - Outputs are written to a sample-specific subdirectory beneath `amr_screening_dir`.
+  - Explicitly selects KMA (`-a kma`), the configured thread count (`-n`), the prepared local database (`--local`) and RGI cleanup (`--clean`). Other mapping options use RGI defaults.
+  - With the pinned RGI version `6.0.4` and these options, mapping uses CARD protein homolog models.
+  - RGI BWT reports read counts: mapped R1 and R2 mates can each contribute a count. It does not perform abundance normalization.
+  - Memory requirements depend on the sample and database size. The example SLURM profile requests `mem_mb: 64000`; adjust the allocation as needed.
+  - These files are marked as temporary in the rule: `sample_paired.allele_mapping_data.json`, `sample_paired.sorted.length_100.bam`, and `sample_paired.sorted.length_100.bam.bai`. Snakemake removes them when they are no longer required. To retain them, remove `temp()` from the corresponding outputs in `workflow/rules/amr_short_reads.smk`.
+  - Each mapping job accesses CARD through a `localDB` symlink in its own temporary working directory beneath `TMPDIR`, or `/tmp` if `TMPDIR` is unset. That directory is removed when the rule finishes.
+  - The processing log is written to `rgi/bwt_sample.log` beneath the configured log directory.
+  - Transcript mapping alone does not establish phenotypic resistance or confirm resistance-conferring mutations.
 
-  - Uses default RGI BWT parameters.
-  - For large sample files the large memory node may be required.
-  - These files are marked as temporary in the rule: `sample_paired.allele_mapping_data.json`, `sample_paired.sorted.length_100.bam`, and `sample_paired.sorted.length_100.bam.bai`. If these are required the temporary() flag on the output files in the rule can be removed.
+---
 
 ---
 
