@@ -1112,23 +1112,44 @@ Previously reported Kraken2 timings with a 600 GB allocation were:
 These timings describe the tested configuration. Memory requirements depend on database size, and runtime also depends on the input reads and hardware. Use the Snakemake report to review recorded job runtimes and refine resource allocations.
 ## Output
 
-**All output file paths are set in the `config/config.yaml` file and need to be edited prior to running the pipeline.**
+Output directories are configured in `config/config.yaml` and should be reviewed before running the pipeline. Output filenames are defined in the workflow rules and scripts.
 
-The following table includes the key outputs of the metatranscriptomics pipeline. The [Snakemake rules](#snakemake-rules) section provides greater detail on all file outputs.
+The following table lists the key outputs of the metatranscriptomics pipeline. The [Snakemake rules](#snakemake-rules) section provides further details.
 
-| Output Type                  | Description                                                                                                    | Filename                                                                                                                                                                                                                |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Processed sample reads       | Processed reads with Host reads and rRNA removed.                                                              | sample_rRNAdep_R1.fastq.gz / sample_rRNAdep_R2.fastq.gz                                                                                                                                                                 |
-| Assembled transcripts        | Individual sample assemblies                                                                                   | sample.fasta                                                                                                                                                                                                            |
-| Transcripts from Co-assembly | Co-assembly of all samples                                                                                     | final.contigs.fa                                                                                                                                                                                                        |
-| Report                       | Kraken taxonomy summary for each sample                                                                        | sample.report.txt                                                                                                                                                                                                       |
-| Report                       | Bracken report for the raw, and relative abundance at each taxonomic level                                     | Bracken_species_raw_abundance.csv, Bracken_species_relative_abundance.csv,Bracken_genus_raw_abundance.csv, Bracken_genus_relative_abundance.csv, Bracken_phylum_raw_abundance.csv, Bracken_genus_relative_abundance.csv |
-| Report                       | Antimicrobial resistance gene profiling using RGI and the CARD.                                                | sample_paired.allele_mapping_data.txt, sample_paired.artifacts_mapping_stats.txt, sample_paired.gene_mapping_data.txt, sample_paired.overall_mapping_stats.txt, sample_paired.reference_mapping_stats.txt               |
-| Report                       | rnaQUAST quality control report for individual sample assemblies using the BUSCO bacteria and archaea lineages | Reports are found in`sample_bacteria/` and `sample_archaea/` directories which contain the short_report files with .pdf, .tsv, and .txt extensions                                                                      |
-| Report                       | Alignment statistics of the sample reads to the co-assembly                                                    | sample.flagstat.txt                                                                                                                                                                                                     |
-| Report                       | Per-base sequencing depth across the co-assembly                                                               | sample.coverage.txt.gz                                                                                                                                                                                                  |
-| Report                       | Sequence level mapping statistics with the sample contig name                                                  | sample.idxstats.txt.gz                                                                                                                                                                                                  |
-| Annotation files             | Annotation tables for gene prediction of the co-assembly with protein sequences and nucleotide sequences       | coassembly.faa, coassembly.fna, coassembly.gff, coassembly.saf                                                                                                                                                          |
-| Report                       | Feature count table for each sample                                                                            | sample_counts.txt                                                                                                                                                                                                       |
+In the filenames below, `sample` represents the sample ID from `samplesheet.csv`. Files are written beneath their configured output directories. Paths beginning with `annotation/` are relative to the configured `dbcan_output_dir`.
+
+| Output type | Description | Filename or directory |
+|---|---|---|
+| Processed sample reads | Paired reads after quality filtering, host and PhiX filtering, and computational rRNA filtering. | `sample_rRNAdep_R1.fastq.gz`<br>`sample_rRNAdep_R2.fastq.gz` |
+| Read-quality reports | HTML and JSON reports generated by fastp. | `fastp/sample.fastp.html`<br>`fastp/sample.fastp.json` |
+| Assembled transcripts | Individual sample transcript assemblies generated by rnaSPAdes. | `sample.fasta` |
+| RNA coassembly | Contigs generated by MEGAHIT from filtered reads across all samples, when an external reference assembly is not supplied. | `final.contigs.fa` |
+| Kraken2 taxonomy outputs | Per-read-pair classifications and a taxonomic summary for each sample. | `sample.kraken`<br>`sample.report.txt` |
+| Bracken species tables | Combined estimated counts and relative abundance at the species level. | `Bracken_species_raw_abundance.csv`<br>`Bracken_species_relative_abundance.csv` |
+| Bracken genus tables | Combined estimated counts and relative abundance at the genus level. | `Bracken_genus_raw_abundance.csv`<br>`Bracken_genus_relative_abundance.csv` |
+| Bracken phylum tables | Combined estimated counts and relative abundance at the phylum level. | `Bracken_phylum_raw_abundance.csv`<br>`Bracken_phylum_relative_abundance.csv` |
+| AMR-associated transcript profiles | Read-based mapping results and statistics generated by RGI BWT using CARD reference sequences. | `sample_paired.allele_mapping_data.txt`<br>`sample_paired.artifacts_mapping_stats.txt`<br>`sample_paired.gene_mapping_data.txt`<br>`sample_paired.overall_mapping_stats.txt`<br>`sample_paired.reference_mapping_stats.txt` |
+| Transcript assembly evaluation | rnaQUAST reports including BUSCO evaluations using the configured bacterial and archaeal lineages. | `sample_bacteria/`<br>`sample_archaea/` |
+| Read alignments | Coordinate-sorted and indexed alignments of each sample's filtered metatranscriptomic reads to the shared reference assembly. | `sample.coassembly.sorted.bam`<br>`sample.coassembly.sorted.bam.bai` |
+| Alignment statistics | SAMtools flagstat summary for each sample's alignments to the shared reference assembly. | `sample.flagstat.txt` |
+| Sequencing depth | Per-base read depth across the shared reference assembly. The current command omits positions with zero depth. | `sample.coverage.txt.gz` |
+| Contig mapping statistics | Reference contig names, lengths, and mapped and unmapped read-segment counts from SAMtools idxstats. | `sample.idxstats.txt.gz` |
+| Gene prediction outputs | Prokaryotic coding sequences predicted by Prodigal, their translated protein sequences, and GFF and SAF annotations. | `coassembly.faa`<br>`coassembly.fna`<br>`coassembly.gff`<br>`coassembly.saf` |
+| Gene-count outputs | Raw paired-fragment counts for predicted genes in each sample, accompanied by featureCounts assignment statistics. | `sample_counts.txt`<br>`sample_counts.txt.summary` |
+| CAZyme annotation inputs | Protein sequences prepared for run_dbcan and a mapping between protein identifiers and reference gene identifiers. | `reference_proteins.faa`<br>`protein_gene_ids.tsv` |
+| Native dbCAN annotation outputs | Combined annotation results and individual results from DIAMOND, dbCAN HMM searches and dbCAN-sub searches. | `annotation/overview.tsv`<br>`annotation/diamond.out`<br>`annotation/dbCAN_hmm_results.tsv`<br>`annotation/dbCANsub_hmm_results.tsv` |
+| Filtered CAZyme annotations | CAZyme gene annotations retained after applying the configured minimum tool-support threshold. | `cazyme_annotations.tsv` |
+| CAZyme gene counts | Raw paired-fragment counts across samples for the retained CAZyme genes. | `cazyme_gene_counts.tsv` |
+| CAZyme family counts | Counts from retained CAZyme genes aggregated by parent CAZy family. | `cazyme_family_counts.tsv` |
+| CAZyme run records | Annotation log, database and software provenance, and a summary of the count-table generation. | `annotation/run_dbcan.log`<br>`annotation/provenance.json`<br>`count_summary.json` |
+| Software-version reports | Installed package versions from the Conda environments found beneath the configured Conda environment prefix, with filtered text and HTML reports for selected bioinformatics packages. | `software_versions_summary.txt`<br>`key_bioinformatics_software.txt`<br>`key_bioinformatics_software.html` |
+
+**Notes:**
+
+- When `reference_assembly` is supplied, the workflow uses that assembly for mapping, gene prediction, counting and CAZyme annotation instead of generating `final.contigs.fa`. Downstream filenames retain the `coassembly` prefix.
+- The rnaQUAST directory names shown above correspond to the default lineage keys. Report files inside these directories depend on the software version and analysis performed.
+- Taxonomic outputs describe the representation of classified RNA reads and should not be interpreted directly as microbial cell abundance.
+- Gene-count and CAZyme-count tables contain raw counts and require appropriate downstream processing for comparisons between samples.
+- The default CAZyme filter requires support from at least two annotation methods for a gene. A gene assigned to multiple CAZy families contributes its full count to each family, so family totals can overlap.
 
 ---
