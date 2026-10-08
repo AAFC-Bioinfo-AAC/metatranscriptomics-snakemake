@@ -762,246 +762,354 @@ Bioinformatics software dependencies are specified in the per-rule environment f
 
 #### 1. Installation
 
-Clone the repository into the directory where you want to run the metatranscriptomics Snakemake pipeline.
-**Note:** This location must be on an HPC (High Performance Computing) cluster with access to a high-memory node (at least 600 GB RAM) and sufficient storage for all metatranscriptomics analyses.
+Clone the repository into the directory where you want to store the workflow code.
+
+The instructions below describe execution on a SLURM cluster. The workflow can also run locally on a Linux system with sufficient resources. Kraken2 memory requirements depend on the selected database; 600 GB is a previously used allocation, rather than a universal requirement.
+
+Workflow code, input reads, databases, Conda environments and declared outputs must be accessible from the nodes executing the jobs.
 
 ```bash
 cd /path/to/code/directory
-git clone <repository-url>
+git clone https://github.com/AAFC-Bioinfo-AAC/metatranscriptomics-snakemake.git
+cd metatranscriptomics-snakemake
 ```
+
+Use a separate environment containing Snakemake `9.20.0`, the SLURM executor plugin and `python-dotenv`. For a new installation:
+
+```bash
+conda create -n snakemake-9.20.0 \
+    -c conda-forge -c bioconda \
+    --override-channels \
+    --strict-channel-priority \
+    snakemake=9.20.0 \
+    snakemake-executor-plugin-slurm=1.6.1 \
+    python-dotenv
+
+conda activate snakemake-9.20.0
+```
+
+An existing environment containing these dependencies can also be used; replace the environment name in subsequent examples accordingly. Conda `24.7.1` or later must be available to Snakemake.
 
 #### 2. SLURM Profile
 
 ##### 2.1. SLURM Profile Directory Structure
 
-```bash
-metatranscriptomics_pipeline/
-├── Workflow/
-│   └── Snakefile
-│   └── ... 
-├── profiles/
-│   └── slurm/
-│       └── config.yaml         ← profile config
-├── config/
-│   └── config.yaml             ← workflow data/sample config
-|   └── samples.txt
-├── run_snakemake.sh            ← your SLURM launcher
-├── .env
-└── ...                       
-```
+The relevant paths are shown below.
+
+| Path | Purpose |
+|---|---|
+| `workflow/Snakefile` | Main workflow definition. |
+| `workflow/rules/` | Snakemake rule modules. |
+| `workflow/scripts/` | Scripts called by the rules. |
+| `workflow/envs/` | Per-rule Conda environment definitions. |
+| `profiles/slurm/example_config.yaml` | Editable SLURM profile template. |
+| `profiles/slurm/config.yaml` | Active SLURM profile created from the template. |
+| `config/config.yaml` | Workflow parameters and data paths. |
+| `config/samplesheet.csv` | Sample IDs and paired-read filenames. |
+| `run_snakemake.sh` | User-created SLURM launcher. |
+| `.env` | Optional environment-variable file in the repository root. |
 
 ##### 2.2. Profile Configuration
 
-The SLURM execution settings must be configured in `profiles/slurm/config.yaml.` An editable example is provided in this repository at `profiles/slurm/example_config.yaml` After editing, rename this file to `config.yaml` so that Snakemake recognizes it.
+The SLURM execution settings are configured in `profiles/slurm/config.yaml`. An editable example is provided at `profiles/slurm/example_config.yaml`.
 
-- This configuration file defines resource defaults, cluster submission commands, and job script templates for Snakemake. It should be customized for each specific HPC environment.
-- Remember to update the rerun-triggers: [input, params, software-env] setting whenever the pipeline is modified.
-- Pre-rule resource allocations should also be adjusted according to the size and number of input samples for each rule.
-
-**Example for profiles/slurm/config.yaml:**
+Copy the template to `config.yaml`, then edit the copy:
 
 ```bash
-### How Snakemake assigns resources to rules
-cores: 60
-jobs: 10 
-latency-wait: 60 
-rerun-incomplete: true
-retries: 2            
-max-jobs-per-second: 2 
+cp profiles/slurm/example_config.yaml profiles/slurm/config.yaml
+```
+
+- This file selects the SLURM executor and defines concurrency, resource defaults and per-rule resource overrides. The executor plugin handles job submission.
+- Keep the normal rerun triggers, including `code` and `mtime`, so Snakemake can identify affected jobs when the workflow or its inputs change.
+- Per-rule memory and runtime allocations should be adjusted for the database sizes, input data and cluster limits.
+- `envvars` lists variable names to forward; it does not assign their values. Export `TMPDIR` before using this profile.
+- For executor plugin `1.6.1`, use the resource names `clusters` and `qos`.
+- Snakemake `9.20.0` ignores alternative Conda frontend selections. Use `conda-frontend: conda`; Conda’s solver is configured separately.
+
+**Example for `profiles/slurm/config.yaml`:**
+
+All memory and runtime values below are starting points. `runtime` is in minutes, and `mem_mb` specifies memory per job in MB. Replace every placeholder before use. Remove `clusters` or `qos` if they are not required by your cluster.
+
+```yaml
 executor: slurm
 
-# Prevent rerunning jobs just for Snakefile edits
-## flags available [input, mtime, params, software-env, code, resources, none]
-rerun-triggers: [input, params, software-env]
+cores: 60
+local-cores: 1
+jobs: 10
+latency-wait: 60
+rerun-incomplete: true
+retries: 2
+max-jobs-per-second: 2
 
-### Env Vars ###
+rerun-triggers: [mtime, input, params, software-env, code]
+
 envvars:
-  TMPDIR: "/path/to/scratch/${USER}/tmpdir"
+  - TMPDIR
+
+use-conda: true
+conda-frontend: conda
 
 default-resources:
-  - slurm_account=<ACCOUNT_NAME>
-  - slurm_partition=<PARTITION_NAME>
-  - slurm_cluster=<CLUSTER_NAME>
-  - slurm_qos=<QOS_LEVEL>      # e.g., 'low' if jobs are held in queue for long
-  - runtime=<RUNTIME_MINUTES>  # e.g., 60
-  - mem_mb=<MEMORY_MB>         # e.g., 4000
+  slurm_account: "<ACCOUNT_NAME>"
+  slurm_partition: "<PARTITION_NAME>"
+  clusters: "<CLUSTER_NAME>"
+  qos: "<QOS_LEVEL>"
+  runtime: 60
+  mem_mb: 4000
 
-### Env modules ###
-# use-envmodules: false 
-
-### Conda ###
-use-conda: true
-conda-frontend: mamba   
-
-### Resource scopes ###
-set-resource-scopes:
-  cores: local 
-
-# Reusable Slurm Blocks (anchors)
-# Standard partition/account/cluster used by most rules
-_slurm_std: &slurm_std
-  slurm_partition: <PARTITION_NAME>
-  slurm_account: <ACCOUNT_NAME_standard> # e.g., standard, large memory 
-  slurm_cluster: <CLUSTER_NAME>
-
-# Large memory partition/account/cluster used by some rules
-_slurm_large: &slurm_large
-  slurm_partition: <PARTITION_NAME>
-  slurm_account: <ACCOUNT_NAME_large> # e.g., standard, large memory 
-  slurm_cluster: <CLUSTER_NAME>
-
-## Per rule resources
 set-resources:
-  fastp_pe:
-    <<: *slurm_std
-    mem_mb: 4000
-    runtime: 40
+  fastp_pe: {mem_mb: 4000, runtime: 40}
+  bowtie2_align: {mem_mb: 48000, runtime: 120}
+  extract_unmapped_fastq: {mem_mb: 64000, runtime: 120}
+  sortmerna_pe: {mem_mb: 32000, runtime: 360}
 
   kraken2:
-    <<: *slurm_large
+    slurm_partition: "<LARGE_PARTITION_NAME>"
+    slurm_account: "<LARGE_ACCOUNT_NAME>"
     mem_mb: 600000
     runtime: 30
+
+  bracken: {mem_mb: 4000, runtime: 10}
+  combine_bracken_outputs: {mem_mb: 2000, runtime: 20}
+  bracken_extract: {mem_mb: 2000, runtime: 10}
+
+  rgi_validate_database: {mem_mb: 2000, runtime: 30}
+  rgi_bwt: {mem_mb: 64000, runtime: 60}
+
+  rna_spades: {mem_mb: 64000, runtime: 240}
+  rnaquast_busco: {mem_mb: 16000, runtime: 120}
+
+  megahit_coassembly: {mem_mb: 256000, runtime: 720}
+  index_coassembly: {mem_mb: 16000, runtime: 120}
+  bowtie2_map_transcripts: {mem_mb: 32000, runtime: 720}
+  assembly_stats_depth: {mem_mb: 2000, runtime: 30}
+  prodigal_genes: {mem_mb: 2000, runtime: 60}
+  featurecounts: {mem_mb: 8000, runtime: 10}
+
+  prepare_cazyme_proteins: {mem_mb: 2000, runtime: 30}
+  cazyme_annotation: {mem_mb: 16000, runtime: 240}
+  cazyme_rna_counts: {mem_mb: 8000, runtime: 30}
 ```
 
 #### 3. Configuration
 
-The pipeline requires the following configuration files: `config.yaml`, `.env`, and `samples.txt`.
+The pipeline requires `config/config.yaml` and a sample sheet, normally `config/samplesheet.csv`. A repository-root `.env` file is optional when the necessary values are supplied through configuration or exported environment variables.
 
 ##### 3.1. config/config.yaml
 
-The `config.yaml` file must be located in the `config` directory, which resides in the main Snakemake working directory. This file specifies crucial settings, including:
+The workflow loads `config/config.yaml` from the repository, regardless of the directory from which Snakemake is invoked. A separate run configuration can be supplied with `--configfile`.
 
-- Path to the `samples.txt`
-- Input and output directories
-- File paths to required databases
-- Threads for each rule
-- Parameters for software see the [Parameters](#parameters) section.
+This file specifies:
 
-**Note:**
-You must edit `config.yaml` **before** running the pipeline to ensure all paths are correctly set.
-For best practice, use database paths that are in common locations to all users on the HPC.
+- The sample-sheet filename.
+- Input, output and log directories.
+- Paths to required databases, including `dbcan_DB_path` for the required CAZyme module.
+- Thread allocations and configurable software parameters; see [Snakemake rules](#snakemake-rules).
+- Library strandedness for featureCounts.
+- An optional `reference_assembly` for using an existing shared reference instead of MEGAHIT co-assembly.
+
+Set the project root using `project_root` in this file, or `PROJECT_ROOT` in `.env` or the shell environment. The YAML `project_root` value takes precedence. Relative data, database and output paths are resolved against this root; absolute paths are accepted.
+
+The sample-sheet path is an exception: it is resolved relative to the repository’s `config` directory unless it is absolute.
+
+Edit the configuration before running the workflow. Ensure that input files and databases are readable and output directories are writable from the execution nodes. Prepared databases may be stored in shared locations available to other users.
 
 ##### 3.2. Environment file
 
-This file must contain paths to the **PROJECT ROOT**,  **USER SCRATCH**, and **RGI COMMON DATABASE**. Follow these instructions:
+An optional `.env` file can provide environment variables used by the workflow. Place it in the repository root, alongside `config` and `workflow`.
 
-- In the main Snakemake directory (where you are running Snakemake from)
+**Example `.env`:**
 
-```bash
-touch .env
+```dotenv
+PROJECT_ROOT=/absolute/path/to/project
+TMPDIR=/absolute/path/to/writable/scratch
+RGI_CARD=/absolute/path/to/prepared/CARD/localDB
 ```
 
-- Open the .env file and add
+- `PROJECT_ROOT` supplies the project root when `project_root` is not set in YAML.
+- `TMPDIR` supplies working storage for individual jobs. Choose a path that is valid and writable on the execution nodes. Declared outputs, including `temp()` files passed between jobs, must remain on shared storage.
+- `RGI_CARD` points to the prepared CARD `localDB` directory, not to individual database files. When set, it takes precedence over `card_latest`.
+- Variables already present in the shell environment are preserved when `.env` is loaded. The `.env` file does not modify or overwrite `config/config.yaml`.
 
-```bash
- PROJECT_ROOT = path/to/project/root
- TMPDIR = path/to/temp/on/cluster
- RGI_CARD = path/to/card.json and card_reference.fasta
-```
+The launcher below exports `TMPDIR` explicitly. If your cluster supplies an appropriate scratch location automatically, adapt the launcher to use it.
 
 ##### 3.3. Sample list
 
-`samplesheet.csv` Has the following column names: "sample","fastq_1","fastq_2". For the column 'sample" use the sampleID for the read pair, and for "fastq_1","fastq_2" have the names of the read1 and read2 files as they appear in the raw fastq files directory. The file location of the `samplesheet.csv` must be`config/samplesheet.csv`.
+`samplesheet.csv` must contain the columns `sample`, `fastq_1` and `fastq_2`.
 
-**Example `samplesheet.csv`:**
+- `sample`: a unique sample ID, starting with a letter or digit and containing only letters, digits, periods, underscores or hyphens.
+- `fastq_1`: the R1 filename or path.
+- `fastq_2`: the R2 filename or path.
+
+Relative read paths are resolved against `reads_dir`; absolute paths are also accepted. Each row must have nonempty fields and different R1 and R2 filenames.
+
+The default location is `config/samplesheet.csv`; another sample sheet can be selected using the `samplesheet` setting.
+
+**Example matching the bundled test reads:**
+
+```csv
 sample,fastq_1,fastq_2
-test_LLC82Nov10GR,test_LLC82Nov10GR_r1.fastq.gz,test_LLC82Nov10GR_r2.fastq.gz
 test_LLC82Sep06GR,test_LLC82Sep06GR_r1.fastq.gz,test_LLC82Sep06GR_r2.fastq.gz
+```
+
+For samples sequenced across multiple lanes, combine the corresponding R1 files and R2 files before listing one paired-read set per sample.
 
 ##### 3.4. Scripts called in rules
 
-The scripts called in the Snakemake pipeline are located in workflow/scripts.
+The scripts called by the workflow are located in `workflow/scripts`.
 
-- Module [taxonomy.smk](#module-taxonomysmk) uses the `extract_bracken_columns.py` script in `rule combine_bracken_outputs`.
+| Script | Calling rule | Purpose |
+|---|---|---|
+| `extract_bracken_columns.py` | `bracken_extract` | Extracts raw and relative abundance tables from the combined Bracken outputs. |
+| `prepare_cazyme_proteins.py` | `prepare_cazyme_proteins` | Prepares protein identifiers that match the predicted gene annotations. |
+| `run_cazyme_annotation.py` | `cazyme_annotation` | Runs run_dbCAN, checks its outputs and records annotation provenance. |
+| `summarize_cazyme_counts.py` | `cazyme_rna_counts` | Combines accepted CAZyme annotations with gene counts and generates gene- and family-level count tables. |
 
 #### 4. Running the pipeline
 
-Complete steps **1.Installation**, **2.SLURM Profile**, and **3.Configuration** and ensure database paths have been added to the 'config/config.yaml'. Required databases are described in the [Pre-requisites](#pre-requisites).
+Complete **Installation**, **SLURM Profile** and **Configuration**, and prepare the databases described under [Pre-requisites](#pre-requisites).
+
+The default target includes CAZyme annotation and counting. It requires a configured dbCAN database and cannot complete without that module.
 
 ##### 4.1. Conda environments
 
-Snakemake can automatically create and load Conda environments for each rule in your workflow. Check to see that you have the following configuration files in the `workflow/envs` directory:
+Snakemake can automatically create and activate the environments required by the requested workflow targets. The environment definitions in `workflow/envs` are:
 
 - `bedtools.yaml`
 - `bowtie2.yaml`
+- `cazyme_tables.yaml`
+- `dbcan.yaml`
+- `fastp.yaml`
 - `featurecounts.yaml`
 - `kraken2.yaml`
 - `megahit.yaml`
+- `prodigal.yaml`
 - `rgi.yaml`
 - `rnaquast.yaml`
 - `RNAspades.yaml`
 - `sortmerna.yaml`
 
-Load the required conda environments for the pipeline with:
+To create the required rule environments without executing the analysis, run the following from the repository root:
 
 ```bash
-snakemake --use-conda \
-  --conda-create-envs-only \
-  --conda-prefix path/to/common/lab/folder/conda/metatranscriptomics-snakemake-conda
+conda activate snakemake-9.20.0
+
+snakemake \
+    --snakefile workflow/Snakefile \
+    --configfile config/config.yaml \
+    --executor local \
+    --cores 1 \
+    --use-conda \
+    --conda-prefix /absolute/path/to/shared/conda/metatranscriptomics-envs \
+    --conda-create-envs-only
 ```
+
+The workflow configuration and required database paths must already be valid because Snakemake constructs the dependency graph before creating the environments. Environment creation does not download the reference databases.
+
+Use the same writable, shared `--conda-prefix` for environment creation, workflow execution and reporting. The `conda_prefix` entry in the workflow YAML does not itself select Snakemake’s environment installation directory.
 
 ##### 4.2. SLURM launcher
 
-This is the script you use to submit the Snakemake pipeline to SLURM.
+The launcher starts the Snakemake controller, which submits and monitors separate analysis jobs through the SLURM executor.
 
-- Defines resources for the job scheduler
-- Activates the Snakemake environment
-- Submits and manages jobs using the Snakemake `--profile` configuration `(profiles/slurm/)`.
-- Contains any additional Snakemake arguments (e.g.., `--unlock`, `--dry-run`, `--rerun-incomplete`)
-- For a snakemake report with runtime and software versions use --report path/to/metatranscriptomics_report.html after the pipeline has completed
+The launcher’s `#SBATCH` settings apply to the controller job. Resources for individual analysis rules are requested through the profile and workflow.
 
-##### 4.3. Submit launcher to SLURM
+Before submitting the launcher, export a valid scratch path and inspect a dry-run:
 
-- Submit to SLURM compute node with bash terminal with `sbatch name_of_your_script.sh`
-- Example below needs to be edited with the headers for the HPC you are using.
+```bash
+export TMPDIR="/absolute/path/to/writable/scratch"
+mkdir -p "$TMPDIR"
+
+snakemake \
+    --snakefile workflow/Snakefile \
+    --configfile config/config.yaml \
+    --profile profiles/slurm \
+    --conda-prefix /absolute/path/to/shared/conda/metatranscriptomics-envs \
+    --dry-run \
+    --printshellcmds
+```
+
+Save the following example as `run_snakemake.sh`. Replace all placeholders and adjust controller memory and walltime for your workflow and cluster. Remove the `--clusters` directive if cluster selection is not required.
 
 ```bash
 #!/bin/bash
-#SBATCH --job-name=run_snakemake.sh
-#SBATCH --output=run_snakemake_%j.out 
-#SBATCH --error=run_snakemake_%j.err 
-#SBATCH --cluster=<CLUSTER_NAME>
-#SBATCH --partition=<PARTITION_NAME>
+#SBATCH --job-name=metatranscriptomics_snakemake
+#SBATCH --output=run_snakemake_%j.out
+#SBATCH --error=run_snakemake_%j.err
+#SBATCH --clusters=<CLUSTER_NAME>
+#SBATCH --partition=<CONTROLLER_PARTITION>
 #SBATCH --account=<ACCOUNT_NAME>
-#SBATCH --mem=<MEMORY_MB>         # e.g., 2000
-#SBATCH --time=<HH:MM:SS>         # Must be long enough for completion of workflow 
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=8000
+#SBATCH --time=<HH:MM:SS>
 
-source path/to/source/conda/common/miniforge/miniforge3/etc/profile.d/conda.sh
+set -euo pipefail
 
-conda activate snakemake_env
-export PATH="$PWD/bin:$PATH"
+source /absolute/path/to/miniforge3/etc/profile.d/conda.sh
+conda activate snakemake-9.20.0
 
-  snakemake \
-    --profile absolute/path/to/profiles/slurm \
-    --configfile absolute/path/to/config/config.yaml \
-    --conda-prefix absolute/path/to/common/conda/metatranscriptomics-snakemake-conda \
+cd /absolute/path/to/metatranscriptomics-snakemake
+
+export TMPDIR="/absolute/path/to/writable/scratch"
+mkdir -p "$TMPDIR"
+
+snakemake \
+    --snakefile workflow/Snakefile \
+    --configfile config/config.yaml \
+    --profile profiles/slurm \
+    --conda-prefix /absolute/path/to/shared/conda/metatranscriptomics-envs \
     --printshellcmds \
-    --keep-going 
+    --keep-going
+```
+
+##### 4.3. Submit launcher to SLURM
+
+From the repository root, submit the edited launcher:
+
+```bash
+sbatch run_snakemake.sh
+```
+
+The controller host must be able to submit and monitor SLURM jobs and access the shared workflow files. If cluster policy permits running the controller directly on a login node, the Snakemake command can instead be run there without a launcher job.
+
+After completion, generate the report using the same workflow configuration, profile and Conda prefix:
+
+```bash
+snakemake \
+    --snakefile workflow/Snakefile \
+    --configfile config/config.yaml \
+    --profile profiles/slurm \
+    --conda-prefix /absolute/path/to/shared/conda/metatranscriptomics-envs \
+    --report metatranscriptomics_report.html
 ```
 
 ### Notes
 
-- The `profile/slurm/config.yaml` has been configured for our SLURM cluster. This will need to be configured for the cluster you are using.
-- temp folder is set to `path/to/scratch/${USER}/tmpdir`
-- A Snakemake report can be generated from the head node with `snakemake --report path/to/report/report_name.html`
+- The `profiles/slurm/config.yaml` example must be adapted to your cluster.
+- Input reads, databases, Conda environments and outputs passed between rules must be accessible from the execution nodes.
+- Individual jobs create temporary working directories beneath `TMPDIR`, falling back to `/tmp` when it is absent. Scratch space must accommodate the relevant assembly, filtering or sorting jobs.
+- A dry-run checks the planned dependency graph; it does not validate bioinformatics results or demonstrate that the resource allocations are sufficient. Run a representative pilot before processing the full dataset.
 
 #### Warnings
 
-- The conda environments will not be created if the conda configuration is `conda config --set channel_priority strict`.
-- Set conda to `conda config --set channel_priority flexible` or use libmamba.
-- The `.env` file can overwrite the `config/config.yaml` file
+- Strict channel priority is supported and recommended for the `conda-forge` → `bioconda` channel order. If a particular environment fails to solve, inspect its dependency conflict rather than assuming that flexible priority is required. Solver selection and channel priority are separate settings.
+- The workflow uses explicit precedence rules: `project_root` overrides `PROJECT_ROOT`, and a nonempty `RGI_CARD` overrides `card_latest`. Exported environment variables are preserved when `.env` is loaded.
 
 #### Current issues
 
-None.
+The host/PhiX and shared-reference Bowtie2 rules currently declare `.bt2` indexes only; `.bt2l` support has not been implemented.
 
 #### Resource usage
 
-- Kraken2: Large compute node with 600 GB. With 16 CUPs wall time was 7m 56s. With 2 CPUs wall time was 19m 13s.
-- Generate Snakemake report to track walltime
+Previously reported Kraken2 timings with a 600 GB allocation were:
 
----
+| CPUs | Reported walltime |
+|---:|---:|
+| 16 | 7 min 56 s |
+| 2 | 19 min 13 s |
 
+These timings describe the tested configuration. Memory requirements depend on database size, and runtime also depends on the input reads and hardware. Use the Snakemake report to review recorded job runtimes and refine resource allocations.
 ## Output
 
 **All output file paths are set in the `config/config.yaml` file and need to be edited prior to running the pipeline.**
