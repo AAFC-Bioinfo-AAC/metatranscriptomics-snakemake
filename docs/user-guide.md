@@ -209,15 +209,34 @@ Quality-filtering parameters should be selected according to the sequencing plat
 
 #### Module `sortmerna.smk`
 
-**`rule sortmerna` *rRNA Removal***
+This module computationally filters rRNA from host/PhiX-depleted paired reads.
 
-- **Purpose:** Align the clean read pairs to an rRNA database and outputs the rRNA-depleted reads
+**Default configuration settings**
+
+The following value is supplied in `config/config.yaml`.
+
+| Configuration setting | Default | Description |
+|---|---:|---|
+| `sortmerna_pe: threads` | `12` | Number of threads allocated to SortMeRNA. |
+
+**Rule: `sortmerna_pe` — rRNA filtering**
+
+- **Purpose:** Uses *SortMeRNA* to align host/PhiX-depleted paired reads against a configured rRNA reference database and retain pairs for which neither mate meets the rRNA alignment criteria.
 - **Inputs:**
-  - Clean read pairs: `sample_trimmed_clean_R1.fastq.gz`/`sample_trimmed_clean_R2.fastq.gz`
+  - Host/PhiX-depleted read pairs: `sample_trimmed_clean_R1.fastq.gz` / `sample_trimmed_clean_R2.fastq.gz`
+  - rRNA reference fasta file specified by `sortmerna_DB` in `config/config.yaml`.
 - **Outputs:**
-  - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
+  - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz` / `sample_rRNAdep_R2.fastq.gz`
+  - Filtering statistics: `sample_sortmerna_pe.stats`
 - **Notes:**
-  - The database used for testing the pipeline was `smr_v4.3_default_db.fasta`, available from the Reference RNA databases (database.tar.gz) file at [sortmerna release v4.3.3](https://github.com/sortmerna/sortmerna/releases/tag/v4.3.3)
+  - The `--paired_in` option excludes both mates from the retained output if either mate matches the rRNA reference. This preserves pairing but can also remove a non-rRNA mate paired with an rRNA read.
+  - The `--out2` option writes retained R1 and R2 reads into separate compressed fastq files.
+  - The database used for testing the pipeline was `smr_v4.3_default_db.fasta`, available from the Reference RNA databases archive (`database.tar.gz`) at [SortMeRNA release v4.3.3](https://github.com/sortmerna/sortmerna/releases/tag/v4.3.3).
+  - The Conda environment specifies SortMeRNA version `4.3.6`; the database download release and software version are separate.
+  - Each sample uses a unique temporary working directory beneath `TMPDIR`, or `/tmp` if `TMPDIR` is unset. The reference index is built within that directory rather than reused from a shared index.
+  - The statistics file contains the SortMeRNA alignment summary. The retained fastq files and statistics file are saved before the temporary working directory is removed.
+  - The processing log is written to `sortmerna/samplereads_pe.log` beneath the configured log directory.
+  - The retained paired reads are used for downstream taxonomic profiling, ARG profiling, assembly and RNA mapping.
 
 ---
 
