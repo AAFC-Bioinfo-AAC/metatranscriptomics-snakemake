@@ -387,113 +387,233 @@ Database linking is handled within the validation and mapping rules; there is no
 
 ---
 
----
-
 #### Module `sample_assembly.smk`
 
-**`rule rna_spades` *Assemble transcripts***
+This module assembles transcripts separately for each sample and evaluates the resulting assemblies.
 
-- **Purpose:** The rRNA-depleted reads are assembled into presumptive mRNA transcripts
+**Default configuration settings**
+
+| Configuration setting | Default | Description |
+|---|---:|---|
+| `rna_spades: threads` | `24` | Threads allocated to rnaSPAdes. |
+| `rna_spades: memory_gb` | `60` | SPAdes memory limit in GB; must fit within the job’s allocated memory. |
+| `rnaquast_busco: threads` | `4` | Threads allocated to rnaQUAST. |
+
+**Rule: `rna_spades` — Transcript assembly**
+
+- **Purpose:** Assembles transcript sequences from each sample’s rRNA-depleted paired reads using *rnaSPAdes*.
 - **Inputs:**
-
-  - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
-- **Outputs**
-
-  - Presumptive transcripts: `sample.fasta`
-- **Notes:**
-
-  - Poor quality samples that result in no assembly hav an empty sample.fasta file
-
-  **`rule rnaquast_busco` *QC for transcripts***
-- **Purpose:** Reports the number of transcripts, transcripts over 500 bp, transcripts over 1000 bp and the BUSCO completeness.
-- **Inputs:**
-
-  - Presumptive transcripts: `sample.fasta`
-  - Busco lineage: `bacteria_odb12` and `archaea_odb12`
+  - rRNA-depleted paired fastq files: `sample_rRNAdep_R1.fastq.gz` / `sample_rRNAdep_R2.fastq.gz`
 - **Outputs:**
-
-  - QUAST report in `sample_bacteria` and `sample_archaea` directories
+  - Transcript assembly: `sample.fasta`
 - **Notes:**
+  - A failed assembly or missing or empty `transcripts.fasta` causes the rule to fail. Empty placeholder assemblies are not created.
+  - Assembly work files are created beneath `TMPDIR`, or `/tmp` if `TMPDIR` is unset, and removed when the rule finishes.
 
-  - The software is not intended for metatranscriptomics. Use caution when interpreting the results. For instance the BUSCO completeness cannot be interpreted as the percentage of assembly quality but instead it is a representation of the core functions from the bacteria_odb12 and archaea_odb12 lineages.
+**Rule: `rnaquast_busco` — Transcript assembly evaluation**
+
+- **Purpose:** Uses *rnaQUAST* to report transcript assembly statistics and *BUSCO* to assess recovery of lineage-specific marker genes.
+- **Inputs:**
+  - Transcript assembly: `sample.fasta`
+  - BUSCO lineage datasets configured through `busco_lineages`: `bacteria_odb12` and `archaea_odb12`
+- **Outputs:**
+  - rnaQUAST and BUSCO reports in `sample_bacteria/` and `sample_archaea/` directories.
+- **Notes:**
+  - BUSCO scores summarize recovery of expected lineage marker genes. Because these are mixed-community RNA assemblies, interpret the scores in the context of community composition, gene expression and sequencing depth. They are not percentages of overall assembly quality or functional coverage.
+  - The rule supplies neither a reference genome nor a reference annotation to rnaQUAST, so reference-based alignment accuracy metrics are unavailable.
 
 ---
 
 #### Module `coassembly_annotation.smk`
 
-**`megahit_coassembly` *Co-assembly of all samples***
+This module constructs or uses a shared reference for RNA mapping, prokaryotic gene prediction and gene-level counting. By default, the reference is a MEGAHIT co-assembly of the filtered RNA reads. When `reference_assembly` is supplied, that assembly is used instead and the default workflow bypasses RNA co-assembly. Output names retain `coassembly` in either case.
 
-- **Purpose:** rRNA-depleted reads are co-assembled with MEGAHIT
+**Default configuration settings**
+
+| Configuration setting | Default | Description |
+|---|---:|---|
+| `megahit_coassembly: threads` | `24` | Threads allocated to MEGAHIT. |
+| `index_coassembly: threads` | `8` | Threads allocated to Bowtie2 indexing. |
+| `bowtie2_map_transcripts: threads` | `16` | Total threads allocated among Bowtie2 and SAMtools. |
+| `assembly_stats_depth: threads` | `2` | Threads allocated to the statistics and compression rule. |
+| `featurecounts: threads` | `4` | Threads allocated to featureCounts. |
+| `featurecounts: strandedness` | `0` | Library orientation: `0` = unstranded, `1` = forward-stranded, `2` = reverse-stranded. |
+
+**Rule: `megahit_coassembly` — Co-assembly across samples**
+
+- **Purpose:** Co-assembles rRNA-depleted paired reads from all samples with *MEGAHIT* to produce a shared contig reference.
 - **Inputs:**
-
-  - Cleaned sample reads from all samples: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
+  - rRNA-depleted paired fastq files from all samples: `sample_rRNAdep_R1.fastq.gz` / `sample_rRNAdep_R2.fastq.gz`
 - **Outputs:**
-
-  - Presumptive transcripts from the coassembly: `final.contigs.fa`
+  - Co-assembled contigs: `final.contigs.fa`
 - **Notes:**
+  - A suitable matched metagenomic assembly can be supplied through `reference_assembly` to provide the shared reference.
+  - Each sample’s RNA reads are mapped to the same reference. The resulting BAM files support gene-level counting and downstream expression analysis.
+  - MEGAHIT receives a memory limit corresponding to 90% of the allocated `mem_mb`. Missing or empty assembly output causes the rule to fail.
 
-  - If Metagenomic sequencing was done the co-assembly of those reads would be a better choice.
-  - The Co-assembly is used as a index to produce sorted BAM files for each assembly. These sorted BAM files can then be used in featureCounts and downstream expression analysis.
+**Rule: `index_coassembly` — Reference indexing**
 
-**`index_coassembly` *Create index***
-
-- **Purpose:** Bowtie2 is used to make an index that can be used to map the reads to the co-assembly
+- **Purpose:** Builds a Bowtie2 index for the shared reference.
 - **Inputs:**
-  - Presumptive transcripts from the coassembly: `final.contigs.fa`
+  - Shared reference: `final.contigs.fa` or the assembly supplied through `reference_assembly`.
 - **Outputs:**
-  - Bowtie2 index `coassembly.1.bt2`, `coassembly.2.bt2`, `coassembly.3.bt2`, `coassembly.4.bt2`, `coassembly.rev.1.bt2`, and `coassembly.rev.2.bt2`
+  - Bowtie2 index files: `coassembly.1.bt2`, `coassembly.2.bt2`, `coassembly.3.bt2`, `coassembly.4.bt2`, `coassembly.rev.1.bt2` and `coassembly.rev.2.bt2`
+- **Notes:**
+  - The workflow currently declares small-index `.bt2` files; large `.bt2l` indexes are not supported by these output declarations.
 
-**`bowtie2_map_transcripts` *Map samples to co-assembly***
+**Rule: `bowtie2_map_transcripts` — Per-sample RNA mapping**
 
-- **Purpose:** Map the rRNA depleted cleaned reads from each sample to the co-assembly
+- **Purpose:** Maps each sample’s rRNA-depleted paired reads to the shared reference using *Bowtie2*, then sorts and indexes the alignments with *SAMtools*.
 - **Inputs:**
-  - Bowtie2 index `coassembly.1.bt2`, `coassembly.2.bt2`, `coassembly.3.bt2`, `coassembly.4.bt2`, `coassembly.rev.1.bt2`, and `coassembly.rev.2.bt2`
-  - rRNA-depleted reads: `sample_rRNAdep_R1.fastq.gz`/`sample_rRNAdep_R2.fastq.gz`
+  - Complete Bowtie2 index.
+  - rRNA-depleted paired fastq files: `sample_rRNAdep_R1.fastq.gz` / `sample_rRNAdep_R2.fastq.gz`
 - **Outputs:**
-  - BAM file for each sample: `sample.coassembly.sorted.bam`
+  - Coordinate-sorted BAM file: `sample.coassembly.sorted.bam`
+  - BAM index: `sample.coassembly.sorted.bam.bai`
+- **Notes:**
+  - Uses Bowtie2 local alignment (`--local`).
+  - Available threads are divided among Bowtie2 and SAMtools; at least three allocated threads are required.
 
-**`assembly_stats_depth` *QC and coverage for mapped reads***
+**Rule: `assembly_stats_depth` — Mapping statistics and sequencing depth**
 
-- **Purpose:** `samtools flagstat` provides alignment statistics that include the total reads, reads that mapped to the co-assembly, properly paired reads and duplicates. The flagstat is used to check how each sample aligns to the co-assembly. `samtools depth` computes the per-base sequencing depth across the co-assembly to evaluate sequencing depth and uniformity of coverage. `samtools idxstats` provides sequences level mapping statistics with the sample contig name that is used to identify contigs that are over or under represented.
+- **Purpose:** Generates alignment summaries with `samtools flagstat`, per-position read depth with `samtools depth`, and reference-sequence lengths and mapped/unmapped counts with `samtools idxstats`.
 - **Inputs:**
-  - BAM file for each sample: `sample.coassembly.sorted.bam`
-    **Outputs:**
+  - BAM file: `sample.coassembly.sorted.bam`
+  - BAM index: `sample.coassembly.sorted.bam.bai`
+- **Outputs:**
   - Alignment statistics: `sample.flagstat.txt`
   - Sequencing depth: `sample.coverage.txt.gz`
   - Mapping statistics: `sample.idxstats.txt.gz`
+- **Notes:**
+  - Despite its filename, `sample.coverage.txt.gz` contains per-position depth rather than a contig-level coverage summary.
+  - The current `samtools depth` command omits zero-depth positions and counts overlapping mates separately.
+  - Duplicate statistics reflect existing BAM duplicate flags; this workflow does not mark duplicates.
 
-**`rule prodigal_genes` *Gene prediction***
+**Rule: `prodigal_genes` — Prokaryotic gene prediction**
 
-- **Purpose:** Predict the protein and nucleotide sequences in the co-assembly. Generate a simplified annotation format file that is used by `featurecounts`.
+- **Purpose:** Predicts prokaryotic protein-coding sequences in the shared reference using *Prodigal* in metagenomic mode (`-p meta`), then converts the CDS annotations to SAF for featureCounts.
 - **Inputs:**
-
-  - Presumptive transcripts from the coassembly: `final.contigs.fa`
+  - Shared reference: `final.contigs.fa` or the supplied `reference_assembly`.
 - **Outputs:**
-
   - Predicted protein sequences: `coassembly.faa`
-  - Predicted nucleotide sequences: `coassembly.fna`
-  - Feature formatted annotation file: `coassembly.gff`
+  - Predicted CDS nucleotide sequences: `coassembly.fna`
+  - Gene annotations in GFF format: `coassembly.gff`
   - Simplified annotation format file: `coassembly.saf`
 - **Notes:**
+  - All four outputs are retained. The protein and GFF files support CAZyme annotation, and the SAF file supports gene counting.
+  - This annotation strategy targets prokaryotic CDSs and does not provide comprehensive annotation of eukaryotic, spliced or noncoding transcripts.
 
-  - Go back and decided if this output should be designated temporary.
+**Rule: `featurecounts` — Gene-level fragment counting**
 
-**`rule featurecounts` *Count table***
-
-- **Purpose:** generates a table for each sample that includes the Geneid (unique identifier), the co-assembly contig name, the start and end positions of each gene on the contig, the strand orientation (+ or -), the gene length, and the number of reads mapped to each gene. Since all samples are mapped to the same co-assembly reference, the resulting tables can be combined for downstream analysis of gene expression across samples.
+- **Purpose:** Counts paired fragments assigned to predicted CDSs for each sample. Tables include gene identifiers, reference contigs, coordinates, strands, gene lengths and assigned counts. All samples use the same reference annotation, allowing tables to be combined for downstream analysis.
 - **Inputs:**
-  - Simplified annotation formate file: `coassembly.saf`
-  - BAM file for each sample: `sample.coassembly.sorted.bam`
+  - Simplified annotation format file: `coassembly.saf`
+  - BAM file: `sample.coassembly.sorted.bam`
 - **Outputs:**
-  - Featurecounts table: `sample_counts.txt`
+  - featureCounts table: `sample_counts.txt`
+  - Assignment summary: `sample_counts.txt.summary`
+- **Notes:**
+  - Uses `-p --countReadPairs` to count paired fragments. Set `featurecounts.strandedness` to match the RNA library preparation.
+  - Outputs are raw counts requiring appropriate downstream normalization and statistical analysis.
 
-#### Module `env_versions`
+---
 
-**`software_report` *Print versions of all conda packages***
+#### Module `db_can.smk`
 
-**`filter_key_bioinformatics_versions` *Print versions of only the core bioinformatic conda packages***
+This required module annotates predicted CAZymes on the shared reference and combines those annotations with the existing RNA fragment counts. It is included in the default `all` target.
 
-**`filter_key_bioinformatics_html` *Print versions of only the core bioinformatic conda packages in the html report***
+**Default configuration settings**
+
+| Configuration setting | Default | Description |
+|---|---:|---|
+| `cazyme: threads` | `8` | Threads allocated to dbCAN. |
+| `cazyme: min_tools` | `2` | Minimum number of supporting annotation methods per gene; accepts `2` or `3`. |
+| `cazyme: database_release` | `unspecified` | Database release or snapshot label recorded in the provenance file. |
+
+Set `dbcan_DB_path` to a prepared dbCAN database directory. Outputs are written beneath `dbcan_output_dir`.
+
+**Rule: `prepare_cazyme_proteins` — Match protein and count identifiers**
+
+- **Purpose:** Matches Prodigal protein identifiers to the GFF gene IDs used by SAF and featureCounts.
+- **Inputs:**
+  - Predicted protein sequences: `coassembly.faa`
+  - Gene annotations: `coassembly.gff`
+- **Outputs:**
+  - Protein sequences with matched gene identifiers: `reference_proteins.faa`
+  - Protein-to-gene mapping table: `protein_gene_ids.tsv`
+- **Notes:**
+  - Requires a unique correspondence between proteins and CDS annotations.
+  - The mapping table preserves original protein identifiers and coordinates.
+
+**Rule: `cazyme_annotation` — CAZyme annotation**
+
+- **Purpose:** Runs `run_dbcan CAZyme_annotation` in protein mode using DIAMOND, dbCAN-HMM and dbCAN-sub searches.
+- **Inputs:**
+  - `reference_proteins.faa`
+  - Prepared database files: `CAZy.dmnd`, `dbCAN.hmm`, `dbCAN-sub.hmm` and `fam-substrate-mapping.tsv`
+- **Outputs:**
+  - `annotation/`, including `overview.tsv`, method-specific results, `run_dbcan.log` and `provenance.json`.
+- **Notes:**
+  - Uses dbCAN version `5.2.8`.
+  - Results are checked before publication.
+  - Provenance records the software version, database label and database-file checksums.
+
+**Rule: `cazyme_rna_counts` — CAZyme gene and family counts**
+
+- **Purpose:** Filters annotations by method support and joins accepted CAZyme genes to each sample’s featureCounts table.
+- **Inputs:**
+  - dbCAN annotation summary: `annotation/overview.tsv`
+  - Protein-to-gene mapping table: `protein_gene_ids.tsv`
+  - Gene-count tables for all samples: `sample_counts.txt`
+- **Outputs:**
+  - Accepted annotations: `cazyme_annotations.tsv`
+  - Raw gene-count matrix: `cazyme_gene_counts.tsv`
+  - Raw parent-family count matrix: `cazyme_family_counts.tsv`
+  - Counting summary: `count_summary.json`
+- **Notes:**
+  - Uses dbCAN’s `Recommend Results` assignments. Method support is assessed per gene, not separately for every assigned family.
+  - Subfamilies are collapsed to parent families, such as `GH5_7` to `GH5`. Each gene contributes once within each assigned parent family.
+  - A gene assigned to multiple families contributes its full count to each family, so family totals overlap.
+  - Count-table gene IDs and coordinates must match the reference.
+  - Genuine zero counts are retained, and valid results with no accepted CAZyme genes produce header-only matrices.
+  - The matrices contain raw RNA fragment counts for annotated genes; they require downstream analysis and do not directly measure enzyme activity.
+
+**Rule: `cazyme_all` — CAZyme target**
+
+- **Purpose:** Groups the annotation directory, annotation table, count matrices and counting summary into a named target. These outputs are also required by the default workflow.
+
+---
+
+#### Module `env_versions.smk`
+
+This module records installed package versions from environments present beneath Snakemake’s effective Conda prefix. The report is a snapshot taken when the rule runs; cached environments from previous runs may also appear.
+
+**Rule: `software_report` — Installed package versions**
+
+- **Purpose:** Runs `conda list` for each detected environment and records package versions, builds and channels.
+- **Inputs:**
+  - Environments beneath the effective Conda prefix.
+- **Outputs:**
+  - `software_versions_summary.txt` beneath the configured `software_versions` directory.
+
+**Rule: `filter_key_bioinformatics_versions` — Selected bioinformatics packages**
+
+- **Purpose:** Extracts selected bioinformatics package entries from the full version report.
+- **Inputs:**
+  - `software_versions_summary.txt`
+- **Outputs:**
+  - `key_bioinformatics_software.txt`
+- **Notes:**
+  - Packages are selected through the rule’s `KEY_TOOLS` list.
+  - The current list includes dbCAN, DIAMOND and pyHMMER but omits Bracken, BUSCO and KMA.
+
+**Rule: `filter_key_bioinformatics_html` — HTML version report**
+
+- **Purpose:** Creates an HTML rendering of the selected-package version report, marked for inclusion in Snakemake reports.
+- **Inputs:**
+  - `key_bioinformatics_software.txt`
+- **Outputs:**
+  - `key_bioinformatics_software.html`
 
 ---
 
