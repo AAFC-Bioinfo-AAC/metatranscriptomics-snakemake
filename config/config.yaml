@@ -1,33 +1,41 @@
 # -------------------------------------------------------------------
-# Sample list
+# Sample list and project root
 # -------------------------------------------------------------------
 
-# Follow instructions in the user guide to create your own samplesheet.csv file
+# Resolved inside the repository's config/ directory.
 samplesheet: "samplesheet.csv"
 
-# Set here or export PROJECT_ROOT; all relative data paths use this root.
+# Set project_root here or define PROJECT_ROOT in .env/the environment.
+# Relative data, output and database paths are resolved against this root.
 # project_root: "/absolute/path/to/project"
 
-# Optional matched metagenomic assembly. If set, bypass RNA MEGAHIT coassembly
-# and predict/map/count genes against this shared reference instead.
+# Optional matched metagenomic reference assembly.
+# If supplied, bypass MEGAHIT coassembly and use this reference for
+# gene prediction, read mapping, counting and CAZyme annotation.
 reference_assembly: null
 
 # -------------------------------------------------------------------
-# Conda environment prefix relative to PROJECT_ROOT in .env file
+# Conda environment cache
 # -------------------------------------------------------------------
 
+# Relative to PROJECT_ROOT.
+# Pass the corresponding absolute path through --conda-prefix in
+# the launcher and when creating environments.
 conda_prefix: "code/metatranscriptomics-snakemake/metatranscriptomic-conda-env"
 
 # -------------------------------------------------------------------
-# Directories paths relative to PROJECT_ROOT in .env file
+# Input and output paths
 # -------------------------------------------------------------------
 
+# Relative paths below are resolved against PROJECT_ROOT.
 log_files: "code/metatranscriptomics-snakemake/workflow/logs"
 software_versions: "code/metatranscriptomics-snakemake/results/software_versions"
+
 reads_dir: "data/raw/metatranscriptomics_test/01_raw"
 reads_trimmed: "data/raw/metatranscriptomics_test/02_trimmed"
 reads_host_dep: "data/raw/metatranscriptomics_test/03_host_dep"
 reads_rRNA_dep: "data/raw/metatranscriptomics_test/04_rRNA_dep"
+
 assemblies_dir: "workspace/metatranscriptomics-snakemake/05_assemblies"
 kraken_short_reads_dir: "workspace/metatranscriptomics-snakemake/06_taxonomy_short_reads/kraken2"
 bracken_short_reads_dir: "workspace/metatranscriptomics-snakemake/06_taxonomy_short_reads/bracken"
@@ -40,35 +48,46 @@ prodigal_dir: "workspace/metatranscriptomics-snakemake/12_prodigal"
 featurecounts_dir: "workspace/metatranscriptomics-snakemake/13_featurecounts"
 dbcan_output_dir: "workspace/metatranscriptomics-snakemake/14_dbcan"
 
-# Required for the default workflow; prepare the database outside the workflow.
-dbcan_DB_path: null
-cazyme:
-  threads: 8
-  min_tools: 2  # Accept genes supported by at least 2 of 3 methods; also permits 3.
-  database_release: "unspecified"  # Record the database release used; files are SHA-256 hashed.
+# -------------------------------------------------------------------
+# Reference databases
+# -------------------------------------------------------------------
 
-
-# Bowtie2 index. Make sure to build your own index
+# Prefix of a complete Bowtie2 index containing the host and PhiX
+# references. Do not include a .bt2 or .bt2l suffix.
 bowtie2_index: "code/metatranscriptomics-snakemake/resources/bowtie2_index/Cow_phiX"
 
-#SortMeRNA database
+# SortMeRNA reference database.
 sortmerna_DB: "code/metatranscriptomics-snakemake/resources/rRNA_DB/smr_v4.3_default_db.fasta"
 
-### File paths for databases on common drives###
-gtbd_DB: "abs/path/to/db/reference/kraken2_gtdb/release220"
-busco_lineages:
-  bacteria: "abs/path/to/db/reference/busco/busco_downloads/lineages/bacteria_odb12"
-  archaea: "abs/path/to/db/reference/busco/busco_downloads/lineages/archaea_odb12"
+# Kraken2-formatted GTDB directory.
+# The key gtbd_DB is retained to match the current Snakefile.
+# With bracken.readlen: 150, this directory must also contain
+# database150mers.kmer_distrib from the same Kraken2 database.
+gtbd_DB: "/absolute/path/to/db/reference/kraken2_gtdb/release220"
 
-### File path for CARD database if the user set it up. This is a fallback if there is no common database
+# Local BUSCO lineage directories.
+busco_lineages:
+  bacteria: "/absolute/path/to/db/reference/busco/busco_downloads/lineages/bacteria_odb12"
+  archaea: "/absolute/path/to/db/reference/busco/busco_downloads/lineages/archaea_odb12"
+
+# Preloaded CARD database directory, including the KMA index.
+# Used when RGI_CARD is not defined in .env/the environment.
 card_latest: "code/metatranscriptomics-snakemake/localDB"
 
+# Required dbCAN database directory.
+# Prepare this database before running the workflow.
+# Required files:
+#   CAZy.dmnd
+#   dbCAN.hmm
+#   dbCAN-sub.hmm
+#   fam-substrate-mapping.tsv
+dbcan_DB_path: "/absolute/path/to/dbcan"
+
 # -------------------------------------------------------------------
-# Parameters and threads 
-# See the user documentation parameters section
+# Parameters and threads
 # -------------------------------------------------------------------
 
-## preprocessing.smk
+# preprocessing.smk
 fastp:
   threads: 2
   cut_tail: true
@@ -78,51 +97,71 @@ fastp:
   qualified_quality_phred: 15
   detect_adapter_for_pe: true
   length_required: 100
+
 bowtie2_align:
   threads: 12
+
 extract_unmapped_fastq:
   threads: 8
-## sortmerna.smk
+
+# sortmerna.smk
 sortmerna_pe:
   threads: 12
-## amr_short_reads.smk
-rgi_validate_database:
-  threads: 1
+
+# amr_short_reads.smk
 rgi_bwt:
   threads: 8
-## taxonomy.smk
+
+# taxonomy.smk
 kraken2:
   threads: 2
-  conf_threshold: "0.5"
+  conf_threshold: 0.5
+
 bracken:
   readlen: 150
-  # Minimum Kraken-assigned reads per taxon, not CPU counts (-t in Bracken).
+  # Minimum Kraken clade count required at each requested rank.
   threshold_species: 10
   threshold_genus: 10
   threshold_phylum: 10
-combine_bracken_outputs:
-  threads: 1
-bracken_extract:
-  threads: 1
-## sample_assembly.smk
+
+# sample_assembly.smk
 rna_spades:
   threads: 24
-  # SPAdes -m is in GB; keep below the job's 64000 MB memory allocation.
+  # SPAdes -m uses GB. The revised rule defaults to mem_mb: 64000.
+  # Ensure profile overrides provide sufficient memory.
   memory_gb: 60
+
 rnaquast_busco:
   threads: 4
-## coassembly_annotation.smk
+
+# coassembly_annotation.smk
 megahit_coassembly:
   threads: 24
+
 index_coassembly:
   threads: 8
+  # Set true when a large Bowtie2 index (.bt2l) is required.
+  large_index: false
+
 bowtie2_map_transcripts:
   threads: 16
+
 assembly_stats_depth:
   threads: 2
-prodigal_genes:
-  threads: 1
+
 featurecounts:
   threads: 4
-  # Match the library preparation: 0=unstranded, 1=forward, 2=reverse.
+  # Match the library preparation:
+  # 0 = unstranded, 1 = forward-stranded, 2 = reverse-stranded.
   strandedness: 0
+
+# db_can.smk
+# CAZyme analysis is included in the default workflow.
+cazyme:
+  threads: 8
+  # Require support from at least two annotation methods.
+  # Allowed values: 2 or 3.
+  min_tools: 2
+  # Replace with the database release label used for this analysis.
+  # Database files are also recorded using SHA-256 hashes.
+  database_release: "unspecified"
