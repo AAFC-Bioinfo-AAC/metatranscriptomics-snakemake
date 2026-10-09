@@ -2,6 +2,6 @@ name: RNAspades
 channels:
   - bioconda
   - conda-forge
-  - defaults
+  - nodefaults
 dependencies:
-  - spades>=4.2.0,<5
+  - spades=4.3.0
