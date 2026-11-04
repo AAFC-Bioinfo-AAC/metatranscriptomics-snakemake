@@ -114,14 +114,30 @@ set-resources:
     mem_mb: 8000
     runtime: 10
 
+  bwa_index_coassembly:
+    mem_mb: 64000
+    runtime: 720
+
+  bwa_mem_mapping:
+    mem_mb: 32000
+    runtime: 720
+
+  dbcan_depth:
+    mem_mb: 16000
+    runtime: 720
+
+  prepare_cazyme_quantification:
+    mem_mb: 2000
+    runtime: 30
+
+  merge_cazyme_rpm:
+    mem_mb: 2000
+    runtime: 30
+
   prepare_cazyme_proteins:
     mem_mb: 2000
     runtime: 30
 
   cazyme_annotation:
-    mem_mb: 16000
+    mem_mb: 64000
     runtime: 240
-
-  cazyme_rna_counts:
-    mem_mb: 8000
-    runtime: 30
