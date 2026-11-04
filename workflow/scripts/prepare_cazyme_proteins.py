@@ -1,4 +1,9 @@
-"""Use Prodigal's GFF IDs as FASTA IDs so dbCAN and featureCounts can join."""
+"""Match Pyrodigal proteins, GFF and SAF before joining dbCAN to RNA counts.
+
+Pyrodigal can use contig-based GFF/FASTA identifiers while the FASTA ID=
+attribute uses numeric Prodigal-style identifiers. Prefer an exact FASTA/GFF
+match; retain support for legacy Prodigal GFFs joined through ID= attributes.
+"""
 import argparse
 import csv
 import re
@@ -24,7 +29,7 @@ def fasta_records(path):
         yield header, "".join(sequence)
 
 
-def prepare(proteins, gff, output, mapping):
+def prepare(proteins, gff, output, mapping, saf=None):
     genes = {}
     with open(gff) as stream:
         for line in stream:
@@ -44,6 +49,23 @@ def prepare(proteins, gff, output, mapping):
             genes[gene] = [fields[0], fields[3], fields[4], fields[6]]
     if not genes:
         raise ValueError(f"{gff}: no predicted CDSs")
+    if saf is not None:
+        seen_saf = set()
+        with open(saf, newline="") as stream:
+            reader = csv.DictReader(stream, delimiter="\t")
+            if reader.fieldnames != ["GeneID", "Chr", "Start", "End", "Strand"]:
+                raise ValueError(f"{saf}: expected GeneID, Chr, Start, End and Strand columns")
+            for row in reader:
+                if None in row or any(value is None for value in row.values()):
+                    raise ValueError(f"{saf}: malformed annotation row")
+                gene = row["GeneID"]
+                if gene not in genes or gene in seen_saf:
+                    raise ValueError(f"{saf}: unknown or duplicate GeneID {gene}")
+                if [row[name] for name in ("Chr", "Start", "End", "Strand")] != genes[gene]:
+                    raise ValueError(f"{saf}: coordinates differ from GFF for {gene}")
+                seen_saf.add(gene)
+        if seen_saf != set(genes):
+            raise ValueError(f"{saf}: gene IDs differ from GFF")
     for path in (output, mapping):
         Path(path).parent.mkdir(parents=True, exist_ok=True)
     seen, protein_ids = set(), set()
@@ -53,11 +75,9 @@ def prepare(proteins, gff, output, mapping):
         for header, sequence in fasta_records(proteins):
             protein = header.split()[0]
             match = re.search(r"(?:^|[;\s])ID=([^;\s]+)", header)
-            if not match:
-                raise ValueError(f"{proteins}: missing Prodigal ID= attribute for {protein}")
-            gene = match.group(1)
+            gene = protein if protein in genes else match.group(1) if match else None
             if gene not in genes:
-                raise ValueError(f"{proteins}: gene {gene} absent from GFF")
+                raise ValueError(f"{proteins}: protein {protein} has no matching GFF gene")
             if gene in seen or protein in protein_ids:
                 raise ValueError(f"{proteins}: duplicate protein or gene ID {protein}/{gene}")
             if not sequence or not sequence.rstrip("*"):
@@ -75,6 +95,6 @@ def prepare(proteins, gff, output, mapping):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ("proteins", "gff", "output", "mapping"):
+    for name in ("proteins", "gff", "saf", "output", "mapping"):
         parser.add_argument(f"--{name}", required=True)
     prepare(**vars(parser.parse_args()))

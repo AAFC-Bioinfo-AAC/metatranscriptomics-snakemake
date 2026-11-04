@@ -10,7 +10,8 @@ import shutil
 import subprocess
 import tempfile
 
-DATABASE_FILES = ("CAZy.dmnd", "dbCAN.hmm", "dbCAN-sub.hmm", "fam-substrate-mapping.tsv")
+DATABASE_FILES = ("CAZy.dmnd", "dbCAN.hmm", "dbCAN-sub.hmm", "fam-substrate-mapping.tsv",
+                  "TCDB.dmnd", "TF.hmm", "TF.dmnd", "STP.hmm", "PUL.dmnd", "dbCAN-PUL.xlsx", "peptidase_db.dmnd", "sulfatlas_db.dmnd")
 RESULT_COLUMNS = {
     "diamond.out": {"Gene ID", "CAZy ID"},
     "dbCAN_hmm_results.tsv": {"Target Name", "HMM Name", "Target From", "Target To", "i-Evalue"},
@@ -46,9 +47,12 @@ def validate_results(directory, log):
                     observed.add(gene)
     if overview != observed:
         raise ValueError("dbCAN overview does not cover exactly the genes in its method results")
+    for filename in ("cgc_standard_out.tsv", "substrate_prediction.tsv"):
+        if not (Path(directory) / filename).is_file():
+            raise ValueError(f"dbCAN easy_substrate did not create {filename}")
 
 
-def annotate(proteins, db_dir, output, log, threads, database_release):
+def annotate(proteins, gff, db_dir, output, log, threads, database_release):
     db_dir = Path(db_dir).resolve()
     output, log = Path(output), Path(log)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -65,8 +69,9 @@ def annotate(proteins, db_dir, output, log, threads, database_release):
         manifest[name] = {"sha256": digest.hexdigest(), "bytes": path.stat().st_size}
     with tempfile.TemporaryDirectory(prefix=".dbcan-", dir=output.parent) as temporary:
         results = Path(temporary) / "annotation"
-        command = ["run_dbcan", "CAZyme_annotation", "--input_raw_data", str(Path(proteins).resolve()),
+        command = ["run_dbcan", "easy_substrate", "--input_raw_data", str(Path(proteins).resolve()),
                    "--mode", "protein", "--output_dir", str(results), "--db_dir", str(db_dir),
+                   "--input_gff", str(Path(gff).resolve()), "--gff_type", "prodigal",
                    "--methods", "diamond,hmm,dbCANsub", "--threads", str(threads), "--log-level", "INFO"]
         with log.open("w") as stream:
             subprocess.run(command, stdout=stream, stderr=subprocess.STDOUT, check=True)
@@ -84,7 +89,7 @@ def annotate(proteins, db_dir, output, log, threads, database_release):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ("proteins", "db-dir", "output", "log", "database-release"):
+    for name in ("proteins", "gff", "db-dir", "output", "log", "database-release"):
         parser.add_argument(f"--{name}", required=True)
     parser.add_argument("--threads", type=int, required=True)
     annotate(**vars(parser.parse_args()))
