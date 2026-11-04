@@ -179,13 +179,11 @@ rule all:
         f"{PRODIGAL_DIR}/coassembly.fna",
         f"{PRODIGAL_DIR}/coassembly.gff",
         f"{PRODIGAL_DIR}/coassembly.saf",
-        # Mapping of samples to coassembly, stats, and featurecounts
-        expand(f"{ASSEMBLY_MAPPING}/{{sample}}.coassembly.sorted.bam", sample=SAMPLES),
+        # BWA mapping to the shared reference and mapping statistics
+        CAZYME_BAMS,
         expand(f"{ASSEMBLY_MAPPING}/{{sample}}.flagstat.txt", sample=SAMPLES),
         expand(f"{ASSEMBLY_MAPPING}/{{sample}}.coverage.txt.gz", sample=SAMPLES),
         expand(f"{ASSEMBLY_MAPPING}/{{sample}}.idxstats.txt.gz", sample=SAMPLES),
-        expand(f"{FEATURECOUNTS_DIR}/{{sample}}_counts.txt", sample=SAMPLES),
-        expand(f"{FEATURECOUNTS_DIR}/{{sample}}_counts.txt.summary", sample=SAMPLES),
         expand(f"{LOG_DIR}/fastp/{{sample}}.fastp.html", sample=SAMPLES),
         expand(f"{LOG_DIR}/fastp/{{sample}}.fastp.json", sample=SAMPLES),
 
@@ -196,7 +194,7 @@ rule all:
         f"{SOFTWARE_VERSIONS}/software_versions_summary.txt",
         f"{SOFTWARE_VERSIONS}/key_bioinformatics_software.txt",
         f"{SOFTWARE_VERSIONS}/key_bioinformatics_software.html",
-        # CAZyme annotations and combined RNA count matrices.
+        # Shared-reference CAZyme annotation and per-sample dbCAN RPM profiles.
         CAZYME_TARGETS
 
 
