@@ -83,36 +83,37 @@ flowchart TD
         MH --> REF["Shared reference FASTA"]
         DNA["Matched metagenomic assembly"] -->|reference_assembly set| REF
 
-        REF --> INDEX{"Bowtie2-build"}
+        REF --> INDEX{"BWA index"}
         INDEX --> IDX["Reference index"]
-        IDX --> MAP{"Bowtie2 RNA mapping"}
+        IDX --> MAP{"BWA-MEM RNA mapping"}
         G --> MAP
         MAP --> BAM["Sorted and indexed sample BAMs"]
 
         BAM --> STATS{"SAMtools"}
         STATS --> STATSOUT["Mapping and depth statistics"]
 
-        REF --> PG{"Prodigal"}
+        REF --> PG{"Pyrodigal"}
         PG --> PROTEINS["Proteins and CDS sequences"]
         PG --> ANNOT["GFF and SAF annotations"]
 
-        ANNOT -->|SAF| FC{"featureCounts"}
-        BAM --> FC
-        FC --> COUNTS["Raw paired-fragment counts"]
+        ANNOT -->|GFF| DEPTH{"dbcan_utils cal_coverage"}
+        BAM --> DEPTH
+        DEPTH --> COUNTS["Gene read counts"]
     end
 
-    subgraph CAZYME["CAZYME ANNOTATION AND RNA COUNTS"]
+    subgraph CAZYME["CAZYME ANNOTATION AND RNA RPM"]
         PROTEINS -->|Proteins| PREP{"Match protein and gene IDs"}
         ANNOT -->|GFF| PREP
         PREP --> CAZINPUT["Protein FASTA and ID map"]
 
-        CAZINPUT -->|Protein FASTA| DBCAN{"run_dbcan CAZyme_annotation"}
-        DBCAN --> CAZANNOT["CAZyme annotations"]
+        CAZINPUT -->|Protein FASTA| DBCAN{"run_dbcan easy_substrate"}
+        ANNOT -->|GFF| DBCAN
+        DBCAN --> CAZANNOT["CAZyme and CGC annotations"]
 
-        CAZANNOT --> SUMMARY{"Filter annotations and summarize counts"}
+        CAZANNOT --> SUMMARY{"Filter families and calculate RPM"}
         CAZINPUT -->|ID map| SUMMARY
         COUNTS --> SUMMARY
-        SUMMARY --> MATRICES["CAZyme gene and family count matrices"]
+        SUMMARY --> MATRICES["Per-sample RPM tables and merged matrices"]
     end
 
     classDef default fill:#1f2937,stroke:#F8B229,color:#e5e7eb;
@@ -123,7 +124,7 @@ flowchart TD
 
 ### Snakemake rules
 
-The pipeline is modularized, with each module located in the `metatranscriptomics-snakemake/workflow/rules` directory. The modules are `preprocessing.smk`, `sortmerna.smk`, `taxonomy.smk`,`amr_short_reads.smk`, `sample_assembly.smk`, `coassembly_annotation.smk`, and `env_versions.smk`.
+The pipeline is modularized, with each module located in the `metatranscriptomics-snakemake/workflow/rules` directory. The modules are `preprocessing.smk`, `sortmerna.smk`, `taxonomy.smk`,`amr_short_reads.smk`, `sample_assembly.smk`, `coassembly_annotation.smk`, `db_can.smk`, and `env_versions.smk`.
 
 ---
 
@@ -426,17 +427,17 @@ This module assembles transcripts separately for each sample and evaluates the r
 
 #### Module `coassembly_annotation.smk`
 
-This module constructs or uses a shared reference for RNA mapping, prokaryotic gene prediction and gene-level counting. By default, the reference is a MEGAHIT co-assembly of the filtered RNA reads. When `reference_assembly` is supplied, that assembly is used instead and the default workflow bypasses RNA co-assembly. Output names retain `coassembly` in either case.
+This module constructs or uses a shared reference for prokaryotic gene prediction, mapping statistics and optional gene-level fragment counting. Default BWA mapping and CAZyme read counting are defined in `db_can.smk`. By default, the reference is a MEGAHIT co-assembly of the filtered RNA reads. When `reference_assembly` is supplied, that assembly is used instead and the default workflow bypasses RNA co-assembly. Output names retain `coassembly` in either case.
 
 **Default configuration settings**
 
 | Configuration setting | Default | Description |
 |---|---:|---|
 | `megahit_coassembly: threads` | `24` | Threads allocated to MEGAHIT. |
-| `index_coassembly: threads` | `8` | Threads allocated to Bowtie2 indexing. |
-| `bowtie2_map_transcripts: threads` | `16` | Total threads allocated among Bowtie2 and SAMtools. |
+| `index_coassembly: threads` | `8` | Threads for optional Bowtie2 indexing. |
+| `bowtie2_map_transcripts: threads` | `16` | Thread budget for optional Bowtie2 mapping and SAMtools. |
 | `assembly_stats_depth: threads` | `2` | Threads allocated to the statistics and compression rule. |
-| `featurecounts: threads` | `4` | Threads allocated to featureCounts. |
+| `featurecounts: threads` | `4` | Threads for optional featureCounts targets. |
 | `featurecounts: strandedness` | `0` | Library orientation: `0` = unstranded, `1` = forward-stranded, `2` = reverse-stranded. |
 
 **Rule: `megahit_coassembly` — Co-assembly across samples**
@@ -451,17 +452,17 @@ This module constructs or uses a shared reference for RNA mapping, prokaryotic g
   - Each sample’s RNA reads are mapped to the same reference. The resulting BAM files support gene-level counting and downstream expression analysis.
   - MEGAHIT receives a memory limit corresponding to 90% of the allocated `mem_mb`. Missing or empty assembly output causes the rule to fail.
 
-**Rule: `index_coassembly` — Reference indexing**
+**Rule: `index_coassembly` — Optional Bowtie2 reference indexing**
 
-- **Purpose:** Builds a Bowtie2 index for the shared reference.
+- **Purpose:** Builds a Bowtie2 index for explicitly requested legacy mapping targets. This rule is not required by the default CAZyme workflow.
 - **Inputs:**
   - Shared reference: `final.contigs.fa` or the assembly supplied through `reference_assembly`.
 - **Outputs:**
   - Bowtie2 index files: `coassembly.1.bt2`, `coassembly.2.bt2`, `coassembly.3.bt2`, `coassembly.4.bt2`, `coassembly.rev.1.bt2` and `coassembly.rev.2.bt2`
 - **Notes:**
-  - The workflow currently declares small-index `.bt2` files; large `.bt2l` indexes are not supported by these output declarations.
+  - Set `index_coassembly.large_index: true` to generate a large `.bt2l` index for these optional targets.
 
-**Rule: `bowtie2_map_transcripts` — Per-sample RNA mapping**
+**Rule: `bowtie2_map_transcripts` — Optional Bowtie2 RNA mapping**
 
 - **Purpose:** Maps each sample’s rRNA-depleted paired reads to the shared reference using *Bowtie2*, then sorts and indexes the alignments with *SAMtools*.
 - **Inputs:**
@@ -472,14 +473,14 @@ This module constructs or uses a shared reference for RNA mapping, prokaryotic g
   - BAM index: `sample.coassembly.sorted.bam.bai`
 - **Notes:**
   - Uses Bowtie2 local alignment (`--local`).
-  - Available threads are divided among Bowtie2 and SAMtools; at least three allocated threads are required.
+  - Available threads are divided among Bowtie2 and SAMtools; at least two allocated threads are required.
 
 **Rule: `assembly_stats_depth` — Mapping statistics and sequencing depth**
 
 - **Purpose:** Generates alignment summaries with `samtools flagstat`, per-position read depth with `samtools depth`, and reference-sequence lengths and mapped/unmapped counts with `samtools idxstats`.
 - **Inputs:**
-  - BAM file: `sample.coassembly.sorted.bam`
-  - BAM index: `sample.coassembly.sorted.bam.bai`
+  - BAM file: `dbcan_output_dir/coassembly/samples/sample/mapping/sample.bam`
+  - BAM index: `sample.bam.bai`
 - **Outputs:**
   - Alignment statistics: `sample.flagstat.txt`
   - Sequencing depth: `sample.coverage.txt.gz`
@@ -491,7 +492,7 @@ This module constructs or uses a shared reference for RNA mapping, prokaryotic g
 
 **Rule: `prodigal_genes` — Prokaryotic gene prediction**
 
-- **Purpose:** Predicts prokaryotic protein-coding sequences in the shared reference using *Prodigal* in metagenomic mode (`-p meta`), then converts the CDS annotations to SAF for featureCounts.
+- **Purpose:** Predicts prokaryotic protein-coding sequences in the shared reference using *Pyrodigal* in metagenomic mode (`-p meta`) and produces SAF annotations for optional featureCounts targets.
 - **Inputs:**
   - Shared reference: `final.contigs.fa` or the supplied `reference_assembly`.
 - **Outputs:**
@@ -501,18 +502,22 @@ This module constructs or uses a shared reference for RNA mapping, prokaryotic g
   - Simplified annotation format file: `coassembly.saf`
 - **Notes:**
   - All four outputs are retained. The protein and GFF files support CAZyme annotation, and the SAF file supports gene counting.
+  - Uses Pyrodigal `3.7.1`. The rule name `prodigal_genes` and `prodigal_dir` setting are retained for compatibility with existing profiles and output paths.
+  - GFF identifiers are normalized to protein FASTA identifiers before SAF generation. The CAZyme preparation step also validates SAF coordinates against the GFF.
+  - After migrating from standalone Prodigal, regenerate gene predictions and all dependent CAZyme annotations and abundance tables. The existing co-assembly can be reused. The revised default branch creates new BWA mappings.
   - This annotation strategy targets prokaryotic CDSs and does not provide comprehensive annotation of eukaryotic, spliced or noncoding transcripts.
 
-**Rule: `featurecounts` — Gene-level fragment counting**
+**Rule: `featurecounts` — Optional gene-level fragment counting**
 
 - **Purpose:** Counts paired fragments assigned to predicted CDSs for each sample. Tables include gene identifiers, reference contigs, coordinates, strands, gene lengths and assigned counts. All samples use the same reference annotation, allowing tables to be combined for downstream analysis.
 - **Inputs:**
   - Simplified annotation format file: `coassembly.saf`
-  - BAM file: `sample.coassembly.sorted.bam`
+  - BAM file: `dbcan_output_dir/coassembly/samples/sample/mapping/sample.bam`
 - **Outputs:**
   - featureCounts table: `sample_counts.txt`
   - Assignment summary: `sample_counts.txt.summary`
 - **Notes:**
+  - This rule is excluded from the default target and CAZyme RPM calculations. Request individual `sample_counts.txt` paths to run it.
   - Uses `-p --countReadPairs` to count paired fragments. Set `featurecounts.strandedness` to match the RNA library preparation.
   - Outputs are raw counts requiring appropriate downstream normalization and statistical analysis.
 
@@ -520,67 +525,66 @@ This module constructs or uses a shared reference for RNA mapping, prokaryotic g
 
 #### Module `db_can.smk`
 
-This required module annotates predicted CAZymes on the shared reference and combines those annotations with the existing RNA fragment counts. It is included in the default `all` target.
+This required module uses the same CAZyme mapping and abundance strategy as the metagenomic workflow, with the shared RNA co-assembly as the default reference. It does not require featureCounts. Results are written beneath `dbcan_output_dir/coassembly/`.
 
 **Default configuration settings**
 
 | Configuration setting | Default | Description |
 |---|---:|---|
-| `cazyme: threads` | `8` | Threads allocated to dbCAN. |
-| `cazyme: min_tools` | `2` | Minimum number of supporting annotation methods per gene; accepts `2` or `3`. |
-| `cazyme: database_release` | `unspecified` | Database release or snapshot label recorded in the provenance file. |
+| `cazyme: threads` | `8` | Threads allocated to run_dbcan. |
+| `cazyme: min_tools` | `2` | Minimum annotation methods supporting a gene for family-level quantification; accepts `2` or `3`. |
+| `cazyme: database_release` | `unspecified` | Database snapshot label recorded alongside file checksums. |
+| `bwa_mem_mapping: threads` | `12` | Total BWA-MEM and SAMtools thread budget; at least two required. |
+| `dbcan_depth: threads` | `4` | Threads for gene read counting. |
+| `dbcan_depth: overlap_base_ratio` | `0.2` | Minimum fraction of the read overlapping a gene. |
+| `dbcan_depth: mapping_quality` | `30` | Minimum mapping quality. |
+| `dbcan_depth: identity` | `0.98` | Minimum alignment identity. |
 
-Set `dbcan_DB_path` to a prepared dbCAN database directory. Outputs are written beneath `dbcan_output_dir`.
+**Rule: `prepare_cazyme_proteins` — Match protein and gene identifiers**
 
-**Rule: `prepare_cazyme_proteins` — Match protein and count identifiers**
+- **Purpose:** Matches Pyrodigal protein identifiers to GFF gene IDs and validates the corresponding SAF identifiers and coordinates.
+- **Inputs:** `coassembly.faa`, `coassembly.gff` and `coassembly.saf`.
+- **Outputs:** `reference_proteins.faa` and `protein_gene_ids.tsv`.
 
-- **Purpose:** Matches Prodigal protein identifiers to the GFF gene IDs used by SAF and featureCounts.
-- **Inputs:**
-  - Predicted protein sequences: `coassembly.faa`
-  - Gene annotations: `coassembly.gff`
-- **Outputs:**
-  - Protein sequences with matched gene identifiers: `reference_proteins.faa`
-  - Protein-to-gene mapping table: `protein_gene_ids.tsv`
-- **Notes:**
-  - Requires a unique correspondence between proteins and CDS annotations.
-  - The mapping table preserves original protein identifiers and coordinates.
+**Rule: `cazyme_annotation` — Shared CAZyme annotation**
 
-**Rule: `cazyme_annotation` — CAZyme annotation**
+- **Purpose:** Runs `run_dbcan easy_substrate` in protein mode with the matched GFF, using DIAMOND, dbCAN-HMM and dbCAN-sub searches, CGC detection and substrate prediction.
+- **Inputs:** Prepared proteins, GFF annotations and the full dbCAN database collection.
+- **Outputs:** `annotation/`, including `overview.tsv`, method-specific results, `cgc_standard_out.tsv`, `substrate_prediction.tsv`, `run_dbcan.log` and `provenance.json`.
+- **Notes:** Uses dbCAN `5.2.8`; validates outputs and records the software version, database label and database-file SHA-256 checksums. RNA contigs can represent incomplete gene neighbourhoods, so CGCs are putative transcribed clusters.
 
-- **Purpose:** Runs `run_dbcan CAZyme_annotation` in protein mode using DIAMOND, dbCAN-HMM and dbCAN-sub searches.
-- **Inputs:**
-  - `reference_proteins.faa`
-  - Prepared database files: `CAZy.dmnd`, `dbCAN.hmm`, `dbCAN-sub.hmm` and `fam-substrate-mapping.tsv`
-- **Outputs:**
-  - `annotation/`, including `overview.tsv`, method-specific results, `run_dbcan.log` and `provenance.json`.
-- **Notes:**
-  - Uses dbCAN version `5.2.8`.
-  - Results are checked before publication.
-  - Provenance records the software version, database label and database-file checksums.
+**Rule: `prepare_cazyme_quantification` — Filter annotations for abundance estimation**
 
-**Rule: `cazyme_rna_counts` — CAZyme gene and family counts**
+- **Purpose:** Retains genes supported by at least `cazyme.min_tools` annotation methods in the overview and subfamily-hit tables used for family and substrate quantification.
+- **Outputs:** `quantification_annotation/`, including filtered annotation tables and `filter_summary.json`.
+- **Notes:** Original annotation outputs are retained. CGC tables retain complete gene neighbourhoods rather than applying the family-level support filter to every cluster member. All predicted genes remain in gene counting and the RPM denominator.
 
-- **Purpose:** Filters annotations by method support and joins accepted CAZyme genes to each sample’s featureCounts table.
-- **Inputs:**
-  - dbCAN annotation summary: `annotation/overview.tsv`
-  - Protein-to-gene mapping table: `protein_gene_ids.tsv`
-  - Gene-count tables for all samples: `sample_counts.txt`
-- **Outputs:**
-  - Accepted annotations: `cazyme_annotations.tsv`
-  - Raw gene-count matrix: `cazyme_gene_counts.tsv`
-  - Raw parent-family count matrix: `cazyme_family_counts.tsv`
-  - Counting summary: `count_summary.json`
-- **Notes:**
-  - Uses dbCAN’s `Recommend Results` assignments. Method support is assessed per gene, not separately for every assigned family.
-  - Subfamilies are collapsed to parent families, such as `GH5_7` to `GH5`. Each gene contributes once within each assigned parent family.
-  - A gene assigned to multiple families contributes its full count to each family, so family totals overlap.
-  - Count-table gene IDs and coordinates must match the reference.
-  - Genuine zero counts are retained, and valid results with no accepted CAZyme genes produce header-only matrices.
-  - The matrices contain raw RNA fragment counts for annotated genes; they require downstream analysis and do not directly measure enzyme activity.
+**Rules: `bwa_index_coassembly` and `bwa_mem_mapping` — Shared-reference RNA mapping**
+
+- **Purpose:** Indexes the shared reference and maps each sample's rRNA-depleted paired reads with BWA-MEM, followed by coordinate sorting, validation and indexing with SAMtools.
+- **Outputs:** `bwa_index/coassembly.*` and `samples/sample/mapping/sample.bam` with its `.bai` index.
+
+**Rule: `dbcan_depth` — Gene read counting**
+
+- **Purpose:** Runs `dbcan_utils cal_coverage` with the GFF and each sample's BAM file.
+- **Outputs:** `samples/sample/sample_abund/sample.depth.txt`, containing gene identifier, gene length and assigned read count.
+- **Notes:** Counts reads rather than paired fragments and does not apply strand-specific assignment. Alignment overlap, mapping quality and identity filters are configurable.
+
+**Rule: `get_abundances_rpm` — Per-sample CAZyme abundances**
+
+- **Purpose:** Uses `dbcan_utils` to calculate family, subfamily, EC, substrate and CGC abundances from each sample's gene counts.
+- **Outputs:** Seven tables in `samples/sample/sample_abund/`: `fam_abund.out`, `subfam_abund.out`, `EC_abund.out`, `fam_substrate_abund.out`, `CGC_abund.out`, `CGC_substrate_PUL_homology.out` and `CGC_substrate_majority_voting.out`.
+- **Notes:** For dbCAN `5.2.8`, RPM is normalized by the sum of counts assigned to **all predicted genes** in that sample, rather than all input reads. Family assignments can overlap. Missing annotation groups yield empty tables with an explanatory marker; command failures cause the rule to fail.
+
+**Rule: `merge_cazyme_rpm` — Combined abundance matrices**
+
+- **Purpose:** Combines the per-sample family, subfamily and substrate RPM tables without further normalization.
+- **Outputs:** `cazyme_family_RPM.tsv`, `cazyme_subfamily_RPM.tsv`, `cazyme_substrate_RPM.tsv` and `count_summary.json`.
+- **Notes:** These RNA RPM values describe relative transcript representation; they are not raw paired-fragment counts or direct measurements of enzyme activity. RPM tables should not be supplied as raw counts to count-based differential-expression models.
 
 **Rule: `cazyme_all` — CAZyme target**
 
-- **Purpose:** Groups the annotation directory, annotation table, count matrices and counting summary into a named target. These outputs are also required by the default workflow.
+- **Purpose:** Requests the shared annotation, seven abundance tables per sample and combined RPM matrices. These outputs are also required by the default workflow.
 
 ---
 
@@ -738,6 +742,9 @@ Bioinformatics software dependencies are specified in the per-rule environment f
   - `dbCAN.hmm`
   - `dbCAN-sub.hmm`
   - `fam-substrate-mapping.tsv`
+  - `TCDB.dmnd`, `TF.hmm`, `TF.dmnd` and `STP.hmm`
+  - `PUL.dmnd`, `dbCAN-PUL.xlsx` and the `dbCAN-PUL/` collection
+  - `peptidase_db.dmnd` and `sulfatlas_db.dmnd`
 
   Create the preparation environment and download the CAZyme databases:
 
@@ -749,12 +756,10 @@ Bioinformatics software dependencies are specified in the per-rule environment f
 
   conda activate dbcan-5.2.8
 
-  run_dbcan database \
-      --db_dir /absolute/path/to/dbCAN \
-      --no-cgc
+  run_dbcan database --db_dir /absolute/path/to/dbCAN
   ```
 
-  Set `dbcan_DB_path` to this directory and record the database snapshot in `cazyme: database_release`. The default downloader uses a changing database snapshot, so retain the prepared files for subsequent runs. `--no-cgc` omits databases used for CAZyme gene-cluster analysis. See [Preparing dbCAN databases](https://run-dbcan.readthedocs.io/en/latest/user_guide/prepare_the_database.html).
+  Set `dbcan_DB_path` to this directory and record the database snapshot in `cazyme: database_release`. The default downloader uses a changing database snapshot, so retain the prepared files for subsequent runs. Include the CGC and PUL databases; the family-only download is insufficient for `easy_substrate`. See [Preparing dbCAN databases](https://run-dbcan.readthedocs.io/en/latest/user_guide/prepare_the_database.html).
 
 ---
 
@@ -887,8 +892,12 @@ set-resources:
   featurecounts: {mem_mb: 8000, runtime: 10}
 
   prepare_cazyme_proteins: {mem_mb: 2000, runtime: 30}
-  cazyme_annotation: {mem_mb: 16000, runtime: 240}
-  cazyme_rna_counts: {mem_mb: 8000, runtime: 30}
+  cazyme_annotation: {mem_mb: 64000, runtime: 240}
+  prepare_cazyme_quantification: {mem_mb: 2000, runtime: 30}
+  bwa_index_coassembly: {mem_mb: 64000, runtime: 720}
+  bwa_mem_mapping: {mem_mb: 32000, runtime: 720}
+  dbcan_depth: {mem_mb: 16000, runtime: 720}
+  merge_cazyme_rpm: {mem_mb: 2000, runtime: 30}
 ```
 
 #### 3. Configuration
@@ -963,7 +972,9 @@ The scripts called by the workflow are located in `workflow/scripts`.
 | `extract_bracken_columns.py` | `bracken_extract` | Extracts raw and relative abundance tables from the combined Bracken outputs. |
 | `prepare_cazyme_proteins.py` | `prepare_cazyme_proteins` | Prepares protein identifiers that match the predicted gene annotations. |
 | `run_cazyme_annotation.py` | `cazyme_annotation` | Runs run_dbCAN, checks its outputs and records annotation provenance. |
-| `summarize_cazyme_counts.py` | `cazyme_rna_counts` | Combines accepted CAZyme annotations with gene counts and generates gene- and family-level count tables. |
+| `normalize_pyrodigal_gff.py` | `prodigal_genes` | Makes GFF IDs agree with Pyrodigal protein identifiers. |
+| `prepare_cazyme_quantification.py` | `prepare_cazyme_quantification` | Filters family annotations by method support while retaining complete CGC tables. |
+| `merge_cazyme_rpm.py` | `merge_cazyme_rpm` | Combines per-sample family, subfamily and substrate RPM tables. |
 
 #### 4. Running the pipeline
 
@@ -977,13 +988,14 @@ Snakemake can automatically create and activate the environments required by the
 
 - `bedtools.yaml`
 - `bowtie2.yaml`
+- `bwa.yaml`
 - `cazyme_tables.yaml`
 - `dbcan.yaml`
 - `fastp.yaml`
-- `featurecounts.yaml`
+- `featurecounts.yaml` (optional fragment-count targets)
 - `kraken2.yaml`
 - `megahit.yaml`
-- `prodigal.yaml`
+- `pyrodigal.yaml`
 - `rgi.yaml`
 - `rnaquast.yaml`
 - `RNAspades.yaml`
@@ -1130,17 +1142,18 @@ In the filenames below, `sample` represents the sample ID from `samplesheet.csv`
 | Bracken phylum tables | Combined estimated counts and relative abundance at the phylum level. | `Bracken_phylum_raw_abundance.csv`<br>`Bracken_phylum_relative_abundance.csv` |
 | AMR-associated transcript profiles | Read-based mapping results and statistics generated by RGI BWT using CARD reference sequences. | `sample_paired.allele_mapping_data.txt`<br>`sample_paired.artifacts_mapping_stats.txt`<br>`sample_paired.gene_mapping_data.txt`<br>`sample_paired.overall_mapping_stats.txt`<br>`sample_paired.reference_mapping_stats.txt` |
 | Transcript assembly evaluation | rnaQUAST reports including BUSCO evaluations using the configured bacterial and archaeal lineages. | `sample_bacteria/`<br>`sample_archaea/` |
-| Read alignments | Coordinate-sorted and indexed alignments of each sample's filtered metatranscriptomic reads to the shared reference assembly. | `sample.coassembly.sorted.bam`<br>`sample.coassembly.sorted.bam.bai` |
+| Read alignments | BWA-MEM alignments of each sample's filtered RNA reads to the shared reference, sorted and indexed by SAMtools. | `coassembly/samples/sample/mapping/sample.bam`<br>`sample.bam.bai` |
 | Alignment statistics | SAMtools flagstat summary for each sample's alignments to the shared reference assembly. | `sample.flagstat.txt` |
 | Sequencing depth | Per-base read depth across the shared reference assembly. The current command omits positions with zero depth. | `sample.coverage.txt.gz` |
 | Contig mapping statistics | Reference contig names, lengths, and mapped and unmapped read-segment counts from SAMtools idxstats. | `sample.idxstats.txt.gz` |
-| Gene prediction outputs | Prokaryotic coding sequences predicted by Prodigal, their translated protein sequences, and GFF and SAF annotations. | `coassembly.faa`<br>`coassembly.fna`<br>`coassembly.gff`<br>`coassembly.saf` |
-| Gene-count outputs | Raw paired-fragment counts for predicted genes in each sample, accompanied by featureCounts assignment statistics. | `sample_counts.txt`<br>`sample_counts.txt.summary` |
+| Gene prediction outputs | Prokaryotic coding sequences predicted by Pyrodigal, their translated protein sequences, and GFF and SAF annotations. | `coassembly.faa`<br>`coassembly.fna`<br>`coassembly.gff`<br>`coassembly.saf` |
+| Optional gene-count outputs | Raw paired-fragment counts and assignment statistics from explicitly requested featureCounts targets. | `sample_counts.txt`<br>`sample_counts.txt.summary` |
 | CAZyme annotation inputs | Protein sequences prepared for run_dbcan and a mapping between protein identifiers and reference gene identifiers. | `reference_proteins.faa`<br>`protein_gene_ids.tsv` |
 | Native dbCAN annotation outputs | Combined annotation results and individual results from DIAMOND, dbCAN HMM searches and dbCAN-sub searches. | `annotation/overview.tsv`<br>`annotation/diamond.out`<br>`annotation/dbCAN_hmm_results.tsv`<br>`annotation/dbCANsub_hmm_results.tsv` |
-| Filtered CAZyme annotations | CAZyme gene annotations retained after applying the configured minimum tool-support threshold. | `cazyme_annotations.tsv` |
-| CAZyme gene counts | Raw paired-fragment counts across samples for the retained CAZyme genes. | `cazyme_gene_counts.tsv` |
-| CAZyme family counts | Counts from retained CAZyme genes aggregated by parent CAZy family. | `cazyme_family_counts.tsv` |
+| Filtered CAZyme annotations | Method-support-filtered inputs for abundance estimation. | `coassembly/quantification_annotation/overview.tsv`<br>`filter_summary.json` |
+| Gene read counts | Counts assigned to all predicted genes in each sample. | `coassembly/samples/sample/sample_abund/sample.depth.txt` |
+| Per-sample CAZyme RPM | Family, subfamily, EC, substrate and CGC RPM tables. | `coassembly/samples/sample/sample_abund/fam_abund.out`<br>`subfam_abund.out`<br>`EC_abund.out`<br>`fam_substrate_abund.out`<br>`CGC_abund.out`<br>`CGC_substrate_PUL_homology.out`<br>`CGC_substrate_majority_voting.out` |
+| Combined CAZyme RPM matrices | Per-sample RPM values combined without rescaling. | `coassembly/cazyme_family_RPM.tsv`<br>`coassembly/cazyme_subfamily_RPM.tsv`<br>`coassembly/cazyme_substrate_RPM.tsv` |
 | CAZyme run records | Annotation log, database and software provenance, and a summary of the count-table generation. | `annotation/run_dbcan.log`<br>`annotation/provenance.json`<br>`count_summary.json` |
 | Software-version reports | Installed package versions from the Conda environments found beneath the configured Conda environment prefix, with filtered text and HTML reports for selected bioinformatics packages. | `software_versions_summary.txt`<br>`key_bioinformatics_software.txt`<br>`key_bioinformatics_software.html` |
 
@@ -1149,7 +1162,7 @@ In the filenames below, `sample` represents the sample ID from `samplesheet.csv`
 - When `reference_assembly` is supplied, the workflow uses that assembly for mapping, gene prediction, counting and CAZyme annotation instead of generating `final.contigs.fa`. Downstream filenames retain the `coassembly` prefix.
 - The rnaQUAST directory names shown above correspond to the default lineage keys. Report files inside these directories depend on the software version and analysis performed.
 - Taxonomic outputs describe the representation of classified RNA reads and should not be interpreted directly as microbial cell abundance.
-- Gene-count and CAZyme-count tables contain raw counts and require appropriate downstream processing for comparisons between samples.
+- Gene-depth tables contain raw assigned-read counts. CAZyme abundance tables are already normalized to RPM using all gene-assigned counts, and require an appropriate downstream analysis. Optional featureCounts outputs contain raw paired-fragment counts.
 - The default CAZyme filter requires support from at least two annotation methods for a gene. A gene assigned to multiple CAZy families contributes its full count to each family, so family totals can overlap.
 
 ---
