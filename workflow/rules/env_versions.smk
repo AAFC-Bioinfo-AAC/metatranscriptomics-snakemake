@@ -25,9 +25,9 @@ ENV_VERSION_DEFINITIONS = sorted(
 # These are package names, which may differ from executable names.
 # For example, featureCounts is supplied by the subread package.
 KEY_BIOINFORMATICS_PACKAGES = (
-    "bedtools", "bowtie2", "bracken", "busco", "dbcan", "diamond",
+    "bedtools", "bowtie2", "bracken", "busco", "bwa", "dbcan", "diamond",
     "fastp", "hmmer", "kma", "kraken2", "megahit", "pigz",
-    "prodigal", "pyhmmer", "rgi", "rnaquast", "samtools",
+    "prodigal", "pyrodigal", "pyhmmer", "rgi", "rnaquast", "samtools",
     "sortmerna", "spades", "subread",
 )
 

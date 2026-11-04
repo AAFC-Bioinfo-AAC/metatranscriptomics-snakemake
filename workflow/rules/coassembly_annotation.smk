@@ -291,8 +291,8 @@ rule bowtie2_map_transcripts:
 
 rule assembly_stats_depth:
     input:
-        bam = f"{ASSEMBLY_MAPPING}/{{sample}}.coassembly.sorted.bam",
-        bai = f"{ASSEMBLY_MAPPING}/{{sample}}.coassembly.sorted.bam.bai"
+        bam = lambda wc: f"{DBCAN_SHARED}/samples/{wc.sample}/mapping/{wc.sample}.bam",
+        bai = lambda wc: f"{DBCAN_SHARED}/samples/{wc.sample}/mapping/{wc.sample}.bam.bai"
     output:
         stats = f"{ASSEMBLY_MAPPING}/{{sample}}.flagstat.txt",
         depth = f"{ASSEMBLY_MAPPING}/{{sample}}.coverage.txt.gz",
@@ -335,15 +335,22 @@ rule assembly_stats_depth:
 
 rule prodigal_genes:
     input:
-        coassembly = COASSEMBLY_FASTA
+        coassembly = COASSEMBLY_FASTA,
+        normalize_gff = os.path.join(
+            PIPELINE_DIR, "workflow", "scripts", "normalize_pyrodigal_gff.py"
+        )
     output:
         proteins = f"{PRODIGAL_DIR}/coassembly.faa",
         nucs = f"{PRODIGAL_DIR}/coassembly.fna",
         gff = f"{PRODIGAL_DIR}/coassembly.gff",
         saf = f"{PRODIGAL_DIR}/coassembly.saf"
-    threads: 1
+    # Keep the rule name and output paths compatible with existing profiles.
+    threads:
+        config.get("prodigal_genes", {}).get("threads", 1)
+    params:
+        gene_caller = "pyrodigal-3.7.1"
     conda:
-        "../envs/prodigal.yaml"
+        "../envs/pyrodigal.yaml"
     log:
         f"{LOG_DIR}/prodigal/coassembly_prodigal.log"
     shell:
@@ -353,16 +360,28 @@ rule prodigal_genes:
         mkdir -p "$(dirname {output.gff:q})" \
                  "$(dirname {log:q})"
 
-        prodigal \
+        raw_gff=$(mktemp "$(dirname {output.gff:q})/.pyrodigal.XXXXXX.gff")
+        trap 'rm -f -- "$raw_gff"' EXIT
+
+        pyrodigal \
             -i {input.coassembly:q} \
             -a {output.proteins:q} \
             -d {output.nucs:q} \
-            -o {output.gff:q} \
+            -o "$raw_gff" \
             -p meta \
+            -j {threads} \
             -f gff \
             > {log:q} 2>&1
 
-        # Preserve GFF ID attributes for featureCounts and CAZyme joins.
+        # Pyrodigal's GFF IDs and FASTA ID= attributes can use different
+        # conventions. Match the GFF to the unique protein FASTA identifiers
+        # before deriving the SAF used by featureCounts and the CAZyme joins.
+        python {input.normalize_gff:q} \
+            --proteins {output.proteins:q} \
+            --gff "$raw_gff" \
+            --output {output.gff:q} \
+            >> {log:q} 2>&1
+
         awk -F '\t' '
             BEGIN {{
                 OFS="\t"
@@ -403,7 +422,7 @@ rule prodigal_genes:
 
         for result_file in {output:q}; do
             if [[ ! -s "$result_file" ]]; then
-                echo "ERROR: Missing or empty Prodigal output: $result_file" >> {log:q}
+                echo "ERROR: Missing or empty Pyrodigal output: $result_file" >> {log:q}
                 exit 1
             fi
         done
@@ -413,7 +432,7 @@ rule prodigal_genes:
 rule featurecounts:
     input:
         saf = f"{PRODIGAL_DIR}/coassembly.saf",
-        bam = f"{ASSEMBLY_MAPPING}/{{sample}}.coassembly.sorted.bam"
+        bam = lambda wc: f"{DBCAN_SHARED}/samples/{wc.sample}/mapping/{wc.sample}.bam"
     output:
         counts = f"{FEATURECOUNTS_DIR}/{{sample}}_counts.txt",
         summary = f"{FEATURECOUNTS_DIR}/{{sample}}_counts.txt.summary"
