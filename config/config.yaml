@@ -81,6 +81,10 @@ card_latest: "code/metatranscriptomics-snakemake/localDB"
 #   dbCAN.hmm
 #   dbCAN-sub.hmm
 #   fam-substrate-mapping.tsv
+#   TCDB.dmnd, TF.hmm, TF.dmnd, STP.hmm
+#   PUL.dmnd, dbCAN-PUL.xlsx
+#   peptidase_db.dmnd, sulfatlas_db.dmnd
+# Keep the accompanying dbCAN-PUL/ collection for substrate plots.
 dbcan_DB_path: "/absolute/path/to/dbcan"
 
 # -------------------------------------------------------------------
@@ -149,6 +153,11 @@ bowtie2_map_transcripts:
 assembly_stats_depth:
   threads: 2
 
+# The rule name is retained for existing profiles; the caller is Pyrodigal.
+prodigal_genes:
+  threads: 1
+
+# Optional paired-fragment target; not required by all or cazyme_all.
 featurecounts:
   threads: 4
   # Match the library preparation:
@@ -157,6 +166,14 @@ featurecounts:
 
 # db_can.smk
 # CAZyme analysis is included in the default workflow.
+bwa_mem_mapping:
+  threads: 12
+dbcan_depth:
+  threads: 4
+  overlap_base_ratio: 0.2
+  mapping_quality: 30
+  identity: 0.98
+
 cazyme:
   threads: 8
   # Require support from at least two annotation methods.
